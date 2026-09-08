@@ -1,0 +1,27 @@
+{
+  "indexes": [
+    { "collectionGroup": "committee_media", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "term_id", "order": "ASCENDING" },
+      { "fieldPath": "active", "order": "ASCENDING" },
+      { "fieldPath": "sort_order", "order": "ASCENDING" }
+    ] },
+    { "collectionGroup": "events", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "active", "order": "ASCENDING" },
+      { "fieldPath": "event_date", "order": "DESCENDING" }
+    ] },
+    { "collectionGroup": "event_media", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "event_id", "order": "ASCENDING" },
+      { "fieldPath": "active", "order": "ASCENDING" },
+      { "fieldPath": "sort_order", "order": "ASCENDING" }
+    ] },
+    { "collectionGroup": "donors", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "active", "order": "ASCENDING" },
+      { "fieldPath": "name", "order": "ASCENDING" }
+    ] },
+    { "collectionGroup": "donors", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "active", "order": "ASCENDING" },
+      { "fieldPath": "total_donations", "order": "DESCENDING" }
+    ] }
+  ],
+  "fieldOverrides": []
+}

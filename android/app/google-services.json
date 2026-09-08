@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "941165503580",
+    "project_id": "rokterbadhon-b247b",
+    "storage_bucket": "rokterbadhon-b247b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:941165503580:android:836f342d5b03c84cba7299",
+        "android_client_info": {
+          "package_name": "com.example.rokter_badhon"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDMo0jx9nvfb45CAvr79fNeOZCkXwMDKA8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

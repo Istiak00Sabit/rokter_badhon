@@ -1,0 +1,12 @@
+{
+  "name": "rokter-badhon-firestore-rules",
+  "private": true,
+  "scripts": {
+    "test:rules": "firebase emulators:exec --config firebase.emulator.json --project demo-rokter-badhon --only firestore \"node --test --test-concurrency=1 rules-tests/firestore.test.cjs\""
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "5.0.0",
+    "firebase": "12.10.0",
+    "firebase-tools": "15.11.0"
+  }
+}

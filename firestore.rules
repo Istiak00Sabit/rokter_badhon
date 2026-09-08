@@ -1,0 +1,170 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function linkPath() { return /databases/$(database)/documents/auth_links/$(request.auth.uid); }
+    function userPath(id) { return /databases/$(database)/documents/users/$(id); }
+    function directoryPath(id) { return /databases/$(database)/documents/user_directory/$(id); }
+    function ownId() { return get(linkPath()).data.user_id; }
+    function knownRole(role) {
+      return role in ['developer_admin', 'leader', 'executive', 'committee', 'member'];
+    }
+    function admitted() {
+      return signedIn() && request.auth.token.email_verified == true
+        && exists(linkPath()) && get(linkPath()).data.active == true
+        && ownId() is string && ownId().size() > 0 && !ownId().matches('.*[/].*')
+        && exists(userPath(ownId()))
+        && get(userPath(ownId())).data.active == true
+        && get(userPath(ownId())).data.login_enabled == true
+        && knownRole(get(userPath(ownId())).data.access_role);
+    }
+    function unlinkedOwn(uid) {
+      return signedIn() && uid == request.auth.uid && !exists(linkPath());
+    }
+    function nullableString(value) { return value == null || value is string; }
+    function validUser(u) {
+      return u.keys().hasAll(['name','phone','email','blood_group','profession','address','photo_url',
+          'access_role','active','login_enabled','preferred_language','created_at','created_by','updated_at','updated_by'])
+        && u.keys().hasOnly(['name','phone','email','blood_group','profession','address','photo_url',
+          'access_role','active','login_enabled','preferred_language','created_at','created_by','updated_at','updated_by'])
+        && u.name is string && u.phone is string && nullableString(u.email)
+        && nullableString(u.blood_group) && nullableString(u.profession) && nullableString(u.address)
+        && nullableString(u.preferred_language)
+        && (u.photo_url == null || (u.photo_url is string && u.photo_url.size() <= 2048 && u.photo_url.matches('https://[^/]+.*')))
+        && knownRole(u.access_role) && u.active is bool && u.login_enabled is bool
+        && u.created_at is timestamp && u.updated_at is timestamp
+        && nullableString(u.created_by) && nullableString(u.updated_by);
+    }
+    function projection(u) {
+      return {'name': u.name, 'phone': u.phone, 'blood_group': u.blood_group,
+        'profession': u.profession, 'photo_url': u.photo_url, 'active': u.active};
+    }
+    // Called independently by BOTH write rules. At most five distinct document
+    // accesses per write: link, User before/after, directory before/after.
+    function ownProfileChange(id, before, after) {
+      return admitted() && id == ownId() && validUser(before) && validUser(after)
+        && after.diff(before).affectedKeys().hasOnly(['name','phone','blood_group','profession',
+          'address','preferred_language','updated_at','updated_by'])
+        && after.diff(before).affectedKeys().hasAny(['name','phone','blood_group','profession','address','preferred_language'])
+        && after.updated_at == request.time && after.updated_by == id
+        && get(directoryPath(id)).data == projection(before)
+        && getAfter(directoryPath(id)).data == projection(after);
+    }
+    match /registration_requests/{uid} {
+      allow get: if unlinkedOwn(uid);
+      allow create: if unlinkedOwn(uid)
+        && request.resource.data.keys().hasAll(['auth_uid','name','phone','email','status','requested_at',
+          'approved_by','approved_at','rejected_by','rejected_at','linked_user_id'])
+        && request.resource.data.keys().hasOnly(['auth_uid','name','phone','email','status','requested_at',
+          'approved_by','approved_at','rejected_by','rejected_at','linked_user_id'])
+        && request.resource.data.auth_uid == request.auth.uid
+        && request.resource.data.name is string && request.resource.data.phone is string
+        && request.resource.data.email is string && request.resource.data.email == request.auth.token.email
+        && request.resource.data.status == 'pending' && request.resource.data.requested_at == request.time
+        && request.resource.data.approved_by == null && request.resource.data.approved_at == null
+        && request.resource.data.rejected_by == null && request.resource.data.rejected_at == null
+        && request.resource.data.linked_user_id == null;
+    }
+    match /auth_links/{uid} {
+      allow get: if signedIn() && uid == request.auth.uid;
+    }
+    match /users/{id} {
+      allow get: if admitted() && id == ownId();
+      allow update: if ownProfileChange(id, resource.data, request.resource.data);
+    }
+    match /user_directory/{id} {
+      allow read: if admitted() && resource.data.active == true;
+      allow update: if ownProfileChange(id, get(userPath(id)).data, getAfter(userPath(id)).data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','phone','blood_group','profession'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasAny(['name','phone','blood_group','profession']);
+    }
+    function roleIn(roles) { return get(userPath(ownId())).data.access_role in roles; }
+    function editorial() { return roleIn(['developer_admin', 'leader']); }
+    function history() { return roleIn(['developer_admin', 'leader', 'executive']); }
+    function validId(id) { return id is string && id.size() > 0 && !id.matches('.*[/].*'); }
+    function eventReadable(e) { return e.active == true || (e.active == false && editorial()); }
+    function validDonor(d) {
+      return d.keys().hasAll(['name','phone','blood_group','gender','photo_url','village','union','upazila',
+          'district','profession','linked_user_id','active','last_donated_at','total_donations',
+          'created_at','created_by','updated_at','updated_by'])
+        && d.keys().hasOnly(['name','phone','blood_group','gender','photo_url','village','union','upazila',
+          'district','profession','linked_user_id','active','last_donated_at','total_donations',
+          'created_at','created_by','updated_at','updated_by'])
+        && d.name is string && d.phone is string && d.blood_group is string
+        && nullableString(d.gender) && nullableString(d.village) && nullableString(d.union)
+        && d.upazila is string && d.district is string && nullableString(d.profession)
+        && (d.photo_url == null || (d.photo_url is string && d.photo_url.size() <= 2048
+          && d.photo_url.matches('https://[^/]+.*')))
+        && nullableString(d.linked_user_id) && d.active is bool
+        && (d.last_donated_at == null || d.last_donated_at is timestamp)
+        && d.total_donations is int && d.total_donations >= 0
+        && d.created_at is timestamp && d.created_by is string
+        && d.updated_at is timestamp && d.updated_by is string;
+    }
+    match /committee_terms/{id} {
+      allow read: if admitted();
+    }
+    match /committee_assignments/{id} {
+      allow read: if admitted();
+    }
+    match /committee_media/{id} {
+      allow read: if admitted() && validId(resource.data.term_id)
+        && exists(/databases/$(database)/documents/committee_terms/$(resource.data.term_id))
+        && (resource.data.active == true || (resource.data.active == false && editorial()));
+    }
+    match /events/{id} {
+      allow read: if admitted() && eventReadable(resource.data);
+    }
+    match /event_media/{id} {
+      allow read: if admitted() && validId(resource.data.event_id)
+        && exists(/databases/$(database)/documents/events/$(resource.data.event_id))
+        && eventReadable(get(/databases/$(database)/documents/events/$(resource.data.event_id)).data)
+        && (resource.data.active == true || (resource.data.active == false && editorial()));
+    }
+    match /donors/{id} {
+      allow read: if admitted() && resource.data.active == true;
+      allow create: if admitted() && roleIn(['developer_admin','leader','executive','committee'])
+        && validDonor(request.resource.data)
+        && request.resource.data.active == true && request.resource.data.linked_user_id == null
+        && request.resource.data.total_donations == 0 && request.resource.data.last_donated_at == null
+        && request.resource.data.created_at == request.time && request.resource.data.updated_at == request.time
+        && request.resource.data.created_by == ownId() && request.resource.data.updated_by == ownId();
+      allow update: if admitted() && history() && resource.data.active == true
+        && validDonor(resource.data) && validDonor(request.resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','phone','blood_group',
+          'gender','photo_url','village','union','upazila','district','profession','updated_at','updated_by'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasAny(['name','phone','blood_group',
+          'gender','photo_url','village','union','upazila','district','profession'])
+        && request.resource.data.updated_at == request.time && request.resource.data.updated_by == ownId();
+    }
+    match /donations/{id} {
+      allow read: if admitted() && history();
+    }
+    match /notices/{id} {
+      allow read: if admitted() && (resource.data.status == 'published'
+        || (resource.data.status in ['draft','archived'] && editorial()));
+    }
+    match /blood_requests/{id} {
+      allow read: if admitted() && (resource.data.status == 'active'
+        || (resource.data.status in ['fulfilled','cancelled'] && history()));
+      allow create: if admitted()
+        && request.resource.data.keys().hasAll(['blood_group','patient_name','hospital','location',
+          'contact_name','contact_phone','required_at','status','created_by','created_at','fulfilled_by','fulfilled_at'])
+        && request.resource.data.keys().hasOnly(['blood_group','patient_name','hospital','location',
+          'contact_name','contact_phone','required_at','status','created_by','created_at','fulfilled_by','fulfilled_at'])
+        && request.resource.data.blood_group is string && nullableString(request.resource.data.patient_name)
+        && request.resource.data.hospital is string && request.resource.data.location is string
+        && request.resource.data.contact_name is string && request.resource.data.contact_phone is string
+        && (request.resource.data.required_at == null || request.resource.data.required_at is timestamp)
+        && request.resource.data.status == 'active' && request.resource.data.created_by == ownId()
+        && request.resource.data.created_at == request.time
+        && request.resource.data.fulfilled_by == null && request.resource.data.fulfilled_at == null;
+    }
+    match /audit_logs/{id} {
+      allow read: if admitted() && roleIn(['developer_admin']);
+    }
+    // Includes legacy requests and every unlisted collection/subcollection.
+    // No role (including developer_admin) bypasses these client denials.
+    match /{document=**} { allow read, write: if false; }
+  }
+}

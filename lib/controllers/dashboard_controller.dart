@@ -1,0 +1,65 @@
+import 'package:get/get.dart';
+import '../services/dashboard_service.dart';
+import '../services/auth_services.dart';
+import '../models/user_model.dart';
+
+class DashboardController extends GetxController {
+  final DashboardService _dashboardService = DashboardService();
+  final AuthService _authService = AuthService();
+
+  // Stats
+  final RxInt totalDonors = 0.obs;
+  final RxInt totalMembers = 0.obs;
+  final RxInt thisMonthDonations = 0.obs;
+  final RxInt activeRequests = 0.obs;
+
+  // Notices
+  final RxList notices = [].obs;
+
+  // Current user
+  final Rx<UserModel?> currentUser = Rx<UserModel?>(null);
+
+  // Loading
+  final RxBool isLoading = true.obs;
+
+  @override
+  void onInit() {
+    super.onInit();
+    loadDashboard();
+  }
+
+  Future<void> loadDashboard() async {
+    try {
+      isLoading.value = true;
+
+      // Current user data আনো
+      currentUser.value = await _authService.getCurrentUserData();
+
+      // সব data একসাথে আনো
+      final results = await Future.wait([
+        _dashboardService.getTotalDonors(),
+        _dashboardService.getTotalMembers(),
+        _dashboardService.getThisMonthDonations(),
+        _dashboardService.getActiveRequests(),
+        _dashboardService.getLatestNotices(),
+      ]);
+
+      totalDonors.value = results[0] as int;
+      totalMembers.value = results[1] as int;
+      thisMonthDonations.value = results[2] as int;
+      activeRequests.value = results[3] as int;
+      notices.value = results[4] as List;
+
+    } catch (e) {
+      print('Dashboard error: $e');
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  // Refresh করো
+  @override
+  Future<void> refresh() async {
+    await loadDashboard();
+  }
+}
