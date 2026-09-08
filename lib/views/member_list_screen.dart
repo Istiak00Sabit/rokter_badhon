@@ -8,104 +8,61 @@ import '../models/user_model.dart';
 import 'add_member_screen.dart';
 
 class MemberListScreen extends StatelessWidget {
-  const MemberListScreen({
-    super.key,
-  });
+  const MemberListScreen({super.key});
 
   @override
-  Widget build(
-    BuildContext context,
-  ) {
-    final MemberController controller =
-        Get.put(
-      MemberController(),
-    );
+  Widget build(BuildContext context) {
+    final MemberController controller = Get.put(MemberController());
 
-    final RxString searchQuery =
-        ''.obs;
+    final RxString searchQuery = ''.obs;
 
-    final TextEditingController
-        searchController =
-        TextEditingController();
+    final TextEditingController searchController = TextEditingController();
 
-    WidgetsBinding.instance
-        .addPostFrameCallback(
-      (_) {
-        controller.loadMembers();
-      },
-    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      controller.loadMembers();
+    });
 
     return Scaffold(
-      backgroundColor:
-          AppColors.background,
+      backgroundColor: AppColors.background,
 
       appBar: AppBar(
-        title:
-            const Text(
-          'সদস্য তালিকা',
-        ),
+        title: const Text('সদস্য তালিকা'),
 
-        backgroundColor:
-            AppColors.primary,
+        backgroundColor: AppColors.primary,
 
-        foregroundColor:
-            AppColors.white,
+        foregroundColor: AppColors.white,
 
-        centerTitle:
-            true,
+        centerTitle: true,
 
-        automaticallyImplyLeading:
-            false,
+        automaticallyImplyLeading: false,
 
         actions: [
           Obx(
             () => Padding(
-              padding:
-                  const EdgeInsets.only(
-                right: 12,
-              ),
+              padding: const EdgeInsets.only(right: 12),
 
               child: Center(
-                child:
-                    Container(
-                  padding:
-                      const EdgeInsets.symmetric(
-                    horizontal:
-                        10,
-                    vertical:
-                        4,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
                   ),
 
-                  decoration:
-                      BoxDecoration(
-                    color: AppColors
-                        .white
-                        .withValues(
-                      alpha:
-                          0.2,
-                    ),
+                  decoration: BoxDecoration(
+                    color: AppColors.white.withValues(alpha: 0.2),
 
-                    borderRadius:
-                        BorderRadius
-                            .circular(
-                      12,
-                    ),
+                    borderRadius: BorderRadius.circular(12),
                   ),
 
-                  child:
-                      Text(
+                  child: Text(
                     '${controller.members.length} জন',
 
-                    style:
-                        const TextStyle(
-                      color:
-                          AppColors.white,
+                    style: const TextStyle(
+                      color: AppColors.white,
 
-                      fontSize:
-                          13,
+                      fontSize: 13,
 
-                      fontWeight:
-                          FontWeight.w600,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
@@ -115,109 +72,70 @@ class MemberListScreen extends StatelessWidget {
         ],
       ),
 
-      body:
-          Column(
+      body: Column(
         children: [
           // ===================================================
           // SEARCH
           // ===================================================
-
           Container(
-            color:
-                AppColors.white,
+            color: AppColors.white,
 
-            padding:
-                const EdgeInsets.all(
-              16,
-            ),
+            padding: const EdgeInsets.all(16),
 
-            child:
-                TextField(
-              controller:
-                  searchController,
+            child: TextField(
+              controller: searchController,
 
-              onChanged:
-                  (
-                value,
-              ) {
-                searchQuery.value =
-                    value.trim();
+              onChanged: (value) {
+                searchQuery.value = value.trim();
               },
 
-              decoration:
-                  InputDecoration(
-                hintText:
-                    'নাম বা পদবী দিয়ে খুঁজুন...',
+              decoration: InputDecoration(
+                hintText: 'নাম বা পদবী দিয়ে খুঁজুন...',
 
-                prefixIcon:
-                    const Icon(
+                prefixIcon: const Icon(
                   Icons.search,
 
-                  color:
-                      AppColors.primary,
+                  color: AppColors.primary,
 
-                  size:
-                      20,
+                  size: 20,
                 ),
 
-                suffixIcon:
-                    Obx(
-                  () {
-                    if (searchQuery
-                        .value
-                        .isEmpty) {
-                      return const SizedBox();
-                    }
+                suffixIcon: Obx(() {
+                  if (searchQuery.value.isEmpty) {
+                    return const SizedBox();
+                  }
 
-                    return IconButton(
-                      icon:
-                          const Icon(
-                        Icons.clear,
+                  return IconButton(
+                    icon: const Icon(
+                      Icons.clear,
 
-                        color:
-                            AppColors
-                                .textGrey,
+                      color: AppColors.textGrey,
 
-                        size:
-                            18,
-                      ),
+                      size: 18,
+                    ),
 
-                      onPressed:
-                          () {
-                        searchController
-                            .clear();
+                    onPressed: () {
+                      searchController.clear();
 
-                        searchQuery
-                            .value = '';
-                      },
-                    );
-                  },
+                      searchQuery.value = '';
+                    },
+                  );
+                }),
+
+                filled: true,
+
+                fillColor: AppColors.background,
+
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+
+                  borderSide: BorderSide.none,
                 ),
 
-                filled:
-                    true,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
 
-                fillColor:
-                    AppColors.background,
-
-                border:
-                    OutlineInputBorder(
-                  borderRadius:
-                      BorderRadius.circular(
-                    12,
-                  ),
-
-                  borderSide:
-                      BorderSide.none,
-                ),
-
-                contentPadding:
-                    const EdgeInsets.symmetric(
-                  horizontal:
-                      16,
-
-                  vertical:
-                      12,
+                  vertical: 12,
                 ),
               ),
             ),
@@ -226,296 +144,167 @@ class MemberListScreen extends StatelessWidget {
           // ===================================================
           // MEMBER LIST
           // ===================================================
-
           Expanded(
-            child:
-                Obx(
-              () {
-                if (controller
-                    .isLoading
-                    .value) {
-                  return const Center(
-                    child:
-                        CircularProgressIndicator(
-                      color:
-                          AppColors.primary,
-                    ),
-                  );
+            child: Obx(() {
+              if (controller.isLoading.value) {
+                return const Center(
+                  child: CircularProgressIndicator(color: AppColors.primary),
+                );
+              }
+
+              final String query = searchQuery.value.toLowerCase();
+
+              final List<UserModel> filtered = controller.members.where((
+                member,
+              ) {
+                if (query.isEmpty) {
+                  return true;
                 }
 
-                final String query =
-                    searchQuery.value
-                        .toLowerCase();
+                final String roleLabel = AppConstants.roleLabel(
+                  member.role,
+                ).toLowerCase();
 
-                final List<UserModel>
-                    filtered =
-                    controller.members
-                        .where(
-                  (
-                    member,
-                  ) {
-                    if (query.isEmpty) {
-                      return true;
-                    }
+                return member.name.toLowerCase().contains(query) ||
+                    member.phone.toLowerCase().contains(query) ||
+                    roleLabel.contains(query);
+              }).toList();
 
-                    final String roleLabel =
-                        AppConstants
-                            .roleLabel(
-                      member.role,
-                    )
-                            .toLowerCase();
+              if (filtered.isEmpty) {
+                return const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
 
-                    return member.name
-                            .toLowerCase()
-                            .contains(
-                              query,
-                            ) ||
-                        member.phone
-                            .toLowerCase()
-                            .contains(
-                              query,
-                            ) ||
-                        roleLabel.contains(
-                          query,
-                        );
-                  },
-                ).toList();
+                    children: [
+                      Icon(
+                        Icons.people_outline,
 
-                if (filtered.isEmpty) {
-                  return const Center(
-                    child:
-                        Column(
-                      mainAxisAlignment:
-                          MainAxisAlignment
-                              .center,
+                        size: 64,
 
-                      children: [
-                        Icon(
-                          Icons
-                              .people_outline,
+                        color: AppColors.textLight,
+                      ),
 
-                          size:
-                              64,
+                      SizedBox(height: 16),
 
-                          color:
-                              AppColors
-                                  .textLight,
+                      Text(
+                        'কোনো সদস্য পাওয়া যায়নি',
+
+                        style: TextStyle(
+                          fontSize: 16,
+
+                          color: AppColors.textGrey,
                         ),
+                      ),
 
-                        SizedBox(
-                          height:
-                              16,
+                      SizedBox(height: 8),
+
+                      Text(
+                        'নতুন সদস্য যোগ করুন',
+
+                        style: TextStyle(
+                          fontSize: 13,
+
+                          color: AppColors.textLight,
                         ),
-
-                        Text(
-                          'কোনো সদস্য পাওয়া যায়নি',
-
-                          style:
-                              TextStyle(
-                            fontSize:
-                                16,
-
-                            color:
-                                AppColors
-                                    .textGrey,
-                          ),
-                        ),
-
-                        SizedBox(
-                          height:
-                              8,
-                        ),
-
-                        Text(
-                          'নতুন সদস্য যোগ করুন',
-
-                          style:
-                              TextStyle(
-                            fontSize:
-                                13,
-
-                            color:
-                                AppColors
-                                    .textLight,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                // =============================================
-                // GROUP BY COMMITTEE YEAR
-                // =============================================
-
-                final Map<
-                        int,
-                        List<UserModel>>
-                    groupedByYear =
-                    {};
-
-                for (final UserModel
-                    member
-                    in filtered) {
-                  groupedByYear
-                      .putIfAbsent(
-                    member.committeeYear,
-                    () =>
-                        <UserModel>[],
-                  )
-                      .add(
-                    member,
-                  );
-                }
-
-                final List<int>
-                    sortedYears =
-                    groupedByYear.keys
-                        .toList()
-                      ..sort(
-                        (
-                          a,
-                          b,
-                        ) =>
-                            b.compareTo(
-                          a,
-                        ),
-                      );
-
-                return RefreshIndicator(
-                  onRefresh:
-                      controller
-                          .loadMembers,
-
-                  color:
-                      AppColors.primary,
-
-                  child:
-                      ListView.builder(
-                    physics:
-                        const AlwaysScrollableScrollPhysics(),
-
-                    padding:
-                        const EdgeInsets.all(
-                      16,
-                    ),
-
-                    itemCount:
-                        sortedYears.length,
-
-                    itemBuilder:
-                        (
-                      context,
-                      yearIndex,
-                    ) {
-                      final int year =
-                          sortedYears[
-                              yearIndex];
-
-                      final List<UserModel>
-                          yearMembers =
-                          groupedByYear[
-                              year]!;
-
-                      return Column(
-                        crossAxisAlignment:
-                            CrossAxisAlignment
-                                .start,
-
-                        children: [
-                          Padding(
-                            padding:
-                                const EdgeInsets.only(
-                              bottom:
-                                  10,
-
-                              top:
-                                  4,
-                            ),
-
-                            child:
-                                Row(
-                              children: [
-                                Container(
-                                  padding:
-                                      const EdgeInsets.symmetric(
-                                    horizontal:
-                                        12,
-
-                                    vertical:
-                                        4,
-                                  ),
-
-                                  decoration:
-                                      BoxDecoration(
-                                    color:
-                                        AppColors.primary,
-
-                                    borderRadius:
-                                        BorderRadius.circular(
-                                      20,
-                                    ),
-                                  ),
-
-                                  child:
-                                      Text(
-                                    '$year সালের কমিটি',
-
-                                    style:
-                                        const TextStyle(
-                                      color:
-                                          AppColors.white,
-
-                                      fontSize:
-                                          13,
-
-                                      fontWeight:
-                                          FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-
-                                const SizedBox(
-                                  width:
-                                      8,
-                                ),
-
-                                Text(
-                                  '(${yearMembers.length} জন)',
-
-                                  style:
-                                      const TextStyle(
-                                    fontSize:
-                                        12,
-
-                                    color:
-                                        AppColors.textGrey,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          ...yearMembers.map(
-                            (
-                              member,
-                            ) =>
-                                _buildMemberCard(
-                              member,
-                            ),
-                          ),
-
-                          const SizedBox(
-                            height:
-                                12,
-                          ),
-                        ],
-                      );
-                    },
+                      ),
+                    ],
                   ),
                 );
-              },
-            ),
+              }
+
+              // =============================================
+              // GROUP BY COMMITTEE YEAR
+              // =============================================
+
+              final Map<int, List<UserModel>> groupedByYear = {};
+
+              for (final UserModel member in filtered) {
+                groupedByYear
+                    .putIfAbsent(member.committeeYear, () => <UserModel>[])
+                    .add(member);
+              }
+
+              final List<int> sortedYears = groupedByYear.keys.toList()
+                ..sort((a, b) => b.compareTo(a));
+
+              return RefreshIndicator(
+                onRefresh: controller.loadMembers,
+
+                color: AppColors.primary,
+
+                child: ListView.builder(
+                  physics: const AlwaysScrollableScrollPhysics(),
+
+                  padding: const EdgeInsets.all(16),
+
+                  itemCount: sortedYears.length,
+
+                  itemBuilder: (context, yearIndex) {
+                    final int year = sortedYears[yearIndex];
+
+                    final List<UserModel> yearMembers = groupedByYear[year]!;
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 10, top: 4),
+
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+
+                                  vertical: 4,
+                                ),
+
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary,
+
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+
+                                child: Text(
+                                  '$year সালের কমিটি',
+
+                                  style: const TextStyle(
+                                    color: AppColors.white,
+
+                                    fontSize: 13,
+
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+
+                              const SizedBox(width: 8),
+
+                              Text(
+                                '(${yearMembers.length} জন)',
+
+                                style: const TextStyle(
+                                  fontSize: 12,
+
+                                  color: AppColors.textGrey,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        ...yearMembers.map(
+                          (member) => _buildMemberCard(member),
+                        ),
+
+                        const SizedBox(height: 12),
+                      ],
+                    );
+                  },
+                ),
+              );
+            }),
           ),
         ],
       ),
@@ -523,43 +312,21 @@ class MemberListScreen extends StatelessWidget {
       // =====================================================
       // ADD MEMBER
       // =====================================================
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () async {
+          await Get.to(() => const AddMemberScreen());
 
-      floatingActionButton:
-          FloatingActionButton.extended(
-        onPressed:
-            () async {
-          await Get.to(
-            () =>
-                const AddMemberScreen(),
-          );
-
-          await controller
-              .loadMembers();
+          await controller.loadMembers();
         },
 
-        backgroundColor:
-            AppColors.primary,
+        backgroundColor: AppColors.primary,
 
-        icon:
-            const Icon(
-          Icons.person_add,
+        icon: const Icon(Icons.person_add, color: AppColors.white),
 
-          color:
-              AppColors.white,
-        ),
-
-        label:
-            const Text(
+        label: const Text(
           'নতুন সদস্য',
 
-          style:
-              TextStyle(
-            color:
-                AppColors.white,
-
-            fontWeight:
-                FontWeight.bold,
-          ),
+          style: TextStyle(color: AppColors.white, fontWeight: FontWeight.bold),
         ),
       ),
     );
@@ -569,218 +336,129 @@ class MemberListScreen extends StatelessWidget {
   // MEMBER CARD
   // =========================================================
 
-  Widget _buildMemberCard(
-    UserModel member,
-  ) {
-    final String roleLabel =
-        AppConstants.roleLabel(
-      member.role,
-    );
+  Widget _buildMemberCard(UserModel member) {
+    final String roleLabel = AppConstants.roleLabel(member.role);
 
     return Container(
-      margin:
-          const EdgeInsets.only(
-        bottom:
-            10,
-      ),
+      margin: const EdgeInsets.only(bottom: 10),
 
-      decoration:
-          BoxDecoration(
-        color:
-            AppColors.white,
+      decoration: BoxDecoration(
+        color: AppColors.white,
 
-        borderRadius:
-            BorderRadius.circular(
-          14,
-        ),
+        borderRadius: BorderRadius.circular(14),
 
-        boxShadow:
-            [
+        boxShadow: [
           BoxShadow(
-            color:
-                Colors.black.withValues(
-              alpha:
-                  0.05,
-            ),
+            color: Colors.black.withValues(alpha: 0.05),
 
-            blurRadius:
-                8,
+            blurRadius: 8,
 
-            offset:
-                const Offset(
-              0,
-              2,
-            ),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
 
-      child:
-          Padding(
-        padding:
-            const EdgeInsets.all(
-          14,
-        ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
 
-        child:
-            Row(
+        child: Row(
           children: [
             // Avatar
             Container(
-              width:
-                  50,
+              width: 50,
 
-              height:
-                  50,
+              height: 50,
 
-              decoration:
-                  BoxDecoration(
-                color:
-                    AppColors.primaryLight,
+              decoration: BoxDecoration(
+                color: AppColors.primaryLight,
 
-                shape:
-                    BoxShape.circle,
+                shape: BoxShape.circle,
 
-                border:
-                    Border.all(
-                  color:
-                      AppColors.primary,
-
-                  width:
-                      1.5,
-                ),
+                border: Border.all(color: AppColors.primary, width: 1.5),
               ),
 
-              child:
-                  Center(
-                child:
-                    Text(
-                  member.name.isNotEmpty
-                      ? member.name[0]
-                          .toUpperCase()
-                      : '?',
+              child: Center(
+                child: Text(
+                  member.name.isNotEmpty ? member.name[0].toUpperCase() : '?',
 
-                  style:
-                      const TextStyle(
-                    fontSize:
-                        20,
+                  style: const TextStyle(
+                    fontSize: 20,
 
-                    fontWeight:
-                        FontWeight.bold,
+                    fontWeight: FontWeight.bold,
 
-                    color:
-                        AppColors.primary,
+                    color: AppColors.primary,
                   ),
                 ),
               ),
             ),
 
-            const SizedBox(
-              width:
-                  14,
-            ),
+            const SizedBox(width: 14),
 
             // Info
             Expanded(
-              child:
-                  Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment
-                        .start,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
 
                 children: [
                   Text(
                     member.name,
 
-                    style:
-                        const TextStyle(
-                      fontSize:
-                          15,
+                    style: const TextStyle(
+                      fontSize: 15,
 
-                      fontWeight:
-                          FontWeight.bold,
+                      fontWeight: FontWeight.bold,
 
-                      color:
-                          AppColors.textDark,
+                      color: AppColors.textDark,
                     ),
                   ),
 
-                  const SizedBox(
-                    height:
-                        4,
-                  ),
+                  const SizedBox(height: 4),
 
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(
-                      horizontal:
-                          8,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
 
-                      vertical:
-                          3,
+                      vertical: 3,
                     ),
 
-                    decoration:
-                        BoxDecoration(
-                      color:
-                          AppColors.primaryLight,
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryLight,
 
-                      borderRadius:
-                          BorderRadius.circular(
-                        8,
-                      ),
+                      borderRadius: BorderRadius.circular(8),
                     ),
 
-                    child:
-                        Text(
+                    child: Text(
                       roleLabel,
 
-                      style:
-                          const TextStyle(
-                        fontSize:
-                            12,
+                      style: const TextStyle(
+                        fontSize: 12,
 
-                        color:
-                            AppColors.primaryDark,
+                        color: AppColors.primaryDark,
 
-                        fontWeight:
-                            FontWeight.w600,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
 
-                  const SizedBox(
-                    height:
-                        6,
-                  ),
+                  const SizedBox(height: 6),
 
                   Wrap(
-                    spacing:
-                        12,
+                    spacing: 12,
 
-                    runSpacing:
-                        4,
+                    runSpacing: 4,
 
                     children: [
-                      if (member.phone
-                          .isNotEmpty)
-                        _smallInfo(
-                          Icons.phone_outlined,
-                          member.phone,
-                        ),
+                      if (member.phone.isNotEmpty)
+                        _smallInfo(Icons.phone_outlined, member.phone),
                       _smallInfo(
                         Icons.login,
-                        member.loginEnabled
-                            ? 'লগইন চালু'
-                            : 'লগইন চালু নয়',
+                        member.loginEnabled ? 'লগইন চালু' : 'লগইন চালু নয়',
                       ),
 
-                      if (member.bloodGroup
-                          .isNotEmpty)
+                      if (member.bloodGroup?.isNotEmpty == true)
                         _smallInfo(
-                          Icons
-                              .water_drop_outlined,
-                          member.bloodGroup,
+                          Icons.water_drop_outlined,
+                          member.bloodGroup!,
                         ),
                     ],
                   ),
@@ -788,12 +466,7 @@ class MemberListScreen extends StatelessWidget {
               ),
             ),
 
-            const Icon(
-              Icons.chevron_right,
-
-              color:
-                  AppColors.textLight,
-            ),
+            const Icon(Icons.chevron_right, color: AppColors.textLight),
           ],
         ),
       ),
@@ -804,41 +477,19 @@ class MemberListScreen extends StatelessWidget {
   // SMALL INFO
   // =========================================================
 
-  Widget _smallInfo(
-    IconData icon,
-    String text,
-  ) {
+  Widget _smallInfo(IconData icon, String text) {
     return Row(
-      mainAxisSize:
-          MainAxisSize.min,
+      mainAxisSize: MainAxisSize.min,
 
       children: [
-        Icon(
-          icon,
+        Icon(icon, size: 14, color: AppColors.textGrey),
 
-          size:
-              14,
-
-          color:
-              AppColors.textGrey,
-        ),
-
-        const SizedBox(
-          width:
-              4,
-        ),
+        const SizedBox(width: 4),
 
         Text(
           text,
 
-          style:
-              const TextStyle(
-            fontSize:
-                12,
-
-            color:
-                AppColors.textGrey,
-          ),
+          style: const TextStyle(fontSize: 12, color: AppColors.textGrey),
         ),
       ],
     );

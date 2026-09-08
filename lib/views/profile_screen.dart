@@ -6,473 +6,290 @@ import '../constants/app_constants.dart';
 import '../controllers/auth_controller.dart';
 
 class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({
-    super.key,
-  });
+  const ProfileScreen({super.key});
 
   @override
-  Widget build(
-    BuildContext context,
-  ) {
-    final AuthController authController =
-        Get.find<AuthController>();
+  Widget build(BuildContext context) {
+    final AuthController authController = Get.find<AuthController>();
 
     return Scaffold(
-      backgroundColor:
-          AppColors.background,
+      backgroundColor: AppColors.background,
 
       appBar: AppBar(
-        title:
-            const Text(
-          'প্রোফাইল',
-        ),
+        title: const Text('প্রোফাইল'),
 
-        backgroundColor:
-            AppColors.primary,
+        backgroundColor: AppColors.primary,
 
-        foregroundColor:
-            AppColors.white,
+        foregroundColor: AppColors.white,
 
-        centerTitle:
-            true,
+        centerTitle: true,
 
-        automaticallyImplyLeading:
-            false,
+        automaticallyImplyLeading: false,
       ),
 
-      body:
-          Obx(
-        () {
-          final user =
-              authController
-                  .currentUser
-                  .value;
+      body: Obx(() {
+        final user = authController.currentUser.value;
 
-          if (user == null) {
-            return const Center(
-              child:
-                  CircularProgressIndicator(
-                color:
-                    AppColors.primary,
-              ),
-            );
-          }
+        if (user == null) {
+          return const Center(
+            child: CircularProgressIndicator(color: AppColors.primary),
+          );
+        }
 
-          return SingleChildScrollView(
-            child:
-                Column(
-              children: [
-                // =============================================
-                // HEADER
-                // =============================================
+        return SingleChildScrollView(
+          child: Column(
+            children: [
+              // =============================================
+              // HEADER
+              // =============================================
+              Container(
+                width: double.infinity,
 
-                Container(
-                  width:
-                      double.infinity,
+                decoration: const BoxDecoration(
+                  color: AppColors.primary,
 
-                  decoration:
-                      const BoxDecoration(
-                    color:
-                        AppColors.primary,
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(30),
 
-                    borderRadius:
-                        BorderRadius.only(
-                      bottomLeft:
-                          Radius.circular(
-                        30,
+                    bottomRight: Radius.circular(30),
+                  ),
+                ),
+
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 30),
+
+                child: Column(
+                  children: [
+                    Container(
+                      width: 90,
+
+                      height: 90,
+
+                      decoration: BoxDecoration(
+                        color: AppColors.white.withValues(alpha: 0.2),
+
+                        shape: BoxShape.circle,
+
+                        border: Border.all(color: AppColors.white, width: 2),
                       ),
 
-                      bottomRight:
-                          Radius.circular(
-                        30,
+                      child: Center(
+                        child: Text(
+                          user.name.isNotEmpty
+                              ? user.name[0].toUpperCase()
+                              : 'A',
+
+                          style: const TextStyle(
+                            fontSize: 36,
+
+                            fontWeight: FontWeight.bold,
+
+                            color: AppColors.white,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
 
-                  padding:
-                      const EdgeInsets.fromLTRB(
-                    20,
-                    20,
-                    20,
-                    30,
-                  ),
+                    const SizedBox(height: 12),
 
-                  child:
-                      Column(
-                    children: [
-                      Container(
-                        width:
-                            90,
+                    Text(
+                      user.name,
 
-                        height:
-                            90,
+                      style: const TextStyle(
+                        fontSize: 22,
 
-                        decoration:
-                            BoxDecoration(
-                          color: AppColors.white
-                              .withValues(
-                            alpha:
-                                0.2,
-                          ),
+                        fontWeight: FontWeight.bold,
 
-                          shape:
-                              BoxShape.circle,
+                        color: AppColors.white,
+                      ),
+                    ),
 
-                          border:
-                              Border.all(
-                            color:
-                                AppColors.white,
+                    const SizedBox(height: 4),
 
-                            width:
-                                2,
-                          ),
-                        ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
 
-                        child:
-                            Center(
-                          child:
-                              Text(
-                            user.name.isNotEmpty
-                                ? user.name[0]
-                                    .toUpperCase()
-                                : 'A',
-
-                            style:
-                                const TextStyle(
-                              fontSize:
-                                  36,
-
-                              fontWeight:
-                                  FontWeight.bold,
-
-                              color:
-                                  AppColors.white,
-                            ),
-                          ),
-                        ),
+                        vertical: 4,
                       ),
 
-                      const SizedBox(
-                        height:
-                            12,
+                      decoration: BoxDecoration(
+                        color: AppColors.white.withValues(alpha: 0.2),
+
+                        borderRadius: BorderRadius.circular(20),
                       ),
 
-                      Text(
-                        user.name,
+                      child: Text(
+                        AppConstants.roleLabel(user.role),
 
-                        style:
-                            const TextStyle(
-                          fontSize:
-                              22,
+                        style: const TextStyle(
+                          color: AppColors.white,
 
-                          fontWeight:
-                              FontWeight.bold,
+                          fontSize: 13,
 
-                          color:
-                              AppColors.white,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-
-                      const SizedBox(
-                        height:
-                            4,
-                      ),
-
-                      Container(
-                        padding:
-                            const EdgeInsets.symmetric(
-                          horizontal:
-                              12,
-
-                          vertical:
-                              4,
-                        ),
-
-                        decoration:
-                            BoxDecoration(
-                          color: AppColors.white
-                              .withValues(
-                            alpha:
-                                0.2,
-                          ),
-
-                          borderRadius:
-                              BorderRadius.circular(
-                            20,
-                          ),
-                        ),
-
-                        child:
-                            Text(
-                          AppConstants.roleLabel(
-                            user.role,
-                          ),
-
-                          style:
-                              const TextStyle(
-                            color:
-                                AppColors.white,
-
-                            fontSize:
-                                13,
-
-                            fontWeight:
-                                FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
+              ),
 
-                const SizedBox(
-                  height:
-                      20,
-                ),
+              const SizedBox(height: 20),
 
-                // =============================================
-                // DETAILS
-                // =============================================
+              // =============================================
+              // DETAILS
+              // =============================================
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
 
-                Padding(
-                  padding:
-                      const EdgeInsets.symmetric(
-                    horizontal:
-                        16,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
 
-                  child:
-                      Column(
-                    crossAxisAlignment:
-                        CrossAxisAlignment.start,
+                  children: [
+                    _sectionTitle('ব্যক্তিগত তথ্য'),
 
-                    children: [
-                      _sectionTitle(
-                        'ব্যক্তিগত তথ্য',
+                    const SizedBox(height: 12),
+
+                    _buildInfoCard([
+                      if (user.email?.isNotEmpty == true)
+                        _buildInfoRow(
+                          Icons.email_outlined,
+                          'ইমেইল',
+                          user.email!,
+                        ),
+
+                      if (user.phone.isNotEmpty)
+                        _buildInfoRow(Icons.phone_outlined, 'ফোন', user.phone),
+
+                      if (user.bloodGroup?.isNotEmpty == true)
+                        _buildInfoRow(
+                          Icons.water_drop_outlined,
+                          'রক্তের গ্রুপ',
+                          user.bloodGroup!,
+                        ),
+
+                      if (user.address?.isNotEmpty == true)
+                        _buildInfoRow(
+                          Icons.location_on_outlined,
+                          'ঠিকানা',
+                          user.address!,
+                        ),
+                    ]),
+
+                    const SizedBox(height: 16),
+
+                    _sectionTitle('অ্যাকাউন্টের তথ্য'),
+
+                    const SizedBox(height: 12),
+
+                    _buildInfoCard([
+                      _buildInfoRow(
+                        Icons.badge_outlined,
+                        'ভূমিকা',
+                        AppConstants.roleLabel(user.role),
                       ),
 
-                      const SizedBox(
-                        height:
-                            12,
-                      ),
+                      if (user.role != AppConstants.roleAdmin)
+                        _buildInfoRow(
+                          Icons.groups_outlined,
+                          'কমিটির বছর',
+                          '${user.committeeYear}',
+                        ),
 
-                      _buildInfoCard(
-                        [
-                          if (user.email
-                              .isNotEmpty)
-                            _buildInfoRow(
-                              Icons.email_outlined,
-                              'ইমেইল',
-                              user.email,
-                            ),
-
-                          if (user.phone
-                              .isNotEmpty)
-                            _buildInfoRow(
-                              Icons.phone_outlined,
-                              'ফোন',
-                              user.phone,
-                            ),
-
-                          if (user.bloodGroup
-                              .isNotEmpty)
-                            _buildInfoRow(
-                              Icons
-                                  .water_drop_outlined,
-                              'রক্তের গ্রুপ',
-                              user.bloodGroup,
-                            ),
-
-                          if (user.address
-                              .isNotEmpty)
-                            _buildInfoRow(
-                              Icons
-                                  .location_on_outlined,
-                              'ঠিকানা',
-                              user.address,
-                            ),
-                        ],
-                      ),
-
-                      const SizedBox(
-                        height:
-                            16,
-                      ),
-
-                      _sectionTitle(
-                        'অ্যাকাউন্টের তথ্য',
-                      ),
-
-                      const SizedBox(
-                        height:
-                            12,
-                      ),
-
-                      _buildInfoCard(
-                        [
-                          _buildInfoRow(
-                            Icons.badge_outlined,
-                            'ভূমিকা',
-                            AppConstants.roleLabel(
-                              user.role,
-                            ),
-                          ),
-
-                          if (user.role !=
-                              AppConstants.roleAdmin)
-                            _buildInfoRow(
-                              Icons.groups_outlined,
-                              'কমিটির বছর',
-                              '${user.committeeYear}',
-                            ),
-
-                          _buildInfoRow(
-                            Icons
-                                .calendar_today_outlined,
-                            'যোগদানের তারিখ',
-                            '${user.joinedDate.day}/'
+                      _buildInfoRow(
+                        Icons.calendar_today_outlined,
+                        'যোগদানের তারিখ',
+                        '${user.joinedDate.day}/'
                             '${user.joinedDate.month}/'
                             '${user.joinedDate.year}',
-                          ),
-
-                          _buildInfoRow(
-                            Icons
-                                .check_circle_outline,
-                            'অ্যাকাউন্ট স্ট্যাটাস',
-                            user.active
-                                ? 'সক্রিয়'
-                                : 'নিষ্ক্রিয়',
-
-                            valueColor:
-                                user.active
-                                    ? AppColors.success
-                                    : AppColors.error,
-                          ),
-                        ],
                       ),
 
-                      const SizedBox(
-                        height:
-                            24,
+                      _buildInfoRow(
+                        Icons.check_circle_outline,
+                        'অ্যাকাউন্ট স্ট্যাটাস',
+                        user.active ? 'সক্রিয়' : 'নিষ্ক্রিয়',
+
+                        valueColor: user.active
+                            ? AppColors.success
+                            : AppColors.error,
                       ),
+                    ]),
 
-                      // =======================================
-                      // LOGOUT
-                      // =======================================
+                    const SizedBox(height: 24),
 
-                      SizedBox(
-                        width:
-                            double.infinity,
+                    // =======================================
+                    // LOGOUT
+                    // =======================================
+                    SizedBox(
+                      width: double.infinity,
 
-                        height:
-                            52,
+                      height: 52,
 
-                        child:
-                            OutlinedButton.icon(
-                          onPressed:
-                              () {
-                            Get.dialog(
-                              AlertDialog(
-                                title:
-                                    const Text(
-                                  'লগআউট',
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          Get.dialog(
+                            AlertDialog(
+                              title: const Text('লগআউট'),
+
+                              content: const Text('আপনি কি লগআউট করতে চান?'),
+
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Get.back(),
+
+                                  child: const Text('না'),
                                 ),
 
-                                content:
-                                    const Text(
-                                  'আপনি কি লগআউট করতে চান?',
+                                TextButton(
+                                  onPressed: () => authController.logout(),
+
+                                  child: const Text(
+                                    'হ্যাঁ',
+
+                                    style: TextStyle(color: AppColors.primary),
+                                  ),
                                 ),
+                              ],
+                            ),
+                          );
+                        },
 
-                                actions:
-                                    [
-                                  TextButton(
-                                    onPressed:
-                                        () =>
-                                            Get.back(),
+                        icon: const Icon(
+                          Icons.logout,
 
-                                    child:
-                                        const Text(
-                                      'না',
-                                    ),
-                                  ),
+                          color: AppColors.primary,
+                        ),
 
-                                  TextButton(
-                                    onPressed:
-                                        () =>
-                                            authController.logout(),
+                        label: const Text(
+                          'লগআউট',
 
-                                    child:
-                                        const Text(
-                                      'হ্যাঁ',
+                          style: TextStyle(
+                            color: AppColors.primary,
 
-                                      style:
-                                          TextStyle(
-                                        color:
-                                            AppColors.primary,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
+                            fontSize: 16,
 
-                          icon:
-                              const Icon(
-                            Icons.logout,
-
-                            color:
-                                AppColors.primary,
+                            fontWeight: FontWeight.bold,
                           ),
+                        ),
 
-                          label:
-                              const Text(
-                            'লগআউট',
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: AppColors.primary),
 
-                            style:
-                                TextStyle(
-                              color:
-                                  AppColors.primary,
-
-                              fontSize:
-                                  16,
-
-                              fontWeight:
-                                  FontWeight.bold,
-                            ),
-                          ),
-
-                          style:
-                              OutlinedButton.styleFrom(
-                            side:
-                                const BorderSide(
-                              color:
-                                  AppColors.primary,
-                            ),
-
-                            shape:
-                                RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(
-                                12,
-                              ),
-                            ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
                         ),
                       ),
+                    ),
 
-                      const SizedBox(
-                        height:
-                            30,
-                      ),
-                    ],
-                  ),
+                    const SizedBox(height: 30),
+                  ],
                 ),
-              ],
-            ),
-          );
-        },
-      ),
+              ),
+            ],
+          ),
+        );
+      }),
     );
   }
 
@@ -480,48 +297,32 @@ class ProfileScreen extends StatelessWidget {
   // SECTION TITLE
   // =========================================================
 
-  Widget _sectionTitle(
-    String title,
-  ) {
+  Widget _sectionTitle(String title) {
     return Row(
       children: [
         Container(
-          width:
-              4,
+          width: 4,
 
-          height:
-              18,
+          height: 18,
 
-          decoration:
-              BoxDecoration(
-            color:
-                AppColors.primary,
+          decoration: BoxDecoration(
+            color: AppColors.primary,
 
-            borderRadius:
-                BorderRadius.circular(
-              2,
-            ),
+            borderRadius: BorderRadius.circular(2),
           ),
         ),
 
-        const SizedBox(
-          width:
-              8,
-        ),
+        const SizedBox(width: 8),
 
         Text(
           title,
 
-          style:
-              const TextStyle(
-            fontSize:
-                16,
+          style: const TextStyle(
+            fontSize: 16,
 
-            fontWeight:
-                FontWeight.bold,
+            fontWeight: FontWeight.bold,
 
-            color:
-                AppColors.textDark,
+            color: AppColors.textDark,
           ),
         ),
       ],
@@ -532,75 +333,39 @@ class ProfileScreen extends StatelessWidget {
   // INFO CARD
   // =========================================================
 
-  Widget _buildInfoCard(
-    List<Widget> children,
-  ) {
+  Widget _buildInfoCard(List<Widget> children) {
     if (children.isEmpty) {
       return const SizedBox();
     }
 
     return Container(
-      decoration:
-          BoxDecoration(
-        color:
-            AppColors.white,
+      decoration: BoxDecoration(
+        color: AppColors.white,
 
-        borderRadius:
-            BorderRadius.circular(
-          14,
-        ),
+        borderRadius: BorderRadius.circular(14),
 
-        boxShadow:
-            [
+        boxShadow: [
           BoxShadow(
-            color:
-                Colors.black.withValues(
-              alpha:
-                  0.05,
-            ),
+            color: Colors.black.withValues(alpha: 0.05),
 
-            blurRadius:
-                8,
+            blurRadius: 8,
 
-            offset:
-                const Offset(
-              0,
-              2,
-            ),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
 
-      child:
-          Column(
-        children:
-            children
-                .asMap()
-                .entries
-                .map(
-          (
-            entry,
-          ) {
-            return Column(
-              children: [
-                entry.value,
+      child: Column(
+        children: children.asMap().entries.map((entry) {
+          return Column(
+            children: [
+              entry.value,
 
-                if (entry.key <
-                    children.length - 1)
-                  const Divider(
-                    height:
-                        1,
-
-                    indent:
-                        16,
-
-                    endIndent:
-                        16,
-                  ),
-              ],
-            );
-          },
-        ).toList(),
+              if (entry.key < children.length - 1)
+                const Divider(height: 1, indent: 16, endIndent: 16),
+            ],
+          );
+        }).toList(),
       ),
     );
   }
@@ -616,72 +381,40 @@ class ProfileScreen extends StatelessWidget {
     Color? valueColor,
   }) {
     return Padding(
-      padding:
-          const EdgeInsets.symmetric(
-        horizontal:
-            16,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
 
-        vertical:
-            14,
-      ),
-
-      child:
-          Row(
+      child: Row(
         children: [
-          Icon(
-            icon,
+          Icon(icon, color: AppColors.primary, size: 20),
 
-            color:
-                AppColors.primary,
-
-            size:
-                20,
-          ),
-
-          const SizedBox(
-            width:
-                14,
-          ),
+          const SizedBox(width: 14),
 
           Expanded(
-            child:
-                Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
 
               children: [
                 Text(
                   label,
 
-                  style:
-                      const TextStyle(
-                    fontSize:
-                        12,
+                  style: const TextStyle(
+                    fontSize: 12,
 
-                    color:
-                        AppColors.textGrey,
+                    color: AppColors.textGrey,
                   ),
                 ),
 
-                const SizedBox(
-                  height:
-                      2,
-                ),
+                const SizedBox(height: 2),
 
                 Text(
                   value,
 
-                  style:
-                      TextStyle(
-                    fontSize:
-                        14,
+                  style: TextStyle(
+                    fontSize: 14,
 
-                    fontWeight:
-                        FontWeight.w500,
+                    fontWeight: FontWeight.w500,
 
-                    color:
-                        valueColor ??
-                            AppColors.textDark,
+                    color: valueColor ?? AppColors.textDark,
                   ),
                 ),
               ],

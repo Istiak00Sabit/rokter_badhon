@@ -9,7 +9,9 @@ class LoginScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final AuthController authController = Get.put(AuthController());
+    final AuthController authController = Get.isRegistered<AuthController>()
+        ? Get.find<AuthController>()
+        : Get.put(AuthController());
     final TextEditingController emailController = TextEditingController();
     final TextEditingController passwordController = TextEditingController();
     final RxBool obscurePassword = true.obs;
@@ -59,10 +61,7 @@ class LoginScreen extends StatelessWidget {
                     const SizedBox(height: 6),
                     const Text(
                       AppStrings.orgLocation,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: AppColors.white,
-                      ),
+                      style: TextStyle(fontSize: 14, color: AppColors.white),
                     ),
                   ],
                 ),
@@ -122,40 +121,41 @@ class LoginScreen extends StatelessWidget {
                       const SizedBox(height: 16),
 
                       // Password field
-                      Obx(() => TextField(
-                            controller: passwordController,
-                            obscureText: obscurePassword.value,
-                            autofillHints: const [AutofillHints.password],
-                            decoration: InputDecoration(
-                              labelText: AppStrings.password,
-                              prefixIcon: const Icon(
-                                Icons.lock_outline,
+                      Obx(
+                        () => TextField(
+                          controller: passwordController,
+                          obscureText: obscurePassword.value,
+                          autofillHints: const [AutofillHints.password],
+                          decoration: InputDecoration(
+                            labelText: AppStrings.password,
+                            prefixIcon: const Icon(
+                              Icons.lock_outline,
+                              color: AppColors.primary,
+                            ),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                obscurePassword.value
+                                    ? Icons.visibility_off_outlined
+                                    : Icons.visibility_outlined,
+                                color: AppColors.textGrey,
+                              ),
+                              onPressed: () {
+                                obscurePassword.value = !obscurePassword.value;
+                              },
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(
                                 color: AppColors.primary,
-                              ),
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  obscurePassword.value
-                                      ? Icons.visibility_off_outlined
-                                      : Icons.visibility_outlined,
-                                  color: AppColors.textGrey,
-                                ),
-                                onPressed: () {
-                                  obscurePassword.value =
-                                      !obscurePassword.value;
-                                },
-                              ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(
-                                  color: AppColors.primary,
-                                  width: 2,
-                                ),
+                                width: 2,
                               ),
                             ),
-                          )),
+                          ),
+                        ),
+                      ),
 
                       const SizedBox(height: 12),
 
@@ -174,59 +174,63 @@ class LoginScreen extends StatelessWidget {
                       const SizedBox(height: 12),
 
                       // Error message
-                      Obx(() => authController.errorMessage.value.isNotEmpty
-                          ? Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: AppColors.primaryLight,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                authController.errorMessage.value,
-                                style: const TextStyle(
-                                  color: AppColors.primaryDark,
-                                  fontSize: 14,
+                      Obx(
+                        () => authController.errorMessage.value.isNotEmpty
+                            ? Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primaryLight,
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
-                              ),
-                            )
-                          : const SizedBox()),
+                                child: Text(
+                                  authController.errorMessage.value,
+                                  style: const TextStyle(
+                                    color: AppColors.primaryDark,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              )
+                            : const SizedBox(),
+                      ),
 
                       const SizedBox(height: 16),
 
                       // Login button
-                      Obx(() => SizedBox(
-                            width: double.infinity,
-                            height: 52,
-                            child: ElevatedButton(
-                              onPressed: authController.isLoading.value
-                                  ? null
-                                  : () {
-                                      authController.login(
-                                        email: emailController.text,
-                                        password: passwordController.text,
-                                      );
-                                    },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primary,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
+                      Obx(
+                        () => SizedBox(
+                          width: double.infinity,
+                          height: 52,
+                          child: ElevatedButton(
+                            onPressed: authController.isLoading.value
+                                ? null
+                                : () {
+                                    authController.login(
+                                      email: emailController.text,
+                                      password: passwordController.text,
+                                    );
+                                  },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                              child: authController.isLoading.value
-                                  ? const CircularProgressIndicator(
-                                      color: AppColors.white,
-                                    )
-                                  : const Text(
-                                      AppStrings.login,
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.white,
-                                      ),
-                                    ),
                             ),
-                          )),
+                            child: authController.isLoading.value
+                                ? const CircularProgressIndicator(
+                                    color: AppColors.white,
+                                  )
+                                : const Text(
+                                    AppStrings.login,
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.white,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      ),
 
                       const SizedBox(height: 30),
 

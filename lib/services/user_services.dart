@@ -10,24 +10,20 @@ class UserService {
   // ADD ORGANIZATION USER / MEMBER
   // =========================================================
 
-  Future<Map<String, dynamic>> addUser(
-    UserModel user,
-  ) async {
+  Future<Map<String, dynamic>> addUser(UserModel user) async {
     try {
       // Firestore নিজে unique document ID তৈরি করবে।
-      final DocumentReference<Map<String, dynamic>> docRef =
-          _firestore.collection(AppConstants.usersCollection).doc();
+      final DocumentReference<Map<String, dynamic>> docRef = _firestore
+          .collection(AppConstants.usersCollection)
+          .doc();
 
       // This operation creates an organization record only, never Auth access.
       final UserModel userToSave = user.copyWith(
         id: docRef.id,
-        authUid: null,
         loginEnabled: false,
       );
 
-      await docRef.set(
-        userToSave.toMap(),
-      );
+      await docRef.set(userToSave.toMap());
 
       return {
         'success': true,
@@ -37,14 +33,10 @@ class UserService {
     } on FirebaseException catch (e) {
       return {
         'success': false,
-        'message':
-            'Firebase সমস্যা: ${e.message ?? e.code}',
+        'message': 'Firebase সমস্যা: ${e.message ?? e.code}',
       };
     } catch (e) {
-      return {
-        'success': false,
-        'message': 'সদস্য যোগ করতে সমস্যা হয়েছে: $e',
-      };
+      return {'success': false, 'message': 'সদস্য যোগ করতে সমস্যা হয়েছে: $e'};
     }
   }
 
@@ -54,37 +46,21 @@ class UserService {
 
   Future<List<UserModel>> getOrganizationUsers() async {
     try {
-      final QuerySnapshot<Map<String, dynamic>> snapshot =
-          await _firestore
-              .collection(AppConstants.usersCollection)
-              .where(
-                'active',
-                isEqualTo: true,
-              )
-              .get();
+      final QuerySnapshot<Map<String, dynamic>> snapshot = await _firestore
+          .collection(AppConstants.usersCollection)
+          .where('active', isEqualTo: true)
+          .get();
 
       final List<UserModel> users = snapshot.docs
-          .map(
-            (doc) => UserModel.fromMap(
-              doc.data(),
-              doc.id,
-            ),
-          )
+          .map((doc) => UserModel.fromMap(doc.data(), doc.id))
           // Developer Admin member list-এ দেখানো হবে না।
-          .where(
-            (user) =>
-                user.role != AppConstants.roleAdmin,
-          )
+          .where((user) => user.role != AppConstants.roleAdmin)
           .toList();
 
       // Firestore orderBy ব্যবহার না করে locally sort করছি।
       // এতে unnecessary composite index লাগবে না।
       users.sort(
-        (a, b) => a.name
-            .toLowerCase()
-            .compareTo(
-              b.name.toLowerCase(),
-            ),
+        (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
       );
 
       return users;
@@ -97,19 +73,11 @@ class UserService {
   // GET USERS BY COMMITTEE YEAR
   // =========================================================
 
-  Future<List<UserModel>> getUsersByCommitteeYear(
-    int year,
-  ) async {
+  Future<List<UserModel>> getUsersByCommitteeYear(int year) async {
     try {
-      final List<UserModel> allUsers =
-          await getOrganizationUsers();
+      final List<UserModel> allUsers = await getOrganizationUsers();
 
-      return allUsers
-          .where(
-            (user) =>
-                user.committeeYear == year,
-          )
-          .toList();
+      return allUsers.where((user) => user.committeeYear == year).toList();
     } catch (e) {
       rethrow;
     }
@@ -119,24 +87,18 @@ class UserService {
   // GET SINGLE USER
   // =========================================================
 
-  Future<UserModel?> getUserById(
-    String userId,
-  ) async {
+  Future<UserModel?> getUserById(String userId) async {
     try {
-      final DocumentSnapshot<Map<String, dynamic>> doc =
-          await _firestore
-              .collection(AppConstants.usersCollection)
-              .doc(userId)
-              .get();
+      final DocumentSnapshot<Map<String, dynamic>> doc = await _firestore
+          .collection(AppConstants.usersCollection)
+          .doc(userId)
+          .get();
 
       if (!doc.exists || doc.data() == null) {
         return null;
       }
 
-      return UserModel.fromMap(
-        doc.data()!,
-        doc.id,
-      );
+      return UserModel.fromMap(doc.data()!, doc.id);
     } catch (e) {
       rethrow;
     }

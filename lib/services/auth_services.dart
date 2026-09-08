@@ -1,246 +1,131 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-import '../constants/app_constants.dart';
+import '../models/auth_link_model.dart';
+import '../models/auth_session.dart';
 import '../models/user_model.dart';
 
 class AuthService {
-  final FirebaseAuth _auth =
-      FirebaseAuth.instance;
+  final FirebaseAuth _auth;
+  final FirebaseFirestore _firestore;
 
-  final FirebaseFirestore _firestore =
-      FirebaseFirestore.instance;
+  AuthService({FirebaseAuth? auth, FirebaseFirestore? firestore})
+    : _auth = auth ?? FirebaseAuth.instance,
+      _firestore = firestore ?? FirebaseFirestore.instance;
 
-  // =========================================================
-  // CURRENT FIREBASE AUTH USER
-  // =========================================================
+  User? get currentUser => _auth.currentUser;
+  bool get isLoggedIn => currentUser != null;
 
-  User? get currentUser =>
-      _auth.currentUser;
-
-  // =========================================================
-  // LOGIN STATUS
-  // =========================================================
-
-  bool get isLoggedIn =>
-      _auth.currentUser != null;
-
-  Future<UserModel?> _findProfile(String authUid) async {
-    final users = _firestore.collection(AppConstants.usersCollection);
-
-    // Phase 1 compatibility: keep the existing developer admin document path.
-    // No fields are written or inferred for organization-only users.
-    final existing = await users.doc(authUid).get();
-    final data = existing.data();
-    if (data != null) {
-      final profile = UserModel.fromMap(data, existing.id);
-      if (profile.authUid == authUid) return profile;
-      if (profile.role == AppConstants.roleAdmin &&
-          !data.containsKey('auth_uid') &&
-          !data.containsKey('login_enabled')) {
-        return profile.copyWith(authUid: authUid, loginEnabled: true);
-      }
-    }
-
-    // New-schema identities can use any application document ID.
-    final matches = await users.where('auth_uid', isEqualTo: authUid).limit(2).get();
-    if (matches.docs.length != 1) return null;
-    final doc = matches.docs.single;
-    return UserModel.fromMap(doc.data(), doc.id);
-  }
-
-  // =========================================================
-  // LOGIN
-  // =========================================================
-
-  Future<Map<String, dynamic>> login({
+  Future<AuthSessionResult> login({
     required String email,
     required String password,
   }) async {
     try {
-      final UserCredential credential =
-          await _auth
-              .signInWithEmailAndPassword(
-        email:
-            email.trim(),
-
-        password:
-            password.trim(),
+      final credential = await _auth.signInWithEmailAndPassword(
+        email: email.trim(),
+        // Passwords are passed to Firebase exactly as entered.
+        password: password,
       );
-
-      final User? firebaseUser =
-          credential.user;
-
-      if (firebaseUser == null) {
-        return {
-          'success':
-              false,
-
-          'message':
-              'লগইন করা যায়নি!',
-        };
-      }
-
-      final profile = await _findProfile(firebaseUser.uid);
-
-      if (profile == null) {
-        // Auth হয়েছে কিন্তু application profile নেই।
-        await _auth.signOut();
-
-        return {
-          'success':
-              false,
-
-          'message':
-              'ব্যবহারকারীর প্রোফাইল পাওয়া যায়নি!',
-        };
-      }
-
-      // Account active check
-      if (!profile.active || !profile.loginEnabled) {
-        await _auth.signOut();
-
-        return {
-          'success':
-              false,
-
-          'message':
-              'আপনার অ্যাকাউন্ট নিষ্ক্রিয় করা হয়েছে!',
-        };
-      }
-
-      return {
-        'success':
-            true,
-
-        'message':
-            'সফলভাবে লগইন হয়েছে!',
-
-        'role':
-            profile.role,
-      };
-    }
-
-    // Firebase Auth related error
-    on FirebaseAuthException catch (e) {
-      return {
-        'success':
-            false,
-
-        'message':
-            _getErrorMessage(
-          e.code,
-        ),
-      };
-    }
-
-    // Firestore permission / network etc.
-    on FirebaseException catch (e) {
-      await _auth.signOut();
-      print(
-        'FIREBASE LOGIN ERROR: ${e.code} - ${e.message}',
-      );
-
-      return {
-        'success':
-            false,
-
-        'message':
-            'Firebase সমস্যা: ${e.message ?? e.code}',
-      };
-    }
-
-    catch (e,stackTrace) {
-      await _auth.signOut();
-      print(
-        'LOGIN ERROR: $e',
-      );
-
-      print(
-        'LOGIN STACK TRACE: $stackTrace',
-      );
-
-      return {
-        'success':
-            false,
-
-        'message':
-            'কিছু একটা ভুল হয়েছে! আবার চেষ্টা করুন।',
-      };
+      return resolveSession(firebaseUser: credential.user);
+    } on FirebaseAuthException catch (error) {
+      return AuthSessionResult(AuthSessionState.error, error: error);
+    } catch (error) {
+      return AuthSessionResult(AuthSessionState.error, error: error);
     }
   }
 
-  // =========================================================
-  // LOGOUT
-  // =========================================================
+  Future<AuthSessionResult> resolveSession({User? firebaseUser}) async {
+    final initialUser = firebaseUser ?? _auth.currentUser;
+    if (initialUser == null) {
+      return const AuthSessionResult(AuthSessionState.unauthenticated);
+    }
 
-  Future<void> logout() async {
-    await _auth.signOut();
-  }
-
-  // =========================================================
-  // GET CURRENT USER DATA
-  // =========================================================
-
-  Future<UserModel?>
-      getCurrentUserData() async {
     try {
-      final User? user =
-          currentUser;
-
-      if (user == null) {
-        return null;
+      await initialUser.reload();
+      final refreshedUser = _auth.currentUser;
+      if (refreshedUser == null) {
+        return const AuthSessionResult(AuthSessionState.unauthenticated);
+      }
+      if (!refreshedUser.emailVerified) {
+        return const AuthSessionResult(AuthSessionState.emailUnverified);
       }
 
-      final profile = await _findProfile(user.uid);
-      if (profile == null || !profile.active || !profile.loginEnabled) {
-        return null;
+      final linkDocument = await _firestore
+          .collection('auth_links')
+          .doc(refreshedUser.uid)
+          .get();
+      final linkData = linkDocument.data();
+      if (!linkDocument.exists || linkData == null) {
+        return const AuthSessionResult(AuthSessionState.unlinked);
       }
-      return profile;
-    } on FirebaseException catch (e) {
-      print(
-        'GET CURRENT USER FIREBASE ERROR: ${e.code} - ${e.message}',
-      );
 
-      return null;
-    } catch (e) {
-      print(
-        'GET CURRENT USER ERROR: $e',
-      );
+      final link = AuthLinkModel.fromMap(linkData, refreshedUser.uid);
+      if (!link.active) {
+        return const AuthSessionResult(AuthSessionState.linkInactive);
+      }
 
-      return null;
+      final userDocument = await _firestore
+          .collection('users')
+          .doc(link.userId)
+          .get();
+      final userData = userDocument.data();
+      if (!userDocument.exists || userData == null) {
+        return const AuthSessionResult(AuthSessionState.userMissing);
+      }
+
+      final user = UserModel.fromMap(userData, userDocument.id);
+      final state = AuthSessionPolicy.evaluate(
+        authenticated: true,
+        emailVerified: true,
+        linkDocumentExists: true,
+        link: link,
+        userDocumentExists: true,
+        user: user,
+      );
+      return AuthSessionResult(
+        state,
+        user: state == AuthSessionState.admitted ? user : null,
+      );
+    } on FirebaseException catch (error) {
+      // Permission and network failures are operational errors, never a
+      // fabricated missing-User result.
+      return AuthSessionResult(AuthSessionState.error, error: error);
+    } on FormatException catch (error) {
+      return AuthSessionResult(AuthSessionState.error, error: error);
+    } catch (error) {
+      return AuthSessionResult(AuthSessionState.error, error: error);
     }
   }
 
-  // =========================================================
-  // AUTH ERROR MESSAGE
-  // =========================================================
+  Future<UserModel?> getCurrentUserData() async {
+    final result = await resolveSession();
+    return result.isAdmitted ? result.user : null;
+  }
 
-  String _getErrorMessage(
-    String code,
-  ) {
-    switch (code) {
+  Future<void> sendPasswordResetEmail(String email) {
+    return _auth.sendPasswordResetEmail(email: email.trim());
+  }
+
+  Future<void> logout() => _auth.signOut();
+
+  String authErrorMessage(Object? error) {
+    if (error is! FirebaseAuthException) {
+      return 'লগইন অনুমতি যাচাই করা যায়নি! আবার চেষ্টা করুন।';
+    }
+    switch (error.code) {
       case 'user-not-found':
         return 'এই ইমেইলে কোনো অ্যাকাউন্ট নেই!';
-
       case 'wrong-password':
-        return 'পাসওয়ার্ড ভুল হয়েছে!';
-
-      case 'invalid-email':
-        return 'ইমেইল ঠিকানা সঠিক নয়!';
-
-      case 'user-disabled':
-        return 'এই অ্যাকাউন্ট বন্ধ করা হয়েছে!';
-
-      case 'too-many-requests':
-        return 'অনেকবার চেষ্টা করা হয়েছে! কিছুক্ষণ পর আবার চেষ্টা করুন।';
-
       case 'invalid-credential':
         return 'ইমেইল বা পাসওয়ার্ড ভুল হয়েছে!';
-
+      case 'invalid-email':
+        return 'ইমেইল ঠিকানা সঠিক নয়!';
+      case 'user-disabled':
+        return 'এই অ্যাকাউন্ট বন্ধ করা হয়েছে!';
+      case 'too-many-requests':
+        return 'অনেকবার চেষ্টা করা হয়েছে! কিছুক্ষণ পর আবার চেষ্টা করুন।';
       case 'network-request-failed':
         return 'ইন্টারনেট সংযোগ পরীক্ষা করুন!';
-
       default:
         return 'লগইন করতে সমস্যা হয়েছে! আবার চেষ্টা করুন।';
     }

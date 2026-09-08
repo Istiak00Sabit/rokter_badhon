@@ -1,118 +1,206 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class UserModel {
-  // Application identity comes from the Firestore document path.
-  final String id;
-  final String? authUid;
-  final bool loginEnabled;
-  final String name;
-  final String email;
-  final String role;
-  final String phone;
-  final String photo;
-  final String bloodGroup;
-  final String address;
-  final int committeeYear;
-  final DateTime joinedDate;
-  final bool active;
+  static const Set<String> allowedAccessRoles = {
+    'developer_admin',
+    'leader',
+    'executive',
+    'committee',
+    'member',
+  };
+  static const Set<String> _fields = {
+    'name',
+    'phone',
+    'email',
+    'blood_group',
+    'profession',
+    'address',
+    'photo_url',
+    'access_role',
+    'active',
+    'login_enabled',
+    'preferred_language',
+    'created_at',
+    'created_by',
+    'updated_at',
+    'updated_by',
+  };
 
-  UserModel({
+  final String id;
+  final String name;
+  final String phone;
+  final String? email;
+  final String? bloodGroup;
+  final String? profession;
+  final String? address;
+  final String? photoUrl;
+  final String accessRole;
+  final bool active;
+  final bool loginEnabled;
+  final String? preferredLanguage;
+  final DateTime createdAt;
+  final String? createdBy;
+  final DateTime updatedAt;
+  final String? updatedBy;
+
+  const UserModel({
     required this.id,
-    this.authUid,
-    this.loginEnabled = false,
     required this.name,
-    required this.email,
-    required this.role,
     required this.phone,
-    this.photo = '',
-    this.bloodGroup = '',
-    this.address = '',
-    this.committeeYear = 0,
-    required this.joinedDate,
-    this.active = true,
+    required this.email,
+    required this.bloodGroup,
+    required this.profession,
+    required this.address,
+    required this.photoUrl,
+    required this.accessRole,
+    required this.active,
+    required this.loginEnabled,
+    required this.preferredLanguage,
+    required this.createdAt,
+    required this.createdBy,
+    required this.updatedAt,
+    required this.updatedBy,
   });
 
-  factory UserModel.fromMap(
-    Map<String, dynamic> map,
-    String documentId,
-  ) {
-    DateTime parseDate(dynamic value) {
-      if (value == null) return DateTime.now();
-      if (value is Timestamp) return value.toDate();
-      if (value is String) {
-        return DateTime.tryParse(value) ?? DateTime.now();
-      }
-      return DateTime.now();
-    }
+  bool get hasRecognizedAccessRole => allowedAccessRoles.contains(accessRole);
 
+  // Source-compatible display alias. This is derived only from access_role;
+  // the legacy Firestore role field is never accepted.
+  String get role => accessRole;
+
+  // Transitional display-only aliases for screens outside Phase 2A. Neither
+  // value reads a legacy Firestore field or participates in authorization.
+  DateTime get joinedDate => createdAt;
+  int get committeeYear => createdAt.year;
+
+  factory UserModel.fromMap(Map<String, dynamic> map, String documentId) {
+    _requireExactFields(map, _fields, 'User');
     return UserModel(
       id: documentId,
-      authUid: map['auth_uid'] as String?,
-      loginEnabled: map['login_enabled'] == true,
-      name: map['name'] ?? '',
-      email: map['email'] ?? '',
-      role: map['role'] ?? 'member',
-      phone: map['phone'] ?? '',
-      photo: map['photo'] ?? '',
-      bloodGroup: map['blood_group'] ?? '',
-      address: map['address'] ?? '',
-      committeeYear:
-          map['committee_year'] ?? DateTime.now().year,
-      joinedDate: parseDate(map['joined_date']),
-      active: map['active'] ?? true,
+      name: _requiredString(map, 'name'),
+      phone: _requiredString(map, 'phone'),
+      email: _nullableString(map, 'email'),
+      bloodGroup: _nullableString(map, 'blood_group'),
+      profession: _nullableString(map, 'profession'),
+      address: _nullableString(map, 'address'),
+      photoUrl: _nullableString(map, 'photo_url'),
+      accessRole: _requiredString(map, 'access_role'),
+      active: _requiredBool(map, 'active'),
+      loginEnabled: _requiredBool(map, 'login_enabled'),
+      preferredLanguage: _nullableString(map, 'preferred_language'),
+      createdAt: _requiredTimestamp(map, 'created_at').toDate(),
+      createdBy: _nullableString(map, 'created_by'),
+      updatedAt: _requiredTimestamp(map, 'updated_at').toDate(),
+      updatedBy: _nullableString(map, 'updated_by'),
     );
   }
 
   UserModel copyWith({
     String? id,
-    Object? authUid = _unchangedAuthUid,
-    bool? loginEnabled,
     String? name,
-    String? email,
-    String? role,
     String? phone,
-    String? photo,
-    String? bloodGroup,
-    String? address,
-    int? committeeYear,
-    DateTime? joinedDate,
+    Object? email = _unchanged,
+    Object? bloodGroup = _unchanged,
+    Object? profession = _unchanged,
+    Object? address = _unchanged,
+    Object? photoUrl = _unchanged,
+    String? accessRole,
     bool? active,
+    bool? loginEnabled,
+    Object? preferredLanguage = _unchanged,
+    DateTime? createdAt,
+    Object? createdBy = _unchanged,
+    DateTime? updatedAt,
+    Object? updatedBy = _unchanged,
   }) {
     return UserModel(
       id: id ?? this.id,
-      authUid: identical(authUid, _unchangedAuthUid)
-          ? this.authUid
-          : authUid as String?,
-      loginEnabled: loginEnabled ?? this.loginEnabled,
       name: name ?? this.name,
-      email: email ?? this.email,
-      role: role ?? this.role,
       phone: phone ?? this.phone,
-      photo: photo ?? this.photo,
-      bloodGroup: bloodGroup ?? this.bloodGroup,
-      address: address ?? this.address,
-      committeeYear: committeeYear ?? this.committeeYear,
-      joinedDate: joinedDate ?? this.joinedDate,
+      email: identical(email, _unchanged) ? this.email : email as String?,
+      bloodGroup: identical(bloodGroup, _unchanged)
+          ? this.bloodGroup
+          : bloodGroup as String?,
+      profession: identical(profession, _unchanged)
+          ? this.profession
+          : profession as String?,
+      address: identical(address, _unchanged)
+          ? this.address
+          : address as String?,
+      photoUrl: identical(photoUrl, _unchanged)
+          ? this.photoUrl
+          : photoUrl as String?,
+      accessRole: accessRole ?? this.accessRole,
       active: active ?? this.active,
+      loginEnabled: loginEnabled ?? this.loginEnabled,
+      preferredLanguage: identical(preferredLanguage, _unchanged)
+          ? this.preferredLanguage
+          : preferredLanguage as String?,
+      createdAt: createdAt ?? this.createdAt,
+      createdBy: identical(createdBy, _unchanged)
+          ? this.createdBy
+          : createdBy as String?,
+      updatedAt: updatedAt ?? this.updatedAt,
+      updatedBy: identical(updatedBy, _unchanged)
+          ? this.updatedBy
+          : updatedBy as String?,
     );
   }
 
-  Map<String, dynamic> toMap() {
-    return {
-      'auth_uid': authUid,
-      'login_enabled': loginEnabled,
-      'name': name,
-      'email': email,
-      'role': role,
-      'phone': phone,
-      'photo': photo,
-      'blood_group': bloodGroup,
-      'address': address,
-      'committee_year': committeeYear,
-      'joined_date': Timestamp.fromDate(joinedDate),
-      'active': active,
-    };
-  }
+  Map<String, dynamic> toMap() => {
+    'name': name,
+    'phone': phone,
+    'email': email,
+    'blood_group': bloodGroup,
+    'profession': profession,
+    'address': address,
+    'photo_url': photoUrl,
+    'access_role': accessRole,
+    'active': active,
+    'login_enabled': loginEnabled,
+    'preferred_language': preferredLanguage,
+    'created_at': Timestamp.fromDate(createdAt),
+    'created_by': createdBy,
+    'updated_at': Timestamp.fromDate(updatedAt),
+    'updated_by': updatedBy,
+  };
 
-  static const Object _unchangedAuthUid = Object();
+  static const Object _unchanged = Object();
+}
+
+void _requireExactFields(
+  Map<String, dynamic> map,
+  Set<String> fields,
+  String model,
+) {
+  final keys = map.keys.toSet();
+  if (keys.length != fields.length || !keys.containsAll(fields)) {
+    throw FormatException('$model has missing or unapproved fields.');
+  }
+}
+
+String _requiredString(Map<String, dynamic> map, String key) {
+  final value = map[key];
+  if (value is! String) throw FormatException('$key must be a string.');
+  return value;
+}
+
+String? _nullableString(Map<String, dynamic> map, String key) {
+  final value = map[key];
+  if (value != null && value is! String) {
+    throw FormatException('$key must be a string or null.');
+  }
+  return value as String?;
+}
+
+bool _requiredBool(Map<String, dynamic> map, String key) {
+  final value = map[key];
+  if (value is! bool) throw FormatException('$key must be a bool.');
+  return value;
+}
+
+Timestamp _requiredTimestamp(Map<String, dynamic> map, String key) {
+  final value = map[key];
+  if (value is! Timestamp) throw FormatException('$key must be a Timestamp.');
+  return value;
 }

@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../constants/app_colors.dart';
 import '../constants/app_strings.dart';
+import '../controllers/auth_controller.dart';
+import '../models/auth_session.dart';
+import 'main_navigation_screen.dart';
 import 'login_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -26,19 +29,36 @@ class _SplashScreenState extends State<SplashScreen>
       duration: const Duration(milliseconds: 1500),
     );
 
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeIn),
-    );
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeIn));
 
-    _scaleAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
-    );
+    _scaleAnimation = Tween<double>(
+      begin: 0.5,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.elasticOut));
 
     _controller.forward();
 
-    Future.delayed(const Duration(milliseconds: 2500), () {
-      Get.off(() => const LoginScreen());
-    });
+    _resolveStartup();
+  }
+
+  Future<void> _resolveStartup() async {
+    final controller = Get.isRegistered<AuthController>()
+        ? Get.find<AuthController>()
+        : Get.put(AuthController());
+    final results = await Future.wait([
+      Future<void>.delayed(const Duration(milliseconds: 2500)),
+      controller.restoreSession(),
+    ]);
+    if (!mounted) return;
+    final session = results[1] as AuthSessionResult;
+    if (session.state == AuthSessionState.admitted) {
+      Get.offAll(() => const MainNavigationScreen());
+    } else {
+      Get.offAll(() => const LoginScreen());
+    }
   }
 
   @override
@@ -84,18 +104,12 @@ class _SplashScreenState extends State<SplashScreen>
                 const SizedBox(height: 8),
                 const Text(
                   AppStrings.appTagline,
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: AppColors.white,
-                  ),
+                  style: TextStyle(fontSize: 16, color: AppColors.white),
                 ),
                 const SizedBox(height: 8),
                 const Text(
                   AppStrings.orgLocation,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppColors.white,
-                  ),
+                  style: TextStyle(fontSize: 14, color: AppColors.white),
                 ),
                 const SizedBox(height: 60),
                 const CircularProgressIndicator(

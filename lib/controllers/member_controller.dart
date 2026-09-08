@@ -11,14 +11,11 @@ class MemberController extends GetxController {
   // FORM CONTROLLERS
   // =========================================================
 
-  final TextEditingController nameController =
-      TextEditingController();
+  final TextEditingController nameController = TextEditingController();
 
-  final TextEditingController phoneController =
-      TextEditingController();
+  final TextEditingController phoneController = TextEditingController();
 
-  final TextEditingController addressController =
-      TextEditingController();
+  final TextEditingController addressController = TextEditingController();
 
   // =========================================================
   // FORM VALUES
@@ -29,11 +26,9 @@ class MemberController extends GetxController {
   // President / VP / GS / Committee / Member etc.
   final RxString selectedRole = ''.obs;
 
-  final RxInt selectedYear =
-      DateTime.now().year.obs;
+  final RxInt selectedYear = DateTime.now().year.obs;
 
-  final Rx<DateTime> joiningDate =
-      DateTime.now().obs;
+  final Rx<DateTime> joiningDate = DateTime.now().obs;
 
   // =========================================================
   // STATE
@@ -43,21 +38,16 @@ class MemberController extends GetxController {
 
   // Screen-এর নাম Member হলেও
   // data entity এখন UserModel।
-  final RxList<UserModel> members =
-      <UserModel>[].obs;
+  final RxList<UserModel> members = <UserModel>[].obs;
 
   // =========================================================
   // AVAILABLE COMMITTEE YEARS
   // =========================================================
 
   List<int> get availableYears {
-    final int current =
-        DateTime.now().year;
+    final int current = DateTime.now().year;
 
-    return List.generate(
-      6,
-      (index) => current - index,
-    );
+    return List.generate(6, (index) => current - index);
   }
 
   // =========================================================
@@ -72,11 +62,9 @@ class MemberController extends GetxController {
     selectedBloodGroup.value = '';
     selectedRole.value = '';
 
-    selectedYear.value =
-        DateTime.now().year;
+    selectedYear.value = DateTime.now().year;
 
-    joiningDate.value =
-        DateTime.now();
+    joiningDate.value = DateTime.now();
   }
 
   // =========================================================
@@ -134,41 +122,31 @@ class MemberController extends GetxController {
 
       final UserModel user = UserModel(
         id: '',
-        authUid: null,
-        loginEnabled: false,
-
         name: nameController.text.trim(),
 
         // এই stage-এ শুধুমাত্র organization user record
         // তৈরি হচ্ছে।
         //
         // Login account পরে activate করা হবে।
-        email: '',
+        email: null,
+        accessRole: selectedRole.value,
 
-        role: selectedRole.value,
+        phone: phoneController.text.trim(),
 
-        phone:
-            phoneController.text.trim(),
-
-        bloodGroup:
-            selectedBloodGroup.value,
-
-        address:
-            addressController.text.trim(),
-
-        committeeYear:
-            selectedYear.value,
-
-        joinedDate:
-            joiningDate.value,
-
+        bloodGroup: selectedBloodGroup.value,
+        profession: null,
+        address: addressController.text.trim(),
+        photoUrl: null,
         active: true,
+        loginEnabled: false,
+        preferredLanguage: null,
+        createdAt: joiningDate.value,
+        createdBy: null,
+        updatedAt: joiningDate.value,
+        updatedBy: null,
       );
 
-      final Map<String, dynamic> result =
-          await _userService.addUser(
-        user,
-      );
+      final Map<String, dynamic> result = await _userService.addUser(user);
 
       if (result['success'] == true) {
         clearForm();
@@ -180,18 +158,15 @@ class MemberController extends GetxController {
 
         Get.snackbar(
           'সফল!',
-          result['message'] ??
-              'সদস্য যোগ করা হয়েছে!',
+          result['message'] ?? 'সদস্য যোগ করা হয়েছে!',
           backgroundColor: Colors.green,
           colorText: Colors.white,
-          snackPosition:
-              SnackPosition.BOTTOM,
+          snackPosition: SnackPosition.BOTTOM,
         );
       } else {
         Get.snackbar(
           'ত্রুটি',
-          result['message'] ??
-              'সদস্য যোগ করা যায়নি!',
+          result['message'] ?? 'সদস্য যোগ করা যায়নি!',
           backgroundColor: Colors.red,
           colorText: Colors.white,
         );
@@ -216,9 +191,7 @@ class MemberController extends GetxController {
     try {
       isLoading.value = true;
 
-      members.value =
-          await _userService
-              .getOrganizationUsers();
+      members.value = await _userService.getOrganizationUsers();
     } catch (e) {
       Get.snackbar(
         'ত্রুটি',
