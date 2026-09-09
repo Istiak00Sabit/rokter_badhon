@@ -52,3 +52,25 @@ Production Architecture v1.2.1 — Free V1. Architecture status: frozen for impl
 - **Production execution:** NOT performed; the Phase 2C safety guard prevents production access.
 - **Legacy administrator:** Current legacy-admin bootstrap/migration remains intentionally deferred.
 - **Exact next task:** Phase 2D — define and review the protected legacy `developer_admin` bootstrap/recovery procedure, then validate it against emulator-only synthetic data before any production execution.
+
+## Phase 2D — Developer Admin Bootstrap and Recovery
+
+- **Status:** Complete; Phase 2D ready for demo/emulator use only.
+- **Bootstrap behavior:** Added `bootstrap-developer-admin`; it requires an explicit verified, enabled Firebase Auth identity and exact intended profile, rejects existing links, identity conflicts, existing developer-admin records, and reused operations, then atomically creates the generated-ID User, exact directory projection, auth link, and `admin.provision` audit record without creating a registration request.
+- **Recovery behavior:** Added `recover-developer-admin`; it accepts only one explicitly identified broken current developer-admin, rejects healthy or ambiguous authority and ordinary-User promotion, preserves historical records, atomically deactivates the superseded User/directory/active link, creates a separate verified replacement authority, and records `admin.recover` audit evidence.
+- **Safety boundaries:** Existing explicit `demo-*` project and Firestore/Auth emulator requirements remain mandatory; production-like projects fail before Firebase initialization. Runtime credentials only; no secrets are stored or printed.
+- **Tests:** Operator synthetic policy/transaction suite passed 21/21; `npm audit` remains at 0 vulnerabilities. Flutter regression tests passed 22/22. Analyzer reported 0 errors, 0 warnings, and 9 pre-existing information-level lints.
+- **Production execution:** NOT performed; no Firebase deployment or production Auth/Firestore mutation occurred.
+- **Legacy administrator:** The current real legacy administrator was NOT migrated; its unverified email and missing backup/checkpoint remain explicit blockers, with later production preconditions added narrowly to `MIGRATION_PLAN.md`.
+- **Exact next task:** Phase 2E — create a separately authorized, access-controlled backup/checkpoint and complete an isolated restore rehearsal before any real legacy-admin migration is considered.
+
+## Phase 2 — Final Integration Review
+
+- **Status:** READY.
+- **Issues found/fixed:** Completed registration and partial-failure retry now sign out explicitly; password confirmation was added; contradictory registration decision metadata and Rules-incompatible photo URLs fail strict parsing; stale session state and obsolete Phase-2 aliases were removed. Trusted approval now creates only a member, rejects existing email/phone identity conflicts atomically, and leaves later role assignment to its separate audited capability.
+- **Auth/admission flow verified:** Firebase Auth account → exact own pending request → email verification → trusted atomic approval → exact User/directory/auth link → strict Phase 2A session resolution. No normal Flutter User/auth-link/role/security-state creation path or UID/User fallback remains.
+- **Trusted-tool boundaries verified:** Normal approval cannot create or elevate to `developer_admin`; bootstrap/recovery remain separate, demo/emulator-only, audited, transactional, and fail closed. No committed secret was found.
+- **Tests:** Operator synthetic tests passed 22/22. Flutter regression validation passed 24/24 tests using the installed Flutter engine and existing package configuration; no package resolution or installation was performed. Rules were unchanged, so Rules tests were not run.
+- **Analyzer:** Flutter analyzer validation completed with 0 errors, 0 warnings, and 9 pre-existing information-level diagnostics using the installed analysis server and existing package configuration.
+- **Production:** Untouched; no deployment, credentials, production Firebase access, Auth change, or Firestore mutation was performed.
+- **Exact next task:** Phase 3A Organization Structure.

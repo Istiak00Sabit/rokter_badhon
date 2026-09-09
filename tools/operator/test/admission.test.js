@@ -202,7 +202,7 @@ async function rejectsCode(promise, code) {
 }
 
 test('valid developer_admin approval creates exact atomic admission records', async () => {
-  const args = approveArgs({ targetRole: 'leader' });
+  const args = approveArgs({ targetRole: 'member' });
   const result = await approveRegistration(args);
   const user = args.db.documents.get(`users/${result.userId}`);
   const directory = args.db.documents.get(`user_directory/${result.userId}`);
@@ -220,7 +220,7 @@ test('valid developer_admin approval creates exact atomic admission records', as
     active: user.active,
   });
   assert.deepEqual(new Set(Object.keys(link)), schemaFields.link);
-  assert.equal(user.access_role, 'leader');
+  assert.equal(user.access_role, 'member');
   assert.equal(user.login_enabled, true);
   assert.equal(request.status, 'approved');
   assert.equal(request.linked_user_id, result.userId);
@@ -231,25 +231,25 @@ test('valid developer_admin approval creates exact atomic admission records', as
   assert.equal(audit.action, 'registration.approve');
 });
 
-test('leader may approve permitted ordinary roles', async () => {
-  for (const targetRole of ['member', 'committee', 'executive']) {
-    const args = approveArgs({
-      fixture: { operatorRole: 'leader' },
-      targetRole,
-      operationId: `leader-${targetRole}`,
-    });
-    const result = await approveRegistration(args);
-    assert.equal(args.db.documents.get(`users/${result.userId}`).access_role, targetRole);
-  }
+test('leader may approve a new member', async () => {
+  const args = approveArgs({
+    fixture: { operatorRole: 'leader' },
+    targetRole: 'member',
+    operationId: 'leader-member',
+  });
+  const result = await approveRegistration(args);
+  assert.equal(args.db.documents.get(`users/${result.userId}`).access_role, 'member');
 });
 
-test('unauthorized assignments and developer_admin creation are denied', async () => {
+test('approval-time elevation and developer_admin creation are denied', async () => {
+  for (const targetRole of ['committee', 'executive', 'leader', 'developer_admin']) {
+    await rejectsCode(
+      approveRegistration(approveArgs({ targetRole })),
+      'unauthorized_role',
+    );
+  }
   await rejectsCode(
     approveRegistration(approveArgs({ fixture: { operatorRole: 'leader' }, targetRole: 'leader' })),
-    'unauthorized_role',
-  );
-  await rejectsCode(
-    approveRegistration(approveArgs({ targetRole: 'developer_admin' })),
     'unauthorized_role',
   );
 });
@@ -280,6 +280,11 @@ test('inactive operator and missing or broken operator link fail closed', async 
     user_id: 'missing-user', active: true, created_at: TIME, created_by: 'seed',
   });
   await rejectsCode(approveRegistration(broken), 'missing');
+
+  await rejectsCode(
+    approveRegistration(approveArgs({ fixture: { operatorChanges: { photo_url: 'http://unsafe.test/photo.jpg' } } })),
+    'malformed',
+  );
 });
 
 test('duplicate auth link and non-pending request are denied', async () => {
@@ -303,6 +308,21 @@ test('active link already targeting the generated User ID is denied', async () =
     },
   });
   await rejectsCode(approveRegistration(args), 'duplicate_user_link');
+  assert.equal(args.db.documents.get('registration_requests/applicant-uid').status, 'pending');
+});
+
+test('existing organization identity blocks duplicate User admission atomically', async () => {
+  const args = approveArgs({
+    fixture: {
+      entries: [['users/existing-user', operatorUser('member', {
+        email: 'applicant@example.test',
+        phone: '09999999999',
+      })]],
+    },
+  });
+  const before = new Set(args.db.documents.keys());
+  await rejectsCode(approveRegistration(args), 'identity_conflict');
+  assert.deepEqual(new Set(args.db.documents.keys()), before);
   assert.equal(args.db.documents.get('registration_requests/applicant-uid').status, 'pending');
 });
 

@@ -72,6 +72,8 @@ class AuthController extends GetxController {
   Future<void> logout() async {
     await _authService.logout();
     currentUser.value = null;
+    sessionState.value = AuthSessionState.unauthenticated;
+    errorMessage.value = '';
     Get.offAll(() => const LoginScreen());
   }
 

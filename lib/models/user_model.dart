@@ -64,8 +64,6 @@ class UserModel {
 
   bool get hasRecognizedAccessRole => allowedAccessRoles.contains(accessRole);
 
-  DateTime get joinedDate => createdAt;
-
   factory UserModel.fromMap(Map<String, dynamic> map, String documentId) {
     _requireExactFields(map, _fields, 'User');
     return UserModel(
@@ -76,7 +74,7 @@ class UserModel {
       bloodGroup: _nullableString(map, 'blood_group'),
       profession: _nullableString(map, 'profession'),
       address: _nullableString(map, 'address'),
-      photoUrl: _nullableString(map, 'photo_url'),
+      photoUrl: _nullableHttpsUrl(map, 'photo_url'),
       accessRole: _requiredString(map, 'access_role'),
       active: _requiredBool(map, 'active'),
       loginEnabled: _requiredBool(map, 'login_enabled'),
@@ -184,6 +182,15 @@ String? _nullableString(Map<String, dynamic> map, String key) {
     throw FormatException('$key must be a string or null.');
   }
   return value as String?;
+}
+
+String? _nullableHttpsUrl(Map<String, dynamic> map, String key) {
+  final value = _nullableString(map, key);
+  if (value != null &&
+      (value.length > 2048 || !RegExp(r'^https://[^/]+.*$').hasMatch(value))) {
+    throw FormatException('$key must be a valid HTTPS URL or null.');
+  }
+  return value;
 }
 
 bool _requiredBool(Map<String, dynamic> map, String key) {

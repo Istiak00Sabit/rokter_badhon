@@ -79,6 +79,17 @@ Keep legacy fields temporarily only for controlled compatibility; do not let old
 
 Exit: verified administrator/recovery access and reviewed link map, with ambiguous identities excluded from automatic activation.
 
+Before any later production migration of the known legacy administrator, all of these checks must pass:
+
+- A separately authorized, access-controlled Firestore/Auth backup or checkpoint exists, with an isolated restore rehearsal and a rollback point.
+- The intended Firebase Auth identity exists, is not disabled, has an email, is email-verified, and has independently verified human ownership; the current inventory's unverified state is a blocker.
+- The selected application User ID and every field satisfy the exact v1.2.1 User schema, with explicit reviewed `developer_admin`, `active`, and `login_enabled` values and trustworthy timestamp/provenance handling.
+- Exactly one active `auth_links/{firebaseAuthUid}` maps the verified Auth identity to that User, and no conflicting UID/User link exists.
+- `user_directory/{userId}` exists with exactly the six approved fields and equals the authoritative User projection.
+- Legacy `role`, `auth_uid`, `uid`, committee position/year, path equality, or missing fields provide no authorization or compatibility bypass.
+- The protected operation uses an explicit operation ID and reason and atomically preserves the required audit evidence with all security-state changes.
+- A demo/emulator dry run, reconciliation of source and target state, and post-write admission/recovery checks pass before separately authorized production execution.
+
 ## 7. Phase 5 — User Schema and Role Mapping
 
 | Current field/value | Target handling |

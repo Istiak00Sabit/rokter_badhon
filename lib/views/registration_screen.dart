@@ -17,6 +17,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final _phone = TextEditingController();
   final _email = TextEditingController();
   final _password = TextEditingController();
+  final _passwordConfirmation = TextEditingController();
   bool _loading = false;
   bool _emailVerified = false;
   RegistrationRequestModel? _request;
@@ -32,8 +33,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     if (_name.text.trim().isEmpty ||
         _phone.text.trim().isEmpty ||
         !_email.text.contains('@') ||
-        _password.text.length < 6) {
-      setState(() => _message = 'Enter a name, phone, valid email, and password.');
+        _password.text.length < 6 ||
+        _password.text != _passwordConfirmation.text) {
+      setState(
+        () => _message =
+            'Enter a name, phone, valid email, and matching passwords.',
+      );
       return;
     }
     setState(() {
@@ -53,14 +58,18 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         RegistrationSubmissionState.submitted =>
           'Registration request submitted. Check your email for verification.',
         RegistrationSubmissionState.submittedVerificationEmailFailed =>
-          'Request submitted, but the verification email was not sent. Use resend below.',
+          'Request submitted, but the verification email was not sent. Sign in again to resend it.',
+        RegistrationSubmissionState.submittedSignOutFailed =>
+          'Request submitted, but automatic sign-out failed. Sign out before leaving this screen. Error: ${result.error}',
         RegistrationSubmissionState.authCreatedRequestFailed =>
           'Your sign-in account was created, but the registration request was not saved. Stay signed in and retry later or contact support. Error: ${result.error}',
         RegistrationSubmissionState.failed =>
           'Registration could not start: ${result.error}',
       };
     });
-    if (result.requestSubmitted) await _refreshStatus();
+    if (result.requestSubmitted && _authService.currentUser != null) {
+      await _refreshStatus();
+    }
   }
 
   Future<void> _refreshStatus() async {
@@ -90,12 +99,14 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     }
     setState(() => _loading = true);
     try {
-      await _authService.submitOwnRegistrationRequest(
+      final result = await _authService.submitOwnRegistrationRequest(
         name: _name.text,
         phone: _phone.text,
       );
-      _message = 'Registration request submitted.';
-      await _refreshStatus();
+      _message = result.state == RegistrationSubmissionState.submitted
+          ? 'Registration request submitted.'
+          : 'Request submitted, but automatic sign-out failed. Sign out before leaving this screen. Error: ${result.error}';
+      if (_authService.currentUser != null) await _refreshStatus();
     } catch (error) {
       if (mounted) {
         setState(() => _message = 'Request submission failed: $error');
@@ -120,6 +131,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     _phone.dispose();
     _email.dispose();
     _password.dispose();
+    _passwordConfirmation.dispose();
     super.dispose();
   }
 
@@ -143,6 +155,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               _field(_phone, 'Phone', type: TextInputType.phone),
               _field(_email, 'Email', type: TextInputType.emailAddress),
               _field(_password, 'Password', obscure: true),
+              _field(
+                _passwordConfirmation,
+                'Confirm password',
+                obscure: true,
+              ),
               ElevatedButton(
                 onPressed: _loading ? null : _register,
                 child: const Text('Submit registration request'),

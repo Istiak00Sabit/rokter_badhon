@@ -7,7 +7,7 @@ export function assertSafeTarget({ projectId, firestoreEmulatorHost, authEmulato
   if (!projectId.startsWith('demo-')) {
     throw new AdmissionError(
       'unsafe_target',
-      'Phase 2C refuses every non-demo Firebase project, including production.',
+      'Phase 2C/2D refuses every non-demo Firebase project, including production.',
     );
   }
   if (!firestoreEmulatorHost || !authEmulatorHost) {

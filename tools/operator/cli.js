@@ -4,6 +4,7 @@ import { getAuth } from 'firebase-admin/auth';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 
 import { approveRegistration, rejectRegistration } from './src/admission.js';
+import { bootstrapDeveloperAdmin, recoverDeveloperAdmin } from './src/developer_admin.js';
 import { AdmissionError } from './src/policy.js';
 import { assertSafeTarget } from './src/safety.js';
 
@@ -54,8 +55,35 @@ async function main() {
     });
   } else if (command === 'reject') {
     result = await rejectRegistration(dependencies);
+  } else if (command === 'bootstrap-developer-admin' || command === 'recover-developer-admin') {
+    const protectedDependencies = {
+      db: dependencies.db,
+      auth: dependencies.auth,
+      serverTimestamp: dependencies.serverTimestamp,
+      authUid: options['auth-uid'],
+      operationId: options['operation-id'],
+      reason: options.reason,
+      identity: {
+        name: options.name,
+        phone: options.phone,
+        email: options.email,
+        blood_group: options['blood-group'],
+        profession: options.profession,
+        address: options.address,
+        preferred_language: options['preferred-language'],
+      },
+    };
+    result = command === 'bootstrap-developer-admin'
+      ? await bootstrapDeveloperAdmin(protectedDependencies)
+      : await recoverDeveloperAdmin({
+        ...protectedDependencies,
+        oldUserId: options['old-user-id'],
+      });
   } else {
-    throw new AdmissionError('invalid_argument', 'Command must be approve or reject.');
+    throw new AdmissionError(
+      'invalid_argument',
+      'Command must be approve, reject, bootstrap-developer-admin, or recover-developer-admin.',
+    );
   }
   console.log(`${result.action}; operation_id=${result.operationId}${result.userId ? `; user_id=${result.userId}` : ''}`);
 }

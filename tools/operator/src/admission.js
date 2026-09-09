@@ -94,21 +94,29 @@ export async function approveRegistration({
     const operator = await resolveOperator(transaction, db, operatorUid, operatorAuth);
     authorizeTargetRole(operator.access_role, targetRole);
 
-    const [requestSnapshot, applicantLinkSnapshot, userSnapshot, directorySnapshot, auditSnapshot, existingUserLinks] =
-      await Promise.all([
-        transaction.get(requestReference),
-        transaction.get(applicantLinkReference),
-        transaction.get(userReference),
-        transaction.get(directoryReference),
-        transaction.get(auditReference),
-        transaction.get(existingUserLinkQuery),
-      ]);
-
+    const requestSnapshot = await transaction.get(requestReference);
     const request = parsePendingRequest(
       requireDocument(requestSnapshot, 'Registration request'),
       applicantUid,
     );
     validateApplicantAuth(applicantAuth, request);
+    const existingEmailQuery = db.collection('users').where('email', '==', request.email);
+    const existingPhoneUsersQuery = db.collection('users').where('phone', '==', request.phone);
+    const existingPhoneDirectoryQuery = db
+      .collection('user_directory')
+      .where('phone', '==', request.phone);
+    const [applicantLinkSnapshot, userSnapshot, directorySnapshot, auditSnapshot, existingUserLinks,
+      existingEmailUsers, existingPhoneUsers, existingPhoneDirectory] =
+      await Promise.all([
+        transaction.get(applicantLinkReference),
+        transaction.get(userReference),
+        transaction.get(directoryReference),
+        transaction.get(auditReference),
+        transaction.get(existingUserLinkQuery),
+        transaction.get(existingEmailQuery),
+        transaction.get(existingPhoneUsersQuery),
+        transaction.get(existingPhoneDirectoryQuery),
+      ]);
     if (applicantLinkSnapshot.exists) {
       throw new AdmissionError('duplicate_auth_link', 'Applicant already has an auth link of some state.');
     }
@@ -120,6 +128,12 @@ export async function approveRegistration({
     }
     if (!existingUserLinks.empty) {
       throw new AdmissionError('duplicate_user_link', 'Generated User ID is already referenced by an auth link.');
+    }
+    if (!existingEmailUsers.empty || !existingPhoneUsers.empty || !existingPhoneDirectory.empty) {
+      throw new AdmissionError(
+        'identity_conflict',
+        'Applicant identity matches existing organization data; use a separate reviewed identity-linking workflow.',
+      );
     }
 
     const actorUserId = operator.id;

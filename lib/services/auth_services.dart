@@ -9,6 +9,7 @@ import '../models/user_model.dart';
 enum RegistrationSubmissionState {
   submitted,
   submittedVerificationEmailFailed,
+  submittedSignOutFailed,
   authCreatedRequestFailed,
   failed,
 }
@@ -26,7 +27,8 @@ class RegistrationSubmissionResult {
 
   bool get requestSubmitted =>
       state == RegistrationSubmissionState.submitted ||
-      state == RegistrationSubmissionState.submittedVerificationEmailFailed;
+      state == RegistrationSubmissionState.submittedVerificationEmailFailed ||
+      state == RegistrationSubmissionState.submittedSignOutFailed;
   bool get authAccountCreated => state != RegistrationSubmissionState.failed;
 }
 
@@ -172,6 +174,16 @@ class AuthService {
           .doc(createdUser.uid)
           .set(payload);
 
+      try {
+        await _auth.signOut();
+      } catch (error) {
+        return RegistrationSubmissionResult(
+          RegistrationSubmissionState.submittedSignOutFailed,
+          error: error,
+          emailVerificationSent: verificationSent,
+        );
+      }
+
       return RegistrationSubmissionResult(
         verificationSent
             ? RegistrationSubmissionState.submitted
@@ -205,7 +217,7 @@ class AuthService {
     return RegistrationRequestModel.fromMap(data, document.id);
   }
 
-  Future<void> submitOwnRegistrationRequest({
+  Future<RegistrationSubmissionResult> submitOwnRegistrationRequest({
     required String name,
     required String phone,
   }) async {
@@ -227,6 +239,17 @@ class AuthService {
         .collection('registration_requests')
         .doc(user.uid)
         .set(payload);
+    try {
+      await _auth.signOut();
+      return const RegistrationSubmissionResult(
+        RegistrationSubmissionState.submitted,
+      );
+    } catch (error) {
+      return RegistrationSubmissionResult(
+        RegistrationSubmissionState.submittedSignOutFailed,
+        error: error,
+      );
+    }
   }
 
   Future<bool> refreshEmailVerification() async {

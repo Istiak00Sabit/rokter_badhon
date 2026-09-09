@@ -45,7 +45,6 @@ class AppConstants {
   static const int eligibilityDays = 90;
 
   // Firestore collections
-  static const String usersCollection = 'users';
   static const String donorsCollection = 'donors';
   static const String donationsCollection = 'donations';
   static const String requestsCollection = 'requests';

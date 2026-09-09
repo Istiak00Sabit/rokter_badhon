@@ -6,8 +6,6 @@ const RECOGNIZED_ROLES = new Set([
   'member',
 ]);
 
-const ORDINARY_ROLES = new Set(['member', 'committee', 'executive']);
-
 const REQUEST_FIELDS = new Set([
   'auth_uid',
   'name',
@@ -40,6 +38,15 @@ const USER_FIELDS = new Set([
   'created_by',
   'updated_at',
   'updated_by',
+]);
+
+const DIRECTORY_FIELDS = new Set([
+  'name',
+  'phone',
+  'blood_group',
+  'profession',
+  'photo_url',
+  'active',
 ]);
 
 export class AdmissionError extends Error {
@@ -80,6 +87,14 @@ function timestamp(value, field, { nullable = false } = {}) {
   }
 }
 
+function httpsUrl(value, field, { nullable = false } = {}) {
+  string(value, field, { nullable });
+  if (nullable && value === null) return;
+  if (value.length > 2048 || !/^https:\/\/[^/]+.*$/.test(value)) {
+    fail('malformed', `${field} must be a valid HTTPS URL${nullable ? ' or null' : ''}.`);
+  }
+}
+
 export function validateId(value, label) {
   if (typeof value !== 'string' || value.length === 0 || value.includes('/')) {
     fail('invalid_argument', `${label} must be a non-empty Firestore document ID.`);
@@ -104,7 +119,7 @@ export function parseUser(data, id) {
   string(data.blood_group, 'blood_group', { nullable: true });
   string(data.profession, 'profession', { nullable: true });
   string(data.address, 'address', { nullable: true });
-  string(data.photo_url, 'photo_url', { nullable: true });
+  httpsUrl(data.photo_url, 'photo_url', { nullable: true });
   string(data.access_role, 'access_role');
   bool(data.active, 'active');
   bool(data.login_enabled, 'login_enabled');
@@ -113,6 +128,17 @@ export function parseUser(data, id) {
   string(data.created_by, 'created_by', { nullable: true });
   timestamp(data.updated_at, 'updated_at');
   string(data.updated_by, 'updated_by', { nullable: true });
+  return { id, ...data };
+}
+
+export function parseDirectory(data, id) {
+  exactFields(data, DIRECTORY_FIELDS, 'UserDirectory');
+  string(data.name, 'name');
+  string(data.phone, 'phone');
+  string(data.blood_group, 'blood_group', { nullable: true });
+  string(data.profession, 'profession', { nullable: true });
+  httpsUrl(data.photo_url, 'photo_url', { nullable: true });
+  bool(data.active, 'active');
   return { id, ...data };
 }
 
@@ -158,8 +184,13 @@ export function authorizeTargetRole(operatorRole, targetRole) {
   if (targetRole === 'developer_admin') {
     fail('unauthorized_role', 'Normal registration approval cannot create developer_admin.');
   }
-  if (operatorRole === 'developer_admin') return;
-  if (operatorRole === 'leader' && ORDINARY_ROLES.has(targetRole)) return;
+  if (targetRole !== 'member') {
+    fail(
+      'unauthorized_role',
+      'Registration approval may create only a member; later role assignment is a separate audited operation.',
+    );
+  }
+  if (operatorRole === 'developer_admin' || operatorRole === 'leader') return;
   fail('unauthorized_role', `${operatorRole} cannot assign ${targetRole}.`);
 }
 
@@ -178,4 +209,5 @@ export const schemaFields = {
   request: REQUEST_FIELDS,
   link: LINK_FIELDS,
   user: USER_FIELDS,
+  directory: DIRECTORY_FIELDS,
 };

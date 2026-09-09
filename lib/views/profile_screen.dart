@@ -194,9 +194,9 @@ class ProfileScreen extends StatelessWidget {
                       _buildInfoRow(
                         Icons.calendar_today_outlined,
                         'যোগদানের তারিখ',
-                        '${user.joinedDate.day}/'
-                            '${user.joinedDate.month}/'
-                            '${user.joinedDate.year}',
+                        '${user.createdAt.day}/'
+                            '${user.createdAt.month}/'
+                            '${user.createdAt.year}',
                       ),
 
                       _buildInfoRow(

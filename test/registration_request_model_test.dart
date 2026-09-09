@@ -67,6 +67,37 @@ void main() {
     }
   });
 
+  test('decision metadata must exactly match request status', () {
+    for (final malformed in [
+      validRequest(changes: {'approved_by': 'operator'}),
+      validRequest(changes: {'status': 'approved'}),
+      validRequest(changes: {
+        'status': 'rejected',
+        'rejected_by': 'operator',
+        'rejected_at': Timestamp.fromMillisecondsSinceEpoch(1700000000000),
+        'linked_user_id': 'user-id',
+      }),
+    ]) {
+      expect(
+        () => RegistrationRequestModel.fromMap(malformed, 'auth-uid'),
+        throwsFormatException,
+      );
+    }
+
+    expect(
+      RegistrationRequestModel.fromMap(
+        validRequest(changes: {
+          'status': 'approved',
+          'approved_by': 'operator',
+          'approved_at': Timestamp.fromMillisecondsSinceEpoch(1700000000000),
+          'linked_user_id': 'user-id',
+        }),
+        'auth-uid',
+      ).status,
+      RegistrationRequestStatus.approved,
+    );
+  });
+
   test('registration creation payload binds UID, email, pending, and null decisions', () {
     final payload = RegistrationRequestPayload.create(
       authUid: 'auth-uid',

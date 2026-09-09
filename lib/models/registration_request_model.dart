@@ -85,19 +85,67 @@ class RegistrationRequestModel {
     if (authUid != documentId) {
       throw const FormatException('auth_uid must match the document ID.');
     }
+    final status = _status(map['status']);
+    final approvedBy = _nullableString(map, 'approved_by');
+    final approvedAt = _nullableTimestamp(map, 'approved_at')?.toDate();
+    final rejectedBy = _nullableString(map, 'rejected_by');
+    final rejectedAt = _nullableTimestamp(map, 'rejected_at')?.toDate();
+    final linkedUserId = _nullableString(map, 'linked_user_id');
+    _validateDecisionState(
+      status: status,
+      approvedBy: approvedBy,
+      approvedAt: approvedAt,
+      rejectedBy: rejectedBy,
+      rejectedAt: rejectedAt,
+      linkedUserId: linkedUserId,
+    );
     return RegistrationRequestModel(
       authUid: authUid,
       name: _requiredString(map, 'name'),
       phone: _requiredString(map, 'phone'),
       email: _requiredString(map, 'email'),
-      status: _status(map['status']),
+      status: status,
       requestedAt: _requiredTimestamp(map, 'requested_at').toDate(),
-      approvedBy: _nullableString(map, 'approved_by'),
-      approvedAt: _nullableTimestamp(map, 'approved_at')?.toDate(),
-      rejectedBy: _nullableString(map, 'rejected_by'),
-      rejectedAt: _nullableTimestamp(map, 'rejected_at')?.toDate(),
-      linkedUserId: _nullableString(map, 'linked_user_id'),
+      approvedBy: approvedBy,
+      approvedAt: approvedAt,
+      rejectedBy: rejectedBy,
+      rejectedAt: rejectedAt,
+      linkedUserId: linkedUserId,
     );
+  }
+
+  static void _validateDecisionState({
+    required RegistrationRequestStatus status,
+    required String? approvedBy,
+    required DateTime? approvedAt,
+    required String? rejectedBy,
+    required DateTime? rejectedAt,
+    required String? linkedUserId,
+  }) {
+    final hasApproval =
+        approvedBy != null && approvedAt != null && linkedUserId != null;
+    final hasRejection = rejectedBy != null && rejectedAt != null;
+    final isCleanPending =
+        approvedBy == null &&
+        approvedAt == null &&
+        rejectedBy == null &&
+        rejectedAt == null &&
+        linkedUserId == null;
+    final valid = switch (status) {
+      RegistrationRequestStatus.pending => isCleanPending,
+      RegistrationRequestStatus.approved =>
+        hasApproval && rejectedBy == null && rejectedAt == null,
+      RegistrationRequestStatus.rejected =>
+        hasRejection &&
+            approvedBy == null &&
+            approvedAt == null &&
+            linkedUserId == null,
+    };
+    if (!valid) {
+      throw const FormatException(
+        'Registration decision fields contradict the request status.',
+      );
+    }
   }
 
   static RegistrationRequestStatus _status(Object? value) {

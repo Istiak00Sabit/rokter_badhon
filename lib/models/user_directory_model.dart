@@ -42,7 +42,7 @@ class UserDirectoryModel {
       phone: _string(map, 'phone'),
       bloodGroup: _nullableString(map, 'blood_group'),
       profession: _nullableString(map, 'profession'),
-      photoUrl: _nullableString(map, 'photo_url'),
+      photoUrl: _nullableHttpsUrl(map, 'photo_url'),
       active: _bool(map, 'active'),
     );
   }
@@ -68,6 +68,16 @@ class UserDirectoryModel {
       throw FormatException('$key must be a string or null.');
     }
     return value as String?;
+  }
+
+  static String? _nullableHttpsUrl(Map<String, dynamic> map, String key) {
+    final value = _nullableString(map, key);
+    if (value != null &&
+        (value.length > 2048 ||
+            !RegExp(r'^https://[^/]+.*$').hasMatch(value))) {
+      throw FormatException('$key must be a valid HTTPS URL or null.');
+    }
+    return value;
   }
 
   static bool _bool(Map<String, dynamic> map, String key) {

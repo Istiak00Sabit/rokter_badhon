@@ -58,6 +58,18 @@ void main() {
     expect(user.hasRecognizedAccessRole, isFalse);
   });
 
+  test('photo URL follows the Rules HTTPS invariant', () {
+    for (final value in ['http://example.test/photo.jpg', 'https:///photo.jpg']) {
+      expect(
+        () => UserModel.fromMap(
+          validUser(changes: {'photo_url': value}),
+          'user-id',
+        ),
+        throwsFormatException,
+      );
+    }
+  });
+
   test(
     'timestamps must be Firestore Timestamps with no current-time fallback',
     () {

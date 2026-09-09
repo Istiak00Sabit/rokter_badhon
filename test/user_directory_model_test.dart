@@ -38,6 +38,7 @@ void main() {
       );
       for (final changes in [
         {'active': 'true'},
+        {'photo_url': 'http://example.test/photo.jpg'},
         {'email': 'private@example.test'},
         {'access_role': 'leader'},
         {'auth_uid': 'uid'},
