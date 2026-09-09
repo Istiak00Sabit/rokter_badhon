@@ -1,15 +1,19 @@
 import 'package:get/get.dart';
 import '../models/auth_session.dart';
+import '../models/profile_update.dart';
 import '../models/user_model.dart';
 import '../services/auth_services.dart';
+import '../services/user_services.dart';
 import '../views/main_navigation_screen.dart';
 import '../views/login_screen.dart';
 
 class AuthController extends GetxController {
   final AuthService _authService;
+  final UserService _userService;
 
-  AuthController({AuthService? authService})
-    : _authService = authService ?? AuthService();
+  AuthController({AuthService? authService, UserService? userService})
+    : _authService = authService ?? AuthService(),
+      _userService = userService ?? UserService();
 
   // Loading state
   final RxBool isLoading = false.obs;
@@ -69,6 +73,31 @@ class AuthController extends GetxController {
     await _authService.logout();
     currentUser.value = null;
     Get.offAll(() => const LoginScreen());
+  }
+
+  Future<bool> updateOwnProfile(ProfileUpdateInput input) async {
+    final user = currentUser.value;
+    if (user == null || sessionState.value != AuthSessionState.admitted) {
+      errorMessage.value = 'An admitted user session is required.';
+      return false;
+    }
+    try {
+      isLoading.value = true;
+      errorMessage.value = '';
+      await _userService.updateOwnProfile(userId: user.id, input: input);
+      final refreshed = await _authService.resolveSession();
+      _applySession(refreshed);
+      if (!refreshed.isAdmitted) {
+        errorMessage.value = _messageFor(refreshed);
+        return false;
+      }
+      return true;
+    } catch (error) {
+      errorMessage.value = error.toString();
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
   }
 
   void _applySession(AuthSessionResult result) {

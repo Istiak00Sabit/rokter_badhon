@@ -27,3 +27,16 @@ Production Architecture v1.2.1 — Free V1. Architecture status: frozen for impl
 - **Tests:** Flutter tests passed 16/16 with synthetic data. Flutter analysis had 0 errors and 0 warnings; 9 pre-existing information-level lints remained.
 - **Known legacy-admin compatibility gap:** The legacy production administrator intentionally cannot pass strict admission until a reviewed bootstrap/migration creates the exact v1.2.1 User and active auth link. No compatibility bypass was added.
 - **Production deployment:** Not performed; no production Firebase/Auth/data change or migration.
+
+## Phase 2B — Registration, Profile and Directory
+
+- **Status:** Complete; Phase 2B ready.
+- **Main files changed:** Registration/profile models, Auth and User services/controllers, registration/login/profile/member-directory/add-member UI, dashboard directory count, synthetic tests, and this implementation log.
+- **Registration flow:** Creates Firebase Auth first, writes only `registration_requests/{firebaseAuthUid}` with the exact pending schema and server timestamp, sends email verification, exposes own-document status only, supports resend/refresh, and reports/retries the Auth-created/Firestore-failed partial state.
+- **Profile/directory behavior:** Active lists query only `user_directory where active == true`; directory data is presentation-only. Own edits are limited to name, phone, blood group, profession, address, and preferred language, with server audit metadata and atomic User/projection writes. Missing, malformed, or unsynchronized projections fail for trusted repair; `photo_url` and security fields are not client-editable.
+- **Legacy privileged client write:** Direct organization User creation and client role/position/year assignment were removed from normal service/controller logic; the historical add-member screen is retained as unavailable pending trusted operator tooling.
+- **Tests:** `flutter test` passed 22/22 synthetic tests.
+- **Analyzer:** `flutter analyze --no-pub` reported 0 errors, 0 warnings, and 9 pre-existing information-level lints.
+- **Known gaps:** Reviewed trusted operator registration approval/rejection, User/directory/auth-link creation, audit evidence, and directory repair tooling remain unavailable; no client fallback was added.
+- **Production deployment:** NOT performed; no production Firebase/Auth/data change or migration.
+- **Exact next task:** Phase 2C — implement reviewed trusted operator registration decision/admission tooling with atomic User, `user_directory`, `auth_links`, and audit-log handling.

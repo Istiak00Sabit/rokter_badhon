@@ -4,6 +4,8 @@ import 'package:get/get.dart';
 import '../constants/app_colors.dart';
 import '../constants/app_constants.dart';
 import '../controllers/auth_controller.dart';
+import '../models/profile_update.dart';
+import '../models/user_model.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -119,7 +121,7 @@ class ProfileScreen extends StatelessWidget {
                       ),
 
                       child: Text(
-                        AppConstants.roleLabel(user.role),
+                        AppConstants.roleLabel(user.accessRole),
 
                         style: const TextStyle(
                           color: AppColors.white,
@@ -186,15 +188,8 @@ class ProfileScreen extends StatelessWidget {
                       _buildInfoRow(
                         Icons.badge_outlined,
                         'ভূমিকা',
-                        AppConstants.roleLabel(user.role),
+                        AppConstants.roleLabel(user.accessRole),
                       ),
-
-                      if (user.role != AppConstants.roleAdmin)
-                        _buildInfoRow(
-                          Icons.groups_outlined,
-                          'কমিটির বছর',
-                          '${user.committeeYear}',
-                        ),
 
                       _buildInfoRow(
                         Icons.calendar_today_outlined,
@@ -216,6 +211,18 @@ class ProfileScreen extends StatelessWidget {
                     ]),
 
                     const SizedBox(height: 24),
+
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () =>
+                            _editProfile(context, authController, user),
+                        icon: const Icon(Icons.edit_outlined),
+                        label: const Text('Edit profile'),
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
 
                     // =======================================
                     // LOGOUT
@@ -291,6 +298,82 @@ class ProfileScreen extends StatelessWidget {
         );
       }),
     );
+  }
+
+  Future<void> _editProfile(
+    BuildContext context,
+    AuthController controller,
+    UserModel user,
+  ) async {
+    final name = TextEditingController(text: user.name);
+    final phone = TextEditingController(text: user.phone);
+    final bloodGroup = TextEditingController(text: user.bloodGroup ?? '');
+    final profession = TextEditingController(text: user.profession ?? '');
+    final address = TextEditingController(text: user.address ?? '');
+    final language = TextEditingController(text: user.preferredLanguage ?? '');
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Edit profile'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _editField(name, 'Name'),
+              _editField(phone, 'Phone'),
+              _editField(bloodGroup, 'Blood group'),
+              _editField(profession, 'Profession'),
+              _editField(address, 'Address'),
+              _editField(language, 'Preferred language'),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              final success = await controller.updateOwnProfile(
+                ProfileUpdateInput(
+                  name: name.text.trim(),
+                  phone: phone.text.trim(),
+                  bloodGroup: _nullableText(bloodGroup.text),
+                  profession: _nullableText(profession.text),
+                  address: _nullableText(address.text),
+                  preferredLanguage: _nullableText(language.text),
+                ),
+              );
+              if (success && dialogContext.mounted) {
+                Navigator.pop(dialogContext);
+              } else if (dialogContext.mounted) {
+                ScaffoldMessenger.of(dialogContext).showSnackBar(
+                  SnackBar(content: Text(controller.errorMessage.value)),
+                );
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _editField(TextEditingController controller, String label) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: TextField(
+        controller: controller,
+        decoration: InputDecoration(labelText: label),
+      ),
+    );
+  }
+
+  String? _nullableText(String value) {
+    final trimmed = value.trim();
+    return trimmed.isEmpty ? null : trimmed;
   }
 
   // =========================================================

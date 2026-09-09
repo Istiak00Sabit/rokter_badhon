@@ -1,106 +1,149 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import '../constants/app_constants.dart';
+import '../models/profile_update.dart';
+import '../models/user_directory_model.dart';
 import '../models/user_model.dart';
 
+class ProfileUpdateException implements Exception {
+  final String message;
+  const ProfileUpdateException(this.message);
+
+  @override
+  String toString() => message;
+}
+
 class UserService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  static const directoryCollection = 'user_directory';
+  static const directoryActiveField = 'active';
 
-  // =========================================================
-  // ADD ORGANIZATION USER / MEMBER
-  // =========================================================
+  final FirebaseFirestore _firestore;
 
-  Future<Map<String, dynamic>> addUser(UserModel user) async {
-    try {
-      // Firestore নিজে unique document ID তৈরি করবে।
-      final DocumentReference<Map<String, dynamic>> docRef = _firestore
-          .collection(AppConstants.usersCollection)
-          .doc();
+  UserService({FirebaseFirestore? firestore})
+    : _firestore = firestore ?? FirebaseFirestore.instance;
 
-      // This operation creates an organization record only, never Auth access.
-      final UserModel userToSave = user.copyWith(
-        id: docRef.id,
-        loginEnabled: false,
+  Future<List<UserDirectoryModel>> getActiveDirectory() async {
+    final snapshot = await _firestore
+        .collection(directoryCollection)
+        .where(directoryActiveField, isEqualTo: true)
+        .get();
+    final entries = snapshot.docs
+        .map((doc) => UserDirectoryModel.fromMap(doc.data(), doc.id))
+        .toList();
+    entries.sort(
+      (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+    );
+    return entries;
+  }
+
+  Future<void> updateOwnProfile({
+    required String userId,
+    required ProfileUpdateInput input,
+  }) async {
+    if (userId.isEmpty || userId.contains('/')) {
+      throw const ProfileUpdateException('Invalid linked application User ID.');
+    }
+
+    final userReference = _firestore.collection('users').doc(userId);
+    final directoryReference = _firestore
+        .collection(directoryCollection)
+        .doc(userId);
+    final documents = await Future.wait([
+      userReference.get(),
+      directoryReference.get(),
+    ]);
+    final userData = documents[0].data();
+    final directoryData = documents[1].data();
+    if (!documents[0].exists || userData == null) {
+      throw const ProfileUpdateException('Own User profile is unavailable.');
+    }
+    if (!documents[1].exists || directoryData == null) {
+      throw const ProfileUpdateException(
+        'Directory projection is missing; trusted operator repair is required.',
       );
-
-      await docRef.set(userToSave.toMap());
-
-      return {
-        'success': true,
-        'message': 'সদস্য সফলভাবে যোগ করা হয়েছে!',
-        'id': docRef.id,
-      };
-    } on FirebaseException catch (e) {
-      return {
-        'success': false,
-        'message': 'Firebase সমস্যা: ${e.message ?? e.code}',
-      };
-    } catch (e) {
-      return {'success': false, 'message': 'সদস্য যোগ করতে সমস্যা হয়েছে: $e'};
     }
-  }
 
-  // =========================================================
-  // GET ALL ORGANIZATION USERS
-  // =========================================================
-
-  Future<List<UserModel>> getOrganizationUsers() async {
+    late final UserModel currentUser;
+    late final UserDirectoryModel currentDirectory;
     try {
-      final QuerySnapshot<Map<String, dynamic>> snapshot = await _firestore
-          .collection(AppConstants.usersCollection)
-          .where('active', isEqualTo: true)
-          .get();
-
-      final List<UserModel> users = snapshot.docs
-          .map((doc) => UserModel.fromMap(doc.data(), doc.id))
-          // Developer Admin member list-এ দেখানো হবে না।
-          .where((user) => user.role != AppConstants.roleAdmin)
-          .toList();
-
-      // Firestore orderBy ব্যবহার না করে locally sort করছি।
-      // এতে unnecessary composite index লাগবে না।
-      users.sort(
-        (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+      currentUser = UserModel.fromMap(userData, userId);
+      currentDirectory = UserDirectoryModel.fromMap(directoryData, userId);
+    } on FormatException catch (error) {
+      throw ProfileUpdateException(
+        'Profile or directory data is malformed; trusted operator repair is required: $error',
       );
-
-      return users;
-    } catch (e) {
-      rethrow;
     }
+
+    validateExistingProjection(currentUser, currentDirectory);
+
+    final requested = input.toMap();
+    final currentEditable = {
+      'name': currentUser.name,
+      'phone': currentUser.phone,
+      'blood_group': currentUser.bloodGroup,
+      'profession': currentUser.profession,
+      'address': currentUser.address,
+      'preferred_language': currentUser.preferredLanguage,
+    };
+    final changed = <String, dynamic>{};
+    for (final key in ProfileUpdateInput.editableFields) {
+      if (requested[key] != currentEditable[key]) changed[key] = requested[key];
+    }
+    if (changed.isEmpty) {
+      throw const ProfileUpdateException('No profile changes were provided.');
+    }
+
+    final userChanges = <String, dynamic>{
+      ...changed,
+      'updated_at': FieldValue.serverTimestamp(),
+      'updated_by': userId,
+    };
+    final directoryChanges = <String, dynamic>{
+      for (final entry in changed.entries)
+        if (ProfileUpdateInput.projectedFields.contains(entry.key))
+          entry.key: entry.value,
+    };
+
+    final batch = _firestore.batch()..update(userReference, userChanges);
+    if (directoryChanges.isNotEmpty) {
+      batch.update(directoryReference, directoryChanges);
+    }
+    await batch.commit();
   }
 
-  // =========================================================
-  // GET USERS BY COMMITTEE YEAR
-  // =========================================================
-
-  Future<List<UserModel>> getUsersByCommitteeYear(int year) async {
-    try {
-      final List<UserModel> allUsers = await getOrganizationUsers();
-
-      return allUsers.where((user) => user.committeeYear == year).toList();
-    } catch (e) {
-      rethrow;
-    }
-  }
-
-  // =========================================================
-  // GET SINGLE USER
-  // =========================================================
-
-  Future<UserModel?> getUserById(String userId) async {
-    try {
-      final DocumentSnapshot<Map<String, dynamic>> doc = await _firestore
-          .collection(AppConstants.usersCollection)
-          .doc(userId)
-          .get();
-
-      if (!doc.exists || doc.data() == null) {
-        return null;
+  static bool _sameMap(
+    Map<String, dynamic> left,
+    Map<String, dynamic> right,
+  ) {
+    if (left.length != right.length) return false;
+    for (final entry in left.entries) {
+      if (!right.containsKey(entry.key) || right[entry.key] != entry.value) {
+        return false;
       }
+    }
+    return true;
+  }
 
-      return UserModel.fromMap(doc.data()!, doc.id);
-    } catch (e) {
-      rethrow;
+  static void validateExistingProjection(
+    UserModel user,
+    UserDirectoryModel? directory,
+  ) {
+    if (directory == null) {
+      throw const ProfileUpdateException(
+        'Directory projection is missing; trusted operator repair is required.',
+      );
+    }
+    final expectedProjection = {
+      'name': user.name,
+      'phone': user.phone,
+      'blood_group': user.bloodGroup,
+      'profession': user.profession,
+      'photo_url': user.photoUrl,
+      'active': user.active,
+    };
+    if (!_sameMap(directory.toMap(), expectedProjection)) {
+      throw const ProfileUpdateException(
+        'Directory projection is out of sync; trusted operator repair is required.',
+      );
     }
   }
 }

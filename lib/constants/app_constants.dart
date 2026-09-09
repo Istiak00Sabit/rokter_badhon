@@ -18,52 +18,26 @@ class AppConstants {
   // USER ROLES
   // =========================================================
 
-  // Developer/System admin - শুধুমাত্র তোমার account
-  static const String roleAdmin = 'admin';
-
-  // Organization roles
-  static const String rolePresident = 'president';
-  static const String roleVP = 'vp';
-  static const String roleGS = 'gs';
-  static const String roleAssistantGS = 'assistant_gs';
-  static const String roleTreasurer = 'treasurer';
-  static const String roleOrganizingSecretary = 'organizing_secretary';
+  static const String roleDeveloperAdmin = 'developer_admin';
+  static const String roleLeader = 'leader';
+  static const String roleExecutive = 'executive';
   static const String roleCommittee = 'committee';
   static const String roleMember = 'member';
 
-  // Admin এখানে intentionally নেই
-  static const List<String> assignableRoles = [
-    rolePresident,
-    roleVP,
-    roleGS,
-    roleAssistantGS,
-    roleTreasurer,
-    roleOrganizingSecretary,
-    roleCommittee,
-    roleMember,
-  ];
-
   static String roleLabel(String role) {
     switch (role) {
-      case roleAdmin:
+      case roleDeveloperAdmin:
         return 'ডেভেলপার অ্যাডমিন';
-      case rolePresident:
-        return 'সভাপতি';
-      case roleVP:
-        return 'সহ-সভাপতি';
-      case roleGS:
-        return 'সাধারণ সম্পাদক';
-      case roleAssistantGS:
-        return 'সহ-সাধারণ সম্পাদক';
-      case roleTreasurer:
-        return 'কোষাধ্যক্ষ';
-      case roleOrganizingSecretary:
-        return 'সাংগঠনিক সম্পাদক';
+      case roleLeader:
+        return 'Leader';
+      case roleExecutive:
+        return 'Executive';
       case roleCommittee:
         return 'কার্যনির্বাহী সদস্য';
       case roleMember:
-      default:
         return 'সাধারণ সদস্য';
+      default:
+        return 'Unavailable';
     }
   }
 

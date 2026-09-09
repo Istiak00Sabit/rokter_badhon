@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import '../constants/app_colors.dart';
 import '../constants/app_strings.dart';
 import '../controllers/auth_controller.dart';
+import 'registration_screen.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -233,6 +234,15 @@ class LoginScreen extends StatelessWidget {
                       ),
 
                       const SizedBox(height: 30),
+
+                      Center(
+                        child: TextButton(
+                          onPressed: () => Get.to(
+                            () => const RegistrationScreen(),
+                          ),
+                          child: const Text('Request an account'),
+                        ),
+                      ),
 
                       // Footer
                       Center(

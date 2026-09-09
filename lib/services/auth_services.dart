@@ -3,7 +3,32 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/auth_link_model.dart';
 import '../models/auth_session.dart';
+import '../models/registration_request_model.dart';
 import '../models/user_model.dart';
+
+enum RegistrationSubmissionState {
+  submitted,
+  submittedVerificationEmailFailed,
+  authCreatedRequestFailed,
+  failed,
+}
+
+class RegistrationSubmissionResult {
+  final RegistrationSubmissionState state;
+  final Object? error;
+  final bool emailVerificationSent;
+
+  const RegistrationSubmissionResult(
+    this.state, {
+    this.error,
+    this.emailVerificationSent = false,
+  });
+
+  bool get requestSubmitted =>
+      state == RegistrationSubmissionState.submitted ||
+      state == RegistrationSubmissionState.submittedVerificationEmailFailed;
+  bool get authAccountCreated => state != RegistrationSubmissionState.failed;
+}
 
 class AuthService {
   final FirebaseAuth _auth;
@@ -104,6 +129,117 @@ class AuthService {
 
   Future<void> sendPasswordResetEmail(String email) {
     return _auth.sendPasswordResetEmail(email: email.trim());
+  }
+
+  Future<RegistrationSubmissionResult> register({
+    required String name,
+    required String phone,
+    required String email,
+    required String password,
+  }) async {
+    User? createdUser;
+    var verificationSent = false;
+    try {
+      final credential = await _auth.createUserWithEmailAndPassword(
+        email: email.trim(),
+        password: password,
+      );
+      createdUser = credential.user;
+      final authenticatedEmail = createdUser?.email;
+      if (createdUser == null || authenticatedEmail == null) {
+        throw StateError('Firebase Auth did not return an account identity.');
+      }
+
+      try {
+        await createdUser.sendEmailVerification();
+        verificationSent = true;
+      } catch (_) {
+        // The request is still submitted below. Resend remains available.
+      }
+
+      final applicant = RegistrationApplicantInput(
+        name: name.trim(),
+        phone: phone.trim(),
+        email: authenticatedEmail,
+      );
+      final payload = RegistrationRequestPayload.create(
+        authUid: createdUser.uid,
+        authenticatedEmail: authenticatedEmail,
+        applicant: applicant,
+      );
+      await _firestore
+          .collection('registration_requests')
+          .doc(createdUser.uid)
+          .set(payload);
+
+      return RegistrationSubmissionResult(
+        verificationSent
+            ? RegistrationSubmissionState.submitted
+            : RegistrationSubmissionState.submittedVerificationEmailFailed,
+        emailVerificationSent: verificationSent,
+      );
+    } catch (error) {
+      if (createdUser != null) {
+        return RegistrationSubmissionResult(
+          RegistrationSubmissionState.authCreatedRequestFailed,
+          error: error,
+          emailVerificationSent: verificationSent,
+        );
+      }
+      return RegistrationSubmissionResult(
+        RegistrationSubmissionState.failed,
+        error: error,
+      );
+    }
+  }
+
+  Future<RegistrationRequestModel?> getOwnRegistrationRequest() async {
+    final user = _auth.currentUser;
+    if (user == null) throw StateError('Authentication is required.');
+    final document = await _firestore
+        .collection('registration_requests')
+        .doc(user.uid)
+        .get();
+    final data = document.data();
+    if (!document.exists || data == null) return null;
+    return RegistrationRequestModel.fromMap(data, document.id);
+  }
+
+  Future<void> submitOwnRegistrationRequest({
+    required String name,
+    required String phone,
+  }) async {
+    final user = _auth.currentUser;
+    final email = user?.email;
+    if (user == null || email == null) {
+      throw StateError('An authenticated account with email is required.');
+    }
+    final payload = RegistrationRequestPayload.create(
+      authUid: user.uid,
+      authenticatedEmail: email,
+      applicant: RegistrationApplicantInput(
+        name: name.trim(),
+        phone: phone.trim(),
+        email: email,
+      ),
+    );
+    await _firestore
+        .collection('registration_requests')
+        .doc(user.uid)
+        .set(payload);
+  }
+
+  Future<bool> refreshEmailVerification() async {
+    final user = _auth.currentUser;
+    if (user == null) throw StateError('Authentication is required.');
+    await user.reload();
+    return _auth.currentUser?.emailVerified ?? false;
+  }
+
+  Future<void> resendEmailVerification() async {
+    final user = _auth.currentUser;
+    if (user == null) throw StateError('Authentication is required.');
+    await user.sendEmailVerification();
   }
 
   Future<void> logout() => _auth.signOut();

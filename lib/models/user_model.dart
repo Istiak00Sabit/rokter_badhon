@@ -64,14 +64,7 @@ class UserModel {
 
   bool get hasRecognizedAccessRole => allowedAccessRoles.contains(accessRole);
 
-  // Source-compatible display alias. This is derived only from access_role;
-  // the legacy Firestore role field is never accepted.
-  String get role => accessRole;
-
-  // Transitional display-only aliases for screens outside Phase 2A. Neither
-  // value reads a legacy Firestore field or participates in authorization.
   DateTime get joinedDate => createdAt;
-  int get committeeYear => createdAt.year;
 
   factory UserModel.fromMap(Map<String, dynamic> map, String documentId) {
     _requireExactFields(map, _fields, 'User');
