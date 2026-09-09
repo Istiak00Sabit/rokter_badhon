@@ -74,3 +74,16 @@ Production Architecture v1.2.1 — Free V1. Architecture status: frozen for impl
 - **Analyzer:** Flutter analyzer validation completed with 0 errors, 0 warnings, and 9 pre-existing information-level diagnostics using the installed analysis server and existing package configuration.
 - **Production:** Untouched; no deployment, credentials, production Firebase access, Auth change, or Firestore mutation was performed.
 - **Exact next task:** Phase 3A Organization Structure.
+
+## Phase 3A — Committee Structure and History
+
+- **Status:** Complete; Phase 3A ready.
+- **Models/services/UI:** Added strict exact-schema CommitteeTerm and CommitteeAssignment models, a display-only committee member projection, scoped read-only committee service/controller logic, current/past committee screens, and committee navigation. Added the required term/assignment query indexes.
+- **Current committee:** Resolves exactly one active term, reads only active assignments for that term, and joins presentation data through active `user_directory` records. Missing directory entries and missing/invalid photos use safe unavailable/local-avatar states.
+- **Past committees:** Lists inactive terms newest-first and reads all assignments for the selected historical term. Historical position always comes from the preserved CommitteeAssignment record, never current User state.
+- **Authorization boundary:** Committee position, term, assignment history, and directory data never map to `users.access_role`. Flutter committee code is read-only and does not create/end/correct terms or assignments, set group photos, query private Users, or perform backfills.
+- **Rules/indexes:** Existing Phase 1B Rules already allow admitted committee/history reads and active-directory presentation reads; Rules were unchanged. Added composite indexes for past-term ordering and active assignment lookup.
+- **Tests:** Offline Flutter engine validation passed 37/37 synthetic tests. The `flutter test --no-pub` wrapper was skipped because its SDK-cache lock requires write permission outside the repository; no approval was requested and no packages were resolved or installed.
+- **Analyzer:** Installed analyzer-server validation completed with 0 errors, 0 warnings, and 9 pre-existing information-level diagnostics. The `flutter analyze --no-pub` wrapper was skipped for the same external SDK-cache permission requirement.
+- **Production:** Untouched; no deployment, credentials, production Firebase access, Auth change, or Firestore mutation was performed.
+- **Exact next task:** Phase 3B — trusted committee assignment operation for existing active terms only.

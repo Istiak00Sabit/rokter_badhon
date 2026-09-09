@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../constants/app_colors.dart';
+import 'committee_screen.dart';
 import 'dashboard_screen.dart';
 import 'donor_list_screen.dart';
-import 'member_list_screen.dart';
 import 'ranklist_screen.dart';
 import 'profile_screen.dart';
 
@@ -21,7 +21,7 @@ class MainNavigationScreen extends StatelessWidget {
   static final List<Widget> _screens = [
     const DashboardScreen(),
     const DonorListScreen(),
-    const MemberListScreen(),
+    const CommitteeScreen(),
     const RanklistScreen(),
     const ProfileScreen(),
   ];
@@ -48,9 +48,7 @@ class MainNavigationScreen extends StatelessWidget {
             fontWeight: FontWeight.w600,
             fontSize: 12,
           ),
-          unselectedLabelStyle: const TextStyle(
-            fontSize: 11,
-          ),
+          unselectedLabelStyle: const TextStyle(fontSize: 11),
           items: const [
             BottomNavigationBarItem(
               icon: Icon(Icons.dashboard_outlined),
@@ -63,9 +61,9 @@ class MainNavigationScreen extends StatelessWidget {
               label: 'রক্তদাতা',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.people_outline),
-              activeIcon: Icon(Icons.people),
-              label: 'সদস্য',
+              icon: Icon(Icons.groups_outlined),
+              activeIcon: Icon(Icons.groups),
+              label: 'কমিটি',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.emoji_events_outlined),

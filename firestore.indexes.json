@@ -1,5 +1,13 @@
 {
   "indexes": [
+    { "collectionGroup": "committee_terms", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "active", "order": "ASCENDING" },
+      { "fieldPath": "end_year", "order": "DESCENDING" }
+    ] },
+    { "collectionGroup": "committee_assignments", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "term_id", "order": "ASCENDING" },
+      { "fieldPath": "active", "order": "ASCENDING" }
+    ] },
     { "collectionGroup": "committee_media", "queryScope": "COLLECTION", "fields": [
       { "fieldPath": "term_id", "order": "ASCENDING" },
       { "fieldPath": "active", "order": "ASCENDING" },
