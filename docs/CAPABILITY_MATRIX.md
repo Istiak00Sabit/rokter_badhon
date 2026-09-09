@@ -10,7 +10,7 @@ Contract status: AUTHORITATIVE V1 OPERATION-LEVEL CONTRACT — unresolved gates 
 
 This document translates the supplied V1 policy into the authoritative operation-level contract for future Flutter UI capability checks, Firestore Security Rules, trusted execution, and authorization tests.
 
-It implements the boundaries of [ARCHITECTURE.md](ARCHITECTURE.md), [PERMISSIONS.md](PERMISSIONS.md), [DATA_MODEL.md](DATA_MODEL.md), and [AUTH_AND_SECURITY.md](AUTH_AND_SECURITY.md). It incorporates the approved v1.2.1 schema/policy decisions and does not implement any feature. Specific V1 decisions here resolve the earlier conditional grants: committee donor creation/donation recording are allowed; committee/member donation-history reads and leader audit-log reads are denied.
+It implements the boundaries of [ARCHITECTURE.md](ARCHITECTURE.md), [DATA_MODEL.md](DATA_MODEL.md), and [AUTH_AND_SECURITY.md](AUTH_AND_SECURITY.md). It incorporates the approved v1.2.1 schema/policy decisions and does not implement any feature. Specific V1 decisions here resolve the earlier conditional grants: committee donor creation/donation recording are allowed; committee/member donation-history reads and leader audit-log reads are denied.
 
 Only these application access roles exist:
 

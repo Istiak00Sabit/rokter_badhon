@@ -81,7 +81,7 @@ Verification refresh must use authoritative Firebase state/token handling. A Fir
 
 ## 6. Authorization and Trusted Execution Boundary
 
-All layers implement the reviewed capability matrix from [PERMISSIONS.md](PERMISSIONS.md).
+All layers implement the reviewed [capability matrix](CAPABILITY_MATRIX.md).
 
 - Flutter: capability-based visibility, navigation, and workflow controls.
 - Firestore Security Rules: authoritative enforcement for direct client reads/writes.
@@ -165,7 +165,7 @@ Rules must:
 - Require Timestamp machine dates; never compensate for malformed data with the current time.
 - Protect donation history and aggregate consistency.
 
-Rules are not query filters: queries must match permitted result sets. Full-document reads cannot hide individual sensitive fields. V1.2.1 deliberately separates the approved six-field user_directory projection; it never contains private User/security fields or supplies authorization. Use the audiences in [PERMISSIONS.md](PERMISSIONS.md).
+Rules are not query filters: queries must match permitted result sets. Full-document reads cannot hide individual sensitive fields. V1.2.1 deliberately separates the approved six-field user_directory projection; it never contains private User/security fields or supplies authorization. Use the audiences in [CAPABILITY_MATRIX.md](CAPABILITY_MATRIX.md).
 
 Rules tests must cover allowed and denied operations, forged fields, missing values, direct requests bypassing UI, and revoked access. Backend workflows require separate authorization/concurrency tests because server writes bypass client rules.
 

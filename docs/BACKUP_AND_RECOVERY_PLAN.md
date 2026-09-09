@@ -9,7 +9,7 @@ Execution status: **PREPARATION ONLY — NO BACKUP OR RECOVERY EXECUTED**
 
 This operational plan follows [CURRENT_FIREBASE_INVENTORY.md](CURRENT_FIREBASE_INVENTORY.md), [MIGRATION_PLAN.md](MIGRATION_PLAN.md), [AUTH_AND_SECURITY.md](AUTH_AND_SECURITY.md), [PRODUCTION_CHECKLIST.md](PRODUCTION_CHECKLIST.md), and [CAPABILITY_MATRIX.md](CAPABILITY_MATRIX.md). It does not amend their permission contracts or authorize execution. Application bulk export remains an unlisted, denied capability; an approved operator using separately verified operational credentials performs backups outside the application.
 
-No Firebase reads were repeated for this plan. The baseline below is evidence from the inventory, not a fresh snapshot. No exports, imports, account changes, auth links, roles, indexes, buckets, rules, billing/IAM changes, PITR/delete-protection changes, or application changes were performed. Current operational amendment: Free V1 uses encrypted raw capture with independent no-cost cloud/offline custody. CLOUD_BACKUP_DESIGN and its readiness/preflight reports are FUTURE / BLAZE OPERATIONAL REFERENCE; their dated observations remain evidence, not current requirements. No earlier one-command authorization is standing execution approval.
+No Firebase reads were repeated for this plan. The baseline below is evidence from the inventory, not a fresh snapshot. No exports, imports, account changes, auth links, roles, indexes, buckets, rules, billing/IAM changes, PITR/delete-protection changes, or application changes were performed. Current Free V1 uses encrypted raw capture with independent no-cost cloud/offline custody. Consolidated dated local/cloud observations are retained in sections 13–14; future managed-cloud material is not a current requirement. No earlier one-command authorization is standing execution approval.
 
 ## Baseline and responsibility register
 
@@ -218,7 +218,7 @@ The first eventual production security mutation remains the separately approved,
 
 | Gate | Current result | Consequence |
 |---|---|---|
-| Dated inventory and Free-V1 plan | GO for documentation/read-only preparation | Refresh source before authorized capture |
+| Dated inventory and frozen Free-V1 architecture | GO for documentation/read-only preparation | Refresh source before authorized capture |
 | Operator, alternate custody, encrypted workspace and independent destination | NO-GO until evidenced | No data-bearing artifact creation yet |
 | Reviewed raw capture/restore and Auth export coverage | NO-GO until tested | Pagination, descendants, types, quiet-window consistency and credential continuity must be demonstrated |
 | Exact commands/window and backup authorization | NO-GO until approved | This document grants no standing execution permission |
@@ -228,3 +228,27 @@ The first eventual production security mutation remains the separately approved,
 Current path is Free V1 raw capture, supported Auth/config capture and encrypted independent custody. Billing, Blaze, paid cloud provisioning and managed export are not prerequisites. Protected temporary handling is required for raw Firestore personal data as well as Auth credential material. Local BitLocker remains unverified dated evidence until independently checked; choose a verified protected environment before capture.
 
 Stop after planning. Actual backup, restore and migration each require their own concrete authorization and evidence.
+
+## 13. Consolidated dated readiness evidence
+
+Read-only checks on 2026-09-07 found the following point-in-time operational evidence. These findings do not authorize a backup or establish current readiness:
+
+- The Windows machine exposed one 512 GB NVMe physical disk across fixed volumes C:–F:; no removable/external disk was detected. Same-disk partitions are not an independent copy. Free-space readings were adequate for the tiny observed baseline but must be refreshed before capture.
+- BitLocker/device-encryption status could not be verified because the read-only check required Windows administrator rights. No local plaintext workspace is approved until active encryption, restrictive ACLs, path isolation, capacity, key recovery, and cleanup are verified.
+- Candidate temporary paths outside the repository did not exist and were not created. The workspace was not a Git worktree at the time; this does not replace a fresh destination/path/sync/junction check.
+- Firebase CLI 15.11.0 and its supported Auth export command were present. The existing CLI principal returned the tested `firebaseauth.users.get`, Auth hash-config, Firestore read/database-get, and `datastore.databases.export` permissions. Permission presence was not an export or restore test.
+- 7-Zip 22.01 was installed at an explicit path but was not on PATH and its encryption workflow/security suitability was not tested. Encrypting later cannot retroactively protect plaintext written to an unverified location.
+
+Current Free V1 therefore remains **NOT READY for a data-bearing backup** until the raw capture/restore tooling, protected temporary workspace, independent no-cost destination, custodians, encryption/key recovery, retention, cleanup, capture window, and isolated restore are approved and tested.
+
+## 14. FUTURE / BLAZE managed-backup record
+
+This section preserves the material conclusions of the 2026-09-07 cloud design/readiness/preflight work. It is **FUTURE / BLAZE OPERATIONAL REFERENCE — NOT ACTIVE IN FREE V1** and authorizes no project, billing, API, IAM, bucket, export, or restore change.
+
+- Proposed topology: managed Firestore export from production to a dedicated bucket in a separate operational project, with a third isolated recovery project and an eventual independently recoverable second copy. Neither backup nor recovery infrastructure may be used by Flutter or inherit application-role access.
+- Verified then: production billing returned `billingEnabled: false`; Firestore API was enabled; the production IAM policy contained `service-941165503580@gcp-sa-firestore.iam.gserviceaccount.com` with `roles/firestore.serviceAgent`; and the operator had the tested source export/monitor permissions. The service account's enabled state and actual “jobs run as” identity remained unresolved.
+- Preflight remained **NOT READY**: no accessible open billing account was established, project-creation permission/quota and organization constraints were unresolved, and no principal/custodian/budget/retention decision was approved. Candidate project `rokter-badhon-backup-7k9m2q` was not proven available; candidate bucket `rokter-badhon-backups-7k9m2q` returned not found but was not reserved.
+- Proposed, unapproved defaults were regional `asia-south1`, Standard storage, uniform bucket-level access, public-access prevention, Google-managed encryption at rest, encrypted Auth artifacts, unique run prefixes, unlocked 90-day retention, no initial versioning/retention lock, and alerts at 50/90/100% of a USD 5 monthly budget. Alerts are not a spending cap; retention/lifecycle/soft-delete and source/restore costs require review.
+- Future IAM must be resource-scoped and time-bounded. The documented managed export/import service-agent role is bucket-level Storage Admin and remains broad; unique prefixes are not an IAM boundary. Application principals receive no access. Auth plaintext requires a separately protected local or controlled cloud workspace before export.
+
+If Blaze-managed backup is reconsidered later, refresh every dated observation and obtain separate approvals. The current Free V1 raw encrypted backup path remains controlling.

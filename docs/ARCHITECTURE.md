@@ -132,7 +132,7 @@ Valid values:
 
 Committee position describes organizational office. access_role describes software permission. Position, committee membership, term status, and translated labels never grant access.
 
-Flutter capability checks, Firestore Security Rules, and trusted execution authorization must implement the same concrete capability matrix. That matrix must be reviewed and completed before production authorization rules are implemented; see [PERMISSIONS.md](PERMISSIONS.md).
+Flutter capability checks, Firestore Security Rules, and trusted execution authorization must implement the same concrete [capability matrix](CAPABILITY_MATRIX.md).
 
 ---
 
@@ -201,7 +201,7 @@ UI permission checks improve usability; backend enforcement provides security.
 - Enforce at most one active auth link per User under concurrent operations.
 - Make sensitive workflows retry-safe, with atomic Firestore state changes and audit evidence.
 - Prefer deactivation/archive over destructive deletion when historical references exist.
-- Define collection audiences in [PERMISSIONS.md](PERMISSIONS.md). The approved user_directory split exposes only name, phone, blood_group, profession, photo_url, and active. A permitted document read exposes every field; private User/security fields must never enter the directory.
+- Define collection audiences in [CAPABILITY_MATRIX.md](CAPABILITY_MATRIX.md). The approved user_directory split exposes only name, phone, blood_group, profession, photo_url, and active. A permitted document read exposes every field; private User/security fields must never enter the directory.
 - All admitted Users may read their own private User and update only the approved own-profile fields through the Rules-constrained Q exception. Directory-visible changes and deactivation synchronize atomically with the authoritative User.
 - Pre-admission requesters have only the explicit create-own/read-own-request contract; it grants no protected collection reads.
 - Ordinary targets are member/committee/executive. Leaders cannot manage leader/developer_admin targets or their own account security. Explicit leader-target operations are developer_admin-only; developer-admin provisioning/recovery is operational, outside ordinary application UI.
@@ -282,6 +282,6 @@ Implementation must preserve working functionality within the frozen security co
 
 External URLs never authorize. Initial workflow: authorized operator uploads externally, validates content/consent and records HTTPS URL through the explicit trusted editorial capability. No reusable provider secret in Flutter; no direct Flutter upload until provider-specific review. Null/error profile images use a bundled local avatar. Replacement switches User/directory atomically before old-asset cleanup; cleanup failure must not break the app. Committee covers belong to individual terms; rollover never overwrites historical photos. Events/galleries use explicit matrix audiences and operations. No image bytes/base64 or biometric identification.
 
-Current backups use raw type-preserving Firestore capture, supported Auth export, Rules/index/config manifests, encrypted artifacts and independent no-cost cloud/offline custody. Manual checkpoints precede major migration/release; managed cloud infrastructure is FUTURE / BLAZE OPERATIONAL REFERENCE. Inventory and FREE_TIER_IMPLEMENTATION_PLAN remain preserved evidence/rationale. President remains organization-only/login-disabled unless independently approved later.
+Current backups use raw type-preserving Firestore capture, supported Auth export, Rules/index/config manifests, encrypted artifacts and independent no-cost cloud/offline custody. Manual checkpoints precede major migration/release; managed cloud infrastructure is FUTURE / BLAZE OPERATIONAL REFERENCE. The inventory, migration plan, backup plan, and implementation log preserve the supporting evidence and history. President remains organization-only/login-disabled unless independently approved later.
 
 Terminology for this Free V1 profile: references to backend/server authorization or backend-owned audit mean trusted execution, implemented by the reviewed operator-local tool now; they do not require a hosted paid service. Firestore Rules remain the enforcement path for explicitly permitted ordinary client operations only.

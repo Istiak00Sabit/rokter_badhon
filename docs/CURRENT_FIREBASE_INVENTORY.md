@@ -11,7 +11,7 @@ Evidence labels:
 - **VERIFIED FROM SOURCE CODE**: active repository source and local configuration. This never establishes what data is deployed.
 - **NOT VERIFIED**: inaccessible or untested state; no default values or assumptions fill these gaps.
 
-The eight frozen architecture documents were reviewed: ARCHITECTURE, DATA_MODEL, AUTH_AND_SECURITY, PERMISSIONS, CAPABILITY_MATRIX, MIGRATION_PLAN, PRODUCTION_CHECKLIST, and LOCALIZATION. Active source searches excluded ZIPs, build output, `.dart_tool`, and generated backups. API reads were live and sequential, not a transactionally consistent backup. Personal values were processed only in memory and excluded from this report; identifiers specifically needed for the requested identity inventory are retained.
+The then-active frozen architecture documents were reviewed; the authoritative set is now ARCHITECTURE, DATA_MODEL, AUTH_AND_SECURITY, CAPABILITY_MATRIX, MIGRATION_PLAN, PRODUCTION_CHECKLIST, and LOCALIZATION. Active source searches excluded ZIPs, build output, `.dart_tool`, and generated backups. API reads were live and sequential, not a transactionally consistent backup. Personal values were processed only in memory and excluded from this report; identifiers specifically needed for the requested identity inventory are retained.
 
 ## 1. Project identity
 

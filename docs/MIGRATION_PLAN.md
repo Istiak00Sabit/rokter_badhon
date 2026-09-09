@@ -34,7 +34,7 @@ No separate Member entity or multi-organization layer is introduced. Prefer addi
 
 Before implementing production authorization rules:
 
-1. Complete and review the concrete capability matrix in [PERMISSIONS.md](PERMISSIONS.md), including all five roles, target scopes, field allowlists, transitions, and tests.
+1. Complete and review [CAPABILITY_MATRIX.md](CAPABILITY_MATRIX.md), including all five roles, target scopes, field allowlists, transitions, and tests.
 2. Use draft/published/archived notice states and the approved one-active-assignment-per-User-per-term constraint; do not impose a shared-position occupancy limit.
 3. Approve identity-matching and administrative recovery procedures.
 4. Apply active user_directory reads and terminal blood-request reads for developer_admin/leader/executive. Validate privacy/retention and the projection's exact field exclusions.
@@ -216,7 +216,7 @@ This migration plan grants no new production Storage access or compatibility exc
 
 ## 15. Free V1 Implementation Dependencies
 
-Use Spark Authentication and Firestore only. No billing, Firebase Storage, hosted Functions/Run, managed export/import or paid scheduling is required. The approved phase order in FREE_TIER_IMPLEMENTATION_PLAN remains the implementation roadmap; the phases above describe migration dependencies, not execution authorization.
+Use Spark Authentication and Firestore only. No billing, Firebase Storage, hosted Functions/Run, managed export/import or paid scheduling is required. The phases above remain the migration roadmap and describe dependencies, not execution authorization; completed implementation work is recorded in [IMPLEMENTATION_LOG.md](IMPLEMENTATION_LOG.md).
 
 Before any data cutover: implement and test the local Rules foundation in emulators; review the operator-local trusted tool with independent capability/target/field checks, atomic/idempotent transactions and audit; capture the type-preserving raw Firestore/Auth/config backup and rehearse isolated recovery under BACKUP_AND_RECOVERY_PLAN. Use an emulator or separately approved no-cost isolated environment, never a paid managed import requirement.
 

@@ -417,7 +417,7 @@ reason: string | null
 
 Required events include approval/rejection, auth-link creation/replacement, access-role change, login enable/disable, privileged account disablement, committee-history modification, donor deactivation/archive, and historical donation correction.
 
-Read audiences and retention are defined in [PERMISSIONS.md](PERMISSIONS.md) and the production privacy/retention policy.
+Read audiences are defined in [CAPABILITY_MATRIX.md](CAPABILITY_MATRIX.md); retention is governed by the production privacy/retention policy.
 
 ## 12. Shared Data Invariants
 
@@ -430,7 +430,7 @@ Read audiences and retention are defined in [PERMISSIONS.md](PERMISSIONS.md) and
 - Controlled values use stable language-neutral keys. User-entered content remains unchanged.
 - Missing security-sensitive values fail closed; no implicit active or privileged defaults.
 - Retain referenced identities and events through deactivation/archive. Retention-driven deletion requires a reviewed reference-preservation/privacy procedure.
-- V1 deliberately separates user_directory from private users for the approved directory audience. No other speculative public/private duplicates or donation archive schema are introduced. See [PERMISSIONS.md](PERMISSIONS.md).
+- V1 deliberately separates user_directory from private users for the approved directory audience. No other speculative public/private duplicates or donation archive schema are introduced. See [CAPABILITY_MATRIX.md](CAPABILITY_MATRIX.md).
 
 ## 13. User Directory
 
