@@ -40,3 +40,15 @@ Production Architecture v1.2.1 — Free V1. Architecture status: frozen for impl
 - **Known gaps:** Reviewed trusted operator registration approval/rejection, User/directory/auth-link creation, audit evidence, and directory repair tooling remain unavailable; no client fallback was added.
 - **Production deployment:** NOT performed; no production Firebase/Auth/data change or migration.
 - **Exact next task:** Phase 2C — implement reviewed trusted operator registration decision/admission tooling with atomic User, `user_directory`, `auth_links`, and audit-log handling.
+
+## Phase 2C — Trusted Registration Admission Tool
+
+- **Status:** Complete; Phase 2C ready.
+- **Tool location:** `tools/operator/`; local Node.js CLI using Firebase Admin SDK, excluded from the Flutter APK.
+- **Approval/rejection behavior:** `approve` validates a pending exact request, verified matching applicant Auth identity, current admitted reviewer, target-role boundary, link uniqueness, operation ID, and review reason, then atomically creates the exact User, directory projection, auth link, approval decision, and audit event. `reject` atomically records only the pending-to-rejected decision fields and audit event without deleting the Auth account or request.
+- **Security boundaries:** Explicit operator Firebase UID is resolved through `auth_links` to the authoritative User on every transaction; malformed/inactive/unrecognized state, self-review, duplicate links, stale decisions, unauthorized target roles, and normal `developer_admin` creation fail closed. Credentials are runtime-only and ignored locally. The CLI prints the target project and currently refuses every non-`demo-*` project or missing Firestore/Auth emulator host.
+- **Tests:** Operator synthetic transaction/policy suite passed 12/12; `npm audit` reported 0 vulnerabilities. Flutter regression tests passed 22/22.
+- **Analyzer:** `flutter analyze --no-pub` reported 0 errors, 0 warnings, and 9 pre-existing information-level lints.
+- **Production execution:** NOT performed; the Phase 2C safety guard prevents production access.
+- **Legacy administrator:** Current legacy-admin bootstrap/migration remains intentionally deferred.
+- **Exact next task:** Phase 2D — define and review the protected legacy `developer_admin` bootstrap/recovery procedure, then validate it against emulator-only synthetic data before any production execution.

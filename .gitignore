@@ -37,6 +37,12 @@ migrate_working_dir/
 node_modules/
 .firebase/
 
+# Local trusted-operator credentials (runtime only; never commit)
+**/service-account*.json
+**/*service-account-key*.json
+tools/operator/.env*
+tools/operator/credentials/
+
 # Symbolication related
 app.*.symbols
 
