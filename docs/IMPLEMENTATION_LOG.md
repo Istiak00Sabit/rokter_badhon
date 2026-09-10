@@ -87,3 +87,14 @@ Production Architecture v1.2.1 — Free V1. Architecture status: frozen for impl
 - **Analyzer:** Installed analyzer-server validation completed with 0 errors, 0 warnings, and 9 pre-existing information-level diagnostics. The `flutter analyze --no-pub` wrapper was skipped for the same external SDK-cache permission requirement.
 - **Production:** Untouched; no deployment, credentials, production Firebase access, Auth change, or Firestore mutation was performed.
 - **Exact next task:** Phase 3B — trusted committee assignment operation for existing active terms only.
+
+## Phase 3B — Trusted Committee Assignment Management
+
+- **Status:** READY. Phase 3B implementation exposed a genuine assignment-lifecycle capability gap; the matrix received one narrow amendment granting `committee.assignment_end` only to developer_admin and leader, with executive, committee and member denied. This did not add a wildcard or reopen other architecture.
+- **Trusted tool operations:** `assign-committee-position` and `end-committee-assignment` are implemented outside Flutter. Every operation resolves Firebase Auth UID → exact active `auth_links` record → exact active, login-enabled User with a recognized `users.access_role`; committee position, directory, term and history never authorize.
+- **Assignment/end behavior:** Assignment retains its exact active User/directory/term checks, machine position key, one-active-User/term transaction guard, shared-position allowance, atomic audit and unchanged `users.access_role`. Ending requires an existing active assignment, existing parent term, unused operation ID and reason, then atomically changes only `active` and `ended_at` and creates audit evidence. Historical user, term, position and assignment provenance remain exact.
+- **Tests:** Operator synthetic suite passed 35/35, covering developer_admin/leader ending, all lower-role denials, immutable history, already-ended/reused-operation rejection, atomic failure, assignment regression, unchanged access role and production-target refusal. Flutter committee mutation scan found no `.add`, `.set`, `.update` or `.delete` path.
+- **Flutter validation:** No Flutter source changed. The external-cache Flutter wrapper remained unavailable without approval; the Phase 3A 37/37 offline baseline remains the latest Flutter test run. No package resolution or installation occurred.
+- **Analyzer:** Direct installed analysis-server validation for the unchanged Flutter sources reported 0 errors, 0 warnings and 10 existing information-level diagnostics.
+- **Production:** Untouched; no deployment, credentials, network access, Firebase Auth/Firestore access or production data mutation occurred. The demo/emulator-only safety guard remains enforced.
+- **Exact next task:** Phase 3C — committee media and group photos.

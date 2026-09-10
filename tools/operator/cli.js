@@ -5,6 +5,7 @@ import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 
 import { approveRegistration, rejectRegistration } from './src/admission.js';
 import { bootstrapDeveloperAdmin, recoverDeveloperAdmin } from './src/developer_admin.js';
+import { assignCommitteePosition, endCommitteeAssignment } from './src/committee.js';
 import { AdmissionError } from './src/policy.js';
 import { assertSafeTarget } from './src/safety.js';
 
@@ -79,13 +80,25 @@ async function main() {
         ...protectedDependencies,
         oldUserId: options['old-user-id'],
       });
+  } else if (command === 'assign-committee-position') {
+    result = await assignCommitteePosition({
+      ...dependencies,
+      targetUserId: options['target-user-id'],
+      termId: options['term-id'],
+      position: options.position,
+    });
+  } else if (command === 'end-committee-assignment') {
+    result = await endCommitteeAssignment({
+      ...dependencies,
+      assignmentId: options['assignment-id'],
+    });
   } else {
     throw new AdmissionError(
       'invalid_argument',
-      'Command must be approve, reject, bootstrap-developer-admin, or recover-developer-admin.',
+      'Command must be approve, reject, bootstrap-developer-admin, recover-developer-admin, assign-committee-position, or end-committee-assignment.',
     );
   }
-  console.log(`${result.action}; operation_id=${result.operationId}${result.userId ? `; user_id=${result.userId}` : ''}`);
+  console.log(`${result.action}; operation_id=${result.operationId}${result.userId ? `; user_id=${result.userId}` : ''}${result.assignmentId ? `; assignment_id=${result.assignmentId}` : ''}`);
 }
 
 main().catch((error) => {
