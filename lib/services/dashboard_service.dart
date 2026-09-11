@@ -3,7 +3,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../constants/app_constants.dart';
 
 class DashboardService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseFirestore _firestore;
+  final DateTime Function() _utcNow;
+
+  DashboardService({FirebaseFirestore? firestore, DateTime Function()? utcNow})
+    : _firestore = firestore ?? FirebaseFirestore.instance,
+      _utcNow = utcNow ?? DateTime.now;
 
   // =========================================================
   // TOTAL DONORS
@@ -45,13 +50,23 @@ class DashboardService {
 
   Future<int> getThisMonthDonations() async {
     try {
-      final DateTime now = DateTime.now();
-
-      final DateTime firstDay = DateTime(now.year, now.month, 1);
+      final nowDhaka = _utcNow().toUtc().add(const Duration(hours: 6));
+      final firstDayUtc = DateTime.utc(
+        nowDhaka.year,
+        nowDhaka.month,
+      ).subtract(const Duration(hours: 6));
+      final nextMonthUtc = DateTime.utc(
+        nowDhaka.month == 12 ? nowDhaka.year + 1 : nowDhaka.year,
+        nowDhaka.month == 12 ? 1 : nowDhaka.month + 1,
+      ).subtract(const Duration(hours: 6));
 
       final QuerySnapshot snapshot = await _firestore
           .collection(AppConstants.donationsCollection)
-          .where('date', isGreaterThanOrEqualTo: firstDay.toIso8601String())
+          .where(
+            'donation_date',
+            isGreaterThanOrEqualTo: Timestamp.fromDate(firstDayUtc),
+          )
+          .where('donation_date', isLessThan: Timestamp.fromDate(nextMonthUtc))
           .get();
 
       return snapshot.docs.length;

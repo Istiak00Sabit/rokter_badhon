@@ -16,6 +16,7 @@ import {
 import { AdmissionError } from './src/policy.js';
 import { rolloverCommitteeTerm } from './src/committee_term.js';
 import { deactivateDonor } from './src/donor.js';
+import { correctDonation, recordDonation } from './src/donation.js';
 import {
   addEventMedia,
   createEvent,
@@ -174,6 +175,26 @@ async function main() {
       ...dependencies,
       donorId: options['donor-id'],
     });
+  } else if (command === 'record-donation') {
+    result = await recordDonation({
+      ...dependencies,
+      donorId: options['donor-id'],
+      donationDate: parseNullableTimestamp(options['donation-date'], 'donation-date'),
+      location: options.location === 'null' ? null : options.location,
+      hospital: options.hospital === 'null' ? null : options.hospital,
+      recipientName: options['recipient-name'] === 'null' ? null : options['recipient-name'],
+      recipientContact: options['recipient-contact'] === 'null' ? null : options['recipient-contact'],
+    });
+  } else if (command === 'correct-donation') {
+    result = await correctDonation({
+      ...dependencies,
+      donationId: options['donation-id'],
+      donationDate: options['donation-date'] === undefined ? undefined : parseNullableTimestamp(options['donation-date'], 'donation-date'),
+      location: options.location === undefined ? undefined : options.location === 'null' ? null : options.location,
+      hospital: options.hospital === undefined ? undefined : options.hospital === 'null' ? null : options.hospital,
+      recipientName: options['recipient-name'] === undefined ? undefined : options['recipient-name'] === 'null' ? null : options['recipient-name'],
+      recipientContact: options['recipient-contact'] === undefined ? undefined : options['recipient-contact'] === 'null' ? null : options['recipient-contact'],
+    });
   } else if (command === 'create-event') {
     result = await createEvent({
       ...dependencies,
@@ -232,7 +253,7 @@ async function main() {
       'Unknown command. Use an explicitly reviewed registration, organization, donor, or event operation.',
     );
   }
-  console.log(`${result.action}; operation_id=${result.operationId}${result.userId ? `; user_id=${result.userId}` : ''}${result.assignmentId ? `; assignment_id=${result.assignmentId}` : ''}${result.mediaId ? `; media_id=${result.mediaId}` : ''}${result.termId ? `; term_id=${result.termId}` : ''}${result.donorId ? `; donor_id=${result.donorId}` : ''}${result.eventId ? `; event_id=${result.eventId}` : ''}`);
+  console.log(`${result.action}; operation_id=${result.operationId}${result.userId ? `; user_id=${result.userId}` : ''}${result.assignmentId ? `; assignment_id=${result.assignmentId}` : ''}${result.mediaId ? `; media_id=${result.mediaId}` : ''}${result.termId ? `; term_id=${result.termId}` : ''}${result.donorId ? `; donor_id=${result.donorId}` : ''}${result.eventId ? `; event_id=${result.eventId}` : ''}${result.donationId ? `; donation_id=${result.donationId}` : ''}`);
 }
 
 main().catch((error) => {

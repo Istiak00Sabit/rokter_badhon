@@ -167,6 +167,15 @@ export function parsePendingRequest(data, documentId) {
 }
 
 export function authorizeOperator({ authRecord, link, user }) {
+  authorizeOperatorForRoles({
+    authRecord,
+    link,
+    user,
+    allowedRoles: ['developer_admin', 'leader'],
+  });
+}
+
+export function authorizeOperatorForRoles({ authRecord, link, user, allowedRoles }) {
   if (!authRecord || authRecord.disabled === true || authRecord.emailVerified !== true) {
     fail('operator_not_admitted', 'Operator Firebase identity must exist, be enabled, and have verified email.');
   }
@@ -174,8 +183,8 @@ export function authorizeOperator({ authRecord, link, user }) {
   if (!user || user.active !== true || user.login_enabled !== true || !RECOGNIZED_ROLES.has(user.access_role)) {
     fail('operator_not_admitted', 'Operator User is missing, inactive, login-disabled, or has an unknown role.');
   }
-  if (!['developer_admin', 'leader'].includes(user.access_role)) {
-    fail('unauthorized', 'Operator lacks registration review capability.');
+  if (!allowedRoles.includes(user.access_role)) {
+    fail('unauthorized', 'Operator lacks the required capability.');
   }
 }
 

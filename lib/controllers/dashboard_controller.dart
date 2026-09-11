@@ -39,7 +39,9 @@ class DashboardController extends GetxController {
       final results = await Future.wait([
         _dashboardService.getTotalDonors(),
         _dashboardService.getTotalMembers(),
-        _dashboardService.getThisMonthDonations(),
+        _canViewDonationHistory(currentUser.value?.accessRole)
+            ? _dashboardService.getThisMonthDonations()
+            : Future.value(0),
         _dashboardService.getActiveRequests(),
         _dashboardService.getLatestNotices(),
       ]);
@@ -49,7 +51,6 @@ class DashboardController extends GetxController {
       thisMonthDonations.value = results[2] as int;
       activeRequests.value = results[3] as int;
       notices.value = results[4] as List;
-
     } catch (e) {
       print('Dashboard error: $e');
     } finally {
@@ -63,3 +64,6 @@ class DashboardController extends GetxController {
     await loadDashboard();
   }
 }
+
+bool _canViewDonationHistory(String? role) =>
+    role == 'developer_admin' || role == 'leader' || role == 'executive';

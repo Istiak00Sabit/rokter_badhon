@@ -35,7 +35,7 @@ function nullableString(value, field) {
   }
 }
 
-function parseDonor(data, id) {
+export function parseDonor(data, id) {
   if (!data || typeof data !== 'object' || Array.isArray(data)) fail('malformed', 'Donor must be an object.');
   const keys = Object.keys(data);
   if (keys.length !== DONOR_FIELDS.size || keys.some((key) => !DONOR_FIELDS.has(key))) {

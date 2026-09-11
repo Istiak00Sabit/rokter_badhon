@@ -5,6 +5,7 @@ import '../constants/app_strings.dart';
 import '../controllers/dashboard_controller.dart';
 import '../views/add_donor_screen.dart';
 import '../views/donor_list_screen.dart';
+import '../views/donation_history_screen.dart';
 import '../views/event_list_screen.dart';
 import '../views/member_list_screen.dart';
 
@@ -194,15 +195,23 @@ class DashboardScreen extends StatelessWidget {
                           ),
                           const SizedBox(width: 12),
                           Expanded(
-                            child: _buildActionButton(
-                              title: 'রক্তদান রেকর্ড',
-                              icon: Icons.add_circle,
-                              onTap: () => Get.snackbar(
-                                'শীঘ্রই আসছে',
-                                'রক্তদান রেকর্ড ফিচার শীঘ্রই যোগ হবে!',
-                                snackPosition: SnackPosition.BOTTOM,
-                              ),
-                            ),
+                            child:
+                                _canViewDonationHistory(
+                                  controller.currentUser.value?.accessRole,
+                                )
+                                ? _buildActionButton(
+                                    title: 'রক্তদানের ইতিহাস',
+                                    icon: Icons.history,
+                                    onTap: () => Get.to(
+                                      () => const DonationHistoryScreen(),
+                                    ),
+                                  )
+                                : _buildActionButton(
+                                    title: 'সদস্য তালিকা',
+                                    icon: Icons.people_outline,
+                                    onTap: () =>
+                                        Get.to(() => const MemberListScreen()),
+                                  ),
                           ),
                         ],
                       ),
@@ -442,3 +451,6 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 }
+
+bool _canViewDonationHistory(String? role) =>
+    role == 'developer_admin' || role == 'leader' || role == 'executive';
