@@ -98,3 +98,27 @@ Production Architecture v1.2.1 — Free V1. Architecture status: frozen for impl
 - **Analyzer:** Direct installed analysis-server validation for the unchanged Flutter sources reported 0 errors, 0 warnings and 10 existing information-level diagnostics.
 - **Production:** Untouched; no deployment, credentials, network access, Firebase Auth/Firestore access or production data mutation occurred. The demo/emulator-only safety guard remains enforced.
 - **Exact next task:** Phase 3C — committee media and group photos.
+
+## Phase 3C — Committee Media and Group Photos
+
+- **Status:** Complete; Phase 3C ready.
+- **CommitteeMedia/read flow:** Added strict exact-schema media parsing with required HTTPS URL, Firestore Timestamp, nonnegative integer ordering and generic nullable provider metadata. Current and historical rosters query only the selected term's active media and order by `sort_order` with document-ID tie-break; malformed media fails closed.
+- **Group photo/gallery behavior:** Existing nullable HTTPS term cover now renders for both current and past terms with local fallback for null or load failure. The minimal gallery shows stable active images, optional captions, an empty state and broken-image fallback. Flutter remains read-only.
+- **Trusted media operations:** Added operator-only `add-committee-media`, `edit-committee-media-caption`, `set-committee-media-order`, `deactivate-committee-media` and `set-committee-group-photo`. Developer_admin/leader authorization is resolved only through Auth UID → active auth link → admitted `users.access_role`; media add/editorial state/cover changes and audit evidence commit atomically, with immutable media identity/provider/upload metadata, no hard deletion and no unrelated field changes.
+- **External provider boundary:** No provider was selected or contacted. Firestore receives only approved HTTPS URLs and nonsecret generic metadata; no image bytes, upload path, credentials or Firebase Storage were added.
+- **Rules/indexes:** Existing Rules already allow admitted active-media reads, restrict hidden media to developer_admin/leader and expose no Flutter media writes. The existing `committee_media(term_id, active, sort_order)` index is exact; no Rules or index change was needed.
+- **Tests:** The expanded operator synthetic suite passed 50/50, including add/caption/order/hide/group-photo authorization, exact schema/audit, invalid/missing state, rollback, retry rejection, unchanged access role, term rollover and production refusal. Added Flutter model/service/source tests for strict parsing, time/URL validation, scoped ordered historical galleries, safe fallbacks and the read-only boundary; the Flutter wrapper remained blocked on its external SDK-cache lock, so these new Flutter tests were not claimed as executed.
+- **Analyzer:** Direct installed analysis-server validation completed with 0 errors, 0 warnings and 10 existing information-level diagnostics.
+- **Production:** Untouched; no network, deployment, credentials, provider call, production Firebase access or data mutation occurred.
+- **Exact next task:** Phase 3 — final organization-structure integration review.
+
+## Phase 3 — Organization Structure Final Integration
+
+- **Status:** READY after closing two implementation-discovered lifecycle gaps narrowly: assignment ending and composite term rollover. Standalone term creation/ending remain denied.
+- **Committee lifecycle:** Added trusted `rollover-committee-term` for developer_admin/leader only. It creates the first active term only when none exists, or atomically deactivates the exactly matched single current term while creating one generated-ID active successor and audit evidence. It never changes assignments, Users, roles, login state or Auth links.
+- **Media completion:** Completed every affirmative committee-media editorial operation: add, caption edit/clear, order update, hide, and group-photo set/clear. Media identity, parent, URL, provider/public ID and upload provenance remain immutable after creation; no unhide/delete exists.
+- **Authorization:** All trusted committee operations resolve current admitted authority exclusively through `users.access_role`; position, term, assignment, directory, uploader and media fields never authorize, and no developer_admin wildcard was introduced.
+- **Tests:** Operator synthetic suite covers term initialization/rollover concurrency state, stale/multiple current terms, role denials, exact successor schema, rollback/idempotency and assignment preservation, alongside all assignment/media regression tests.
+- **Validation:** Operator tests passed 50/50 and direct Flutter analysis remained at 0 errors/0 warnings. Rules/index code was unchanged; the offline Rules rerun could not spawn the installed Java process under the repository sandbox, so the prior 76/76 emulator result remains the latest Rules execution evidence.
+- **Production:** Untouched. All operator commands retain the explicit demo-project plus Firestore/Auth emulator guard.
+- **Exact next task:** Phase 4A — strict donor schema and donor lifecycle integration.

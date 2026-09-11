@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/committee_assignment_model.dart';
 import '../models/committee_member_model.dart';
+import '../models/committee_media_model.dart';
 import '../models/committee_term_model.dart';
 import '../models/user_directory_model.dart';
 
@@ -16,14 +17,20 @@ class CommitteeDataException implements Exception {
 class CommitteeRoster {
   final CommitteeTermModel term;
   final List<CommitteeMemberModel> members;
+  final List<CommitteeMediaModel> gallery;
 
-  const CommitteeRoster({required this.term, required this.members});
+  const CommitteeRoster({
+    required this.term,
+    required this.members,
+    required this.gallery,
+  });
 }
 
 class CommitteeService {
   static const termsCollection = 'committee_terms';
   static const assignmentsCollection = 'committee_assignments';
   static const directoryCollection = 'user_directory';
+  static const mediaCollection = 'committee_media';
   static const _directoryQueryLimit = 30;
 
   final FirebaseFirestore _firestore;
@@ -90,6 +97,21 @@ class CommitteeService {
     return assignments;
   }
 
+  Future<List<CommitteeMediaModel>> getActiveMediaForTerm(String termId) async {
+    _requireDocumentId(termId, 'term');
+    final snapshot = await _firestore
+        .collection(mediaCollection)
+        .where('term_id', isEqualTo: termId)
+        .where('active', isEqualTo: true)
+        .orderBy('sort_order')
+        .orderBy(FieldPath.documentId)
+        .get();
+    final media = snapshot.docs
+        .map((doc) => CommitteeMediaModel.fromMap(doc.data(), doc.id))
+        .toList(growable: false);
+    return validateGallery(termId, media);
+  }
+
   Future<CommitteeRoster> getCurrentRoster(CommitteeTermModel term) async {
     if (!term.active) {
       throw const CommitteeDataException('Current committee term is inactive.');
@@ -112,12 +134,17 @@ class CommitteeService {
     CommitteeTermModel term,
     List<CommitteeAssignmentModel> assignments,
   ) async {
-    final directory = await _getActiveDirectoryEntries(
-      assignments.map((assignment) => assignment.userId).toSet(),
-    );
+    final results = await Future.wait<dynamic>([
+      _getActiveDirectoryEntries(
+        assignments.map((assignment) => assignment.userId).toSet(),
+      ),
+      getActiveMediaForTerm(term.id),
+    ]);
+    final directory = results[0] as Map<String, UserDirectoryModel>;
     return CommitteeRoster(
       term: term,
       members: mapDirectoryPresentation(assignments, directory),
+      gallery: results[1] as List<CommitteeMediaModel>,
     );
   }
 
@@ -207,6 +234,24 @@ class CommitteeService {
       );
     });
     return members;
+  }
+
+  static List<CommitteeMediaModel> validateGallery(
+    String termId,
+    Iterable<CommitteeMediaModel> media,
+  ) {
+    final gallery = media.toList(growable: false);
+    if (gallery.any((item) => !item.active || item.termId != termId)) {
+      throw const CommitteeDataException(
+        'Gallery query returned hidden media or another term.',
+      );
+    }
+    final ordered = [...gallery]
+      ..sort((left, right) {
+        final order = left.sortOrder.compareTo(right.sortOrder);
+        return order != 0 ? order : left.id.compareTo(right.id);
+      });
+    return List.unmodifiable(ordered);
   }
 
   static UserDirectoryModel? _visibleDirectory(UserDirectoryModel? entry) {

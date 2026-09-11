@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rokter_badhon/models/committee_assignment_model.dart';
 import 'package:rokter_badhon/models/committee_term_model.dart';
+import 'package:rokter_badhon/models/committee_media_model.dart';
 import 'package:rokter_badhon/models/user_directory_model.dart';
 import 'package:rokter_badhon/services/committee_service.dart';
 
@@ -52,6 +53,23 @@ UserDirectoryModel directory(String id, {bool active = true}) =>
       'active': active,
     }, id);
 
+CommitteeMediaModel media(
+  String id, {
+  String termId = 'term-id',
+  int sortOrder = 0,
+  bool active = true,
+}) => CommitteeMediaModel.fromMap({
+  'term_id': termId,
+  'image_url': 'https://example.test/$id.jpg',
+  'caption': null,
+  'sort_order': sortOrder,
+  'active': active,
+  'uploaded_at': Timestamp.fromMillisecondsSinceEpoch(1700000000000),
+  'uploaded_by': 'operator-id',
+  'provider': null,
+  'provider_public_id': null,
+}, id);
+
 void main() {
   test('current-term selection accepts zero or one active term only', () {
     final current = term(
@@ -98,6 +116,31 @@ void main() {
   });
 
   test(
+    'gallery validates audience and uses stable historical-term ordering',
+    () {
+      final gallery = CommitteeService.validateGallery('past-term', [
+        media('z', termId: 'past-term', sortOrder: 1),
+        media('b', termId: 'past-term'),
+        media('a', termId: 'past-term'),
+      ]);
+      expect(gallery.map((item) => item.id), ['a', 'b', 'z']);
+      expect(
+        () => CommitteeService.validateGallery('past-term', [
+          media('hidden', termId: 'past-term', active: false),
+        ]),
+        throwsA(isA<CommitteeDataException>()),
+      );
+      expect(
+        () => CommitteeService.validateGallery('past-term', [
+          media('wrong-term'),
+        ]),
+        throwsA(isA<CommitteeDataException>()),
+      );
+      expect(CommitteeService.validateGallery('past-term', const []), isEmpty);
+    },
+  );
+
+  test(
     'directory mapping is display-only and preserves assignment position',
     () {
       final historical = assignment(
@@ -142,6 +185,8 @@ void main() {
       expect(source, contains(".where('active', isEqualTo: true)"));
       expect(source, contains(".where('active', isEqualTo: false)"));
       expect(source, contains(".where('term_id', isEqualTo: termId)"));
+      expect(source, contains(".collection(mediaCollection)"));
+      expect(source, contains(".orderBy('sort_order')"));
       expect(source, contains('FieldPath.documentId'));
       expect(source, isNot(contains(".collection('users')")));
       expect(source, isNot(contains('.add(')));
@@ -149,6 +194,17 @@ void main() {
       expect(source, isNot(contains('.update(')));
       expect(source, isNot(contains('.delete(')));
       expect(source, isNot(contains('access_role')));
+
+      final screenSource = File(
+        'lib/views/committee_screen.dart',
+      ).readAsStringSync();
+      expect(screenSource, contains('No gallery images are available'));
+      expect(screenSource, contains('errorBuilder:'));
+      expect(screenSource, contains('roster.term.groupPhotoUrl'));
+      expect(screenSource, isNot(contains('.add(')));
+      expect(screenSource, isNot(contains('.set(')));
+      expect(screenSource, isNot(contains('.update(')));
+      expect(screenSource, isNot(contains('.delete(')));
     },
   );
 }

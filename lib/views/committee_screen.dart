@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../constants/app_colors.dart';
 import '../controllers/committee_controller.dart';
 import '../models/committee_member_model.dart';
+import '../models/committee_media_model.dart';
 import '../models/committee_term_model.dart';
 import '../services/committee_service.dart';
 import 'member_list_screen.dart';
@@ -254,6 +255,13 @@ class CommitteeRosterView extends StatelessWidget {
           style: const TextStyle(color: AppColors.textGrey),
         ),
         const SizedBox(height: 18),
+        const Text(
+          'Committee Gallery',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        _CommitteeGallery(media: roster.gallery),
+        const SizedBox(height: 18),
         if (roster.members.isEmpty)
           const _EmptyCommittee(
             message: 'No committee assignments are available for this term.',
@@ -261,6 +269,56 @@ class CommitteeRosterView extends StatelessWidget {
         else
           ...roster.members.map(_CommitteeMemberCard.new),
       ],
+    );
+  }
+}
+
+class _CommitteeGallery extends StatelessWidget {
+  final List<CommitteeMediaModel> media;
+
+  const _CommitteeGallery({required this.media});
+
+  @override
+  Widget build(BuildContext context) {
+    if (media.isEmpty) {
+      return const Text(
+        'No gallery images are available for this term.',
+        style: TextStyle(color: AppColors.textGrey),
+      );
+    }
+    return SizedBox(
+      height: 190,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: media.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 10),
+        itemBuilder: (context, index) {
+          final item = media[index];
+          return SizedBox(
+            width: 230,
+            child: Card(
+              clipBehavior: Clip.antiAlias,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: _CommitteeImage(url: item.imageUrl, gallery: true),
+                  ),
+                  if (item.caption != null)
+                    Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: Text(
+                        item.caption!,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 }
@@ -330,8 +388,9 @@ class _CommitteeMemberCard extends StatelessWidget {
 class _CommitteeImage extends StatelessWidget {
   final String? url;
   final bool group;
+  final bool gallery;
 
-  const _CommitteeImage({this.url, this.group = false});
+  const _CommitteeImage({this.url, this.group = false, this.gallery = false});
 
   @override
   Widget build(BuildContext context) {
@@ -339,7 +398,7 @@ class _CommitteeImage extends StatelessWidget {
       color: AppColors.primaryLight,
       child: Center(
         child: Icon(
-          group ? Icons.groups : Icons.person,
+          group ? Icons.groups : (gallery ? Icons.broken_image : Icons.person),
           color: AppColors.primary,
           size: group ? 64 : 30,
         ),

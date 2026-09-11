@@ -1,12 +1,20 @@
 #!/usr/bin/env node
 import { applicationDefault, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
-import { FieldValue, getFirestore } from 'firebase-admin/firestore';
+import { FieldValue, getFirestore, Timestamp } from 'firebase-admin/firestore';
 
 import { approveRegistration, rejectRegistration } from './src/admission.js';
 import { bootstrapDeveloperAdmin, recoverDeveloperAdmin } from './src/developer_admin.js';
 import { assignCommitteePosition, endCommitteeAssignment } from './src/committee.js';
+import {
+  addCommitteeMedia,
+  deactivateCommitteeMedia,
+  editCommitteeMediaCaption,
+  setCommitteeGroupPhoto,
+  setCommitteeMediaOrder,
+} from './src/committee_media.js';
 import { AdmissionError } from './src/policy.js';
+import { rolloverCommitteeTerm } from './src/committee_term.js';
 import { assertSafeTarget } from './src/safety.js';
 
 function parseArguments(values) {
@@ -21,6 +29,16 @@ function parseArguments(values) {
     options[key.slice(2)] = value;
   }
   return { command, options };
+}
+
+function parseNullableTimestamp(value, label) {
+  if (value === undefined || value === 'null') return null;
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?(?:Z|[+-]\d{2}:\d{2})$/.test(value)) {
+    throw new AdmissionError('invalid_argument', `${label} must be an ISO-8601 timestamp with timezone or null.`);
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) throw new AdmissionError('invalid_argument', `${label} is invalid.`);
+  return Timestamp.fromDate(parsed);
 }
 
 async function main() {
@@ -92,13 +110,61 @@ async function main() {
       ...dependencies,
       assignmentId: options['assignment-id'],
     });
+  } else if (command === 'add-committee-media') {
+    result = await addCommitteeMedia({
+      ...dependencies,
+      termId: options['term-id'],
+      imageUrl: options['image-url'],
+      caption: options.caption,
+      sortOrder: Number(options['sort-order']),
+      provider: options.provider,
+      providerPublicId: options['provider-public-id'],
+    });
+  } else if (command === 'deactivate-committee-media') {
+    result = await deactivateCommitteeMedia({
+      ...dependencies,
+      mediaId: options['media-id'],
+    });
+  } else if (command === 'edit-committee-media-caption') {
+    result = await editCommitteeMediaCaption({
+      ...dependencies,
+      mediaId: options['media-id'],
+      caption: options.caption === 'null' ? null : options.caption,
+    });
+  } else if (command === 'set-committee-media-order') {
+    result = await setCommitteeMediaOrder({
+      ...dependencies,
+      mediaId: options['media-id'],
+      sortOrder: Number(options['sort-order']),
+    });
+  } else if (command === 'set-committee-group-photo') {
+    result = await setCommitteeGroupPhoto({
+      ...dependencies,
+      termId: options['term-id'],
+      imageUrl: options['image-url'] === 'null' ? null : options['image-url'],
+    });
+  } else if (command === 'rollover-committee-term') {
+    result = await rolloverCommitteeTerm({
+      ...dependencies,
+      currentTermId: !options['current-term-id'] || options['current-term-id'] === 'none'
+        ? null
+        : options['current-term-id'],
+      name: options.name,
+      startYear: Number(options['start-year']),
+      endYear: Number(options['end-year']),
+      startDate: parseNullableTimestamp(options['start-date'], 'start-date'),
+      endDate: parseNullableTimestamp(options['end-date'], 'end-date'),
+      groupPhotoUrl: options['group-photo-url'] === undefined || options['group-photo-url'] === 'null'
+        ? null
+        : options['group-photo-url'],
+    });
   } else {
     throw new AdmissionError(
       'invalid_argument',
-      'Command must be approve, reject, bootstrap-developer-admin, recover-developer-admin, assign-committee-position, or end-committee-assignment.',
+      'Unknown command. Use an explicitly reviewed registration, developer-admin, committee-assignment, or committee-media operation.',
     );
   }
-  console.log(`${result.action}; operation_id=${result.operationId}${result.userId ? `; user_id=${result.userId}` : ''}${result.assignmentId ? `; assignment_id=${result.assignmentId}` : ''}`);
+  console.log(`${result.action}; operation_id=${result.operationId}${result.userId ? `; user_id=${result.userId}` : ''}${result.assignmentId ? `; assignment_id=${result.assignmentId}` : ''}${result.mediaId ? `; media_id=${result.mediaId}` : ''}${result.termId ? `; term_id=${result.termId}` : ''}`);
 }
 
 main().catch((error) => {
