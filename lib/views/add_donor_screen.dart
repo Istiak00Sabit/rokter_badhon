@@ -17,8 +17,8 @@ class AddDonorScreen extends StatelessWidget {
         title: Obx(
           () => Text(
             controller.editingDonorId.value == null
-                ? 'নতুন রক্তদাতা যোগ করুন'
-                : 'রক্তদাতার তথ্য সম্পাদনা',
+                ? 'add_donor'.tr
+                : 'edit_donor'.tr,
           ),
         ),
         backgroundColor: AppColors.primary,
@@ -56,10 +56,10 @@ class AddDonorScreen extends StatelessWidget {
                     size: 20,
                   ),
                   const SizedBox(width: 10),
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      'এখানে শুধুমাত্র রক্তদাতার তথ্য যোগ করুন। এটি অ্যাপ ব্যবহারকারী নয়।',
-                      style: TextStyle(
+                      'donor_form_note'.tr,
+                      style: const TextStyle(
                         fontSize: 13,
                         color: AppColors.primaryDark,
                       ),
@@ -71,14 +71,14 @@ class AddDonorScreen extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            _sectionTitle('ব্যক্তিগত তথ্য'),
+            _sectionTitle('personal_info'.tr),
             const SizedBox(height: 12),
 
             // Name
             _buildTextField(
               controller: controller.nameController,
-              label: 'পূর্ণ নাম *',
-              hint: 'রক্তদাতার নাম লিখুন',
+              label: '${'full_name'.tr} *',
+              hint: 'enter_name'.tr,
               icon: Icons.person_outline,
             ),
             const SizedBox(height: 14),
@@ -86,7 +86,7 @@ class AddDonorScreen extends StatelessWidget {
             // Phone
             _buildTextField(
               controller: controller.phoneController,
-              label: 'ফোন নম্বর *',
+              label: '${'phone_number'.tr} *',
               hint: '01XXXXXXXXX',
               icon: Icons.phone_outlined,
               keyboardType: TextInputType.phone,
@@ -96,7 +96,7 @@ class AddDonorScreen extends StatelessWidget {
             // Blood Group
             Obx(
               () => _buildDropdown(
-                label: 'রক্তের গ্রুপ *',
+                label: '${'blood_group'.tr} *',
                 icon: Icons.water_drop_outlined,
                 value: controller.selectedBloodGroup.value.isEmpty
                     ? null
@@ -110,7 +110,7 @@ class AddDonorScreen extends StatelessWidget {
             // Gender
             Obx(
               () => _buildDropdown(
-                label: 'লিঙ্গ *',
+                label: '${'gender'.tr} *',
                 icon: Icons.wc_outlined,
                 value: controller.selectedGender.value.isEmpty
                     ? null
@@ -122,14 +122,14 @@ class AddDonorScreen extends StatelessWidget {
             ),
 
             const SizedBox(height: 20),
-            _sectionTitle('ঠিকানা'),
+            _sectionTitle('address'.tr),
             const SizedBox(height: 12),
 
             // Village
             _buildTextField(
               controller: controller.villageController,
-              label: 'গ্রাম',
-              hint: 'গ্রামের নাম লিখুন',
+              label: 'village'.tr,
+              hint: 'enter_village'.tr,
               icon: Icons.home_outlined,
             ),
             const SizedBox(height: 14),
@@ -137,7 +137,7 @@ class AddDonorScreen extends StatelessWidget {
             // Union
             Obx(
               () => _buildDropdown(
-                label: 'ইউনিয়ন / পৌরসভা',
+                label: 'union'.tr,
                 icon: Icons.location_on_outlined,
                 value: controller.selectedUnion.value.isEmpty
                     ? null
@@ -153,7 +153,7 @@ class AddDonorScreen extends StatelessWidget {
               children: [
                 Expanded(
                   child: _buildReadOnlyField(
-                    label: 'উপজেলা',
+                    label: 'upazila'.tr,
                     value: AppConstants.upazila,
                     icon: Icons.map_outlined,
                   ),
@@ -161,7 +161,7 @@ class AddDonorScreen extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: _buildReadOnlyField(
-                    label: 'জেলা',
+                    label: 'district'.tr,
                     value: AppConstants.district,
                     icon: Icons.location_city_outlined,
                   ),
@@ -172,8 +172,8 @@ class AddDonorScreen extends StatelessWidget {
             const SizedBox(height: 14),
             _buildTextField(
               controller: controller.professionController,
-              label: 'পেশা',
-              hint: 'পেশা লিখুন (ঐচ্ছিক)',
+              label: 'profession'.tr,
+              hint: 'enter_profession_optional'.tr,
               icon: Icons.work_outline,
             ),
 
@@ -206,8 +206,8 @@ class AddDonorScreen extends StatelessWidget {
                             SizedBox(width: 8),
                             Text(
                               controller.editingDonorId.value == null
-                                  ? 'রক্তদাতা যোগ করুন'
-                                  : 'তথ্য সংরক্ষণ করুন',
+                                  ? 'add_donor'.tr
+                                  : 'save_information'.tr,
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,

@@ -36,17 +36,17 @@ class AuthController extends GetxController {
   Future<void> login({required String email, required String password}) async {
     // Validation
     if (email.isEmpty || password.isEmpty) {
-      errorMessage.value = 'ইমেইল এবং পাসওয়ার্ড দিন!';
+      errorMessage.value = 'email_password_required'.tr;
       return;
     }
 
     if (!email.contains('@')) {
-      errorMessage.value = 'সঠিক ইমেইল ঠিকানা দিন!';
+      errorMessage.value = 'valid_email_required'.tr;
       return;
     }
 
     if (password.length < 6) {
-      errorMessage.value = 'পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে!';
+      errorMessage.value = 'password_min_length'.tr;
       return;
     }
 
@@ -77,10 +77,28 @@ class AuthController extends GetxController {
     Get.offAll(() => const LoginScreen());
   }
 
+  Future<bool> sendPasswordReset(String email) async {
+    if (!email.contains('@')) {
+      errorMessage.value = 'enter_email'.tr;
+      return false;
+    }
+    try {
+      isLoading.value = true;
+      errorMessage.value = '';
+      await _authService.sendPasswordResetEmail(email);
+      return true;
+    } catch (_) {
+      errorMessage.value = 'reset_failed'.tr;
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   Future<bool> updateOwnProfile(ProfileUpdateInput input) async {
     final user = currentUser.value;
     if (user == null || sessionState.value != AuthSessionState.admitted) {
-      errorMessage.value = 'An admitted user session is required.';
+      errorMessage.value = 'session_unavailable'.tr;
       return false;
     }
     try {
@@ -94,8 +112,8 @@ class AuthController extends GetxController {
         return false;
       }
       return true;
-    } catch (error) {
-      errorMessage.value = error.toString();
+    } catch (_) {
+      errorMessage.value = 'profile_update_error'.tr;
       return false;
     } finally {
       isLoading.value = false;
@@ -110,23 +128,23 @@ class AuthController extends GetxController {
   String _messageFor(AuthSessionResult result) {
     switch (result.state) {
       case AuthSessionState.emailUnverified:
-        return 'আপনার ইমেইল যাচাই করুন।';
+        return 'email_unverified'.tr;
       case AuthSessionState.unlinked:
-        return 'এই অ্যাকাউন্টটি এখনো সংগঠনের ব্যবহারকারীর সাথে যুক্ত নয়।';
+        return 'account_unlinked'.tr;
       case AuthSessionState.linkInactive:
-        return 'আপনার অ্যাকাউন্টের সংযোগ নিষ্ক্রিয়।';
+        return 'link_inactive'.tr;
       case AuthSessionState.userMissing:
-        return 'সংযুক্ত ব্যবহারকারীর প্রোফাইল পাওয়া যায়নি।';
+        return 'user_missing'.tr;
       case AuthSessionState.userInactive:
-        return 'আপনার অ্যাকাউন্ট নিষ্ক্রিয় করা হয়েছে।';
+        return 'user_inactive'.tr;
       case AuthSessionState.loginDisabled:
-        return 'এই অ্যাকাউন্টে লগইন বন্ধ করা হয়েছে।';
+        return 'login_disabled'.tr;
       case AuthSessionState.invalidRole:
-        return 'এই অ্যাকাউন্টের অনুমোদিত ভূমিকা নেই।';
+        return 'invalid_role'.tr;
       case AuthSessionState.error:
-        return _authService.authErrorMessage(result.error);
+        return _authService.authErrorCode(result.error).tr;
       case AuthSessionState.unauthenticated:
-        return 'লগইন করা যায়নি।';
+        return 'login_failed'.tr;
       case AuthSessionState.admitted:
         return '';
     }

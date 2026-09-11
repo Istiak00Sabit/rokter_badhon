@@ -267,26 +267,26 @@ class AuthService {
 
   Future<void> logout() => _auth.signOut();
 
-  String authErrorMessage(Object? error) {
+  String authErrorCode(Object? error) {
     if (error is! FirebaseAuthException) {
-      return 'লগইন অনুমতি যাচাই করা যায়নি! আবার চেষ্টা করুন।';
+      return 'auth_check_failed';
     }
     switch (error.code) {
       case 'user-not-found':
-        return 'এই ইমেইলে কোনো অ্যাকাউন্ট নেই!';
+        return 'auth_user_not_found';
       case 'wrong-password':
       case 'invalid-credential':
-        return 'ইমেইল বা পাসওয়ার্ড ভুল হয়েছে!';
+        return 'auth_invalid_credential';
       case 'invalid-email':
-        return 'ইমেইল ঠিকানা সঠিক নয়!';
+        return 'auth_invalid_email';
       case 'user-disabled':
-        return 'এই অ্যাকাউন্ট বন্ধ করা হয়েছে!';
+        return 'auth_user_disabled';
       case 'too-many-requests':
-        return 'অনেকবার চেষ্টা করা হয়েছে! কিছুক্ষণ পর আবার চেষ্টা করুন।';
+        return 'auth_too_many_requests';
       case 'network-request-failed':
-        return 'ইন্টারনেট সংযোগ পরীক্ষা করুন!';
+        return 'network_unavailable';
       default:
-        return 'লগইন করতে সমস্যা হয়েছে! আবার চেষ্টা করুন।';
+        return 'login_failed';
     }
   }
 }

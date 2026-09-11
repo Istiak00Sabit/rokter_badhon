@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../models/user_directory_model.dart';
@@ -12,18 +11,15 @@ class MemberController extends GetxController {
 
   final RxBool isLoading = false.obs;
   final RxList<UserDirectoryModel> members = <UserDirectoryModel>[].obs;
+  final RxString errorCode = ''.obs;
 
   Future<void> loadMembers() async {
     try {
       isLoading.value = true;
+      errorCode.value = '';
       members.value = await _userService.getActiveDirectory();
-    } catch (error) {
-      Get.snackbar(
-        'Directory unavailable',
-        'The active member directory could not be loaded: $error',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+    } catch (_) {
+      errorCode.value = 'unavailable';
     } finally {
       isLoading.value = false;
     }

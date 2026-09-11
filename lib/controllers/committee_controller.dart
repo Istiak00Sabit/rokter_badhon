@@ -27,10 +27,10 @@ class CommitteeController extends GetxController {
       currentRoster.value = currentTerm == null
           ? null
           : await service.getCurrentRoster(currentTerm);
-    } catch (error) {
+    } catch (_) {
       currentRoster.value = null;
       pastTerms.clear();
-      errorMessage.value = 'Committee data is unavailable: $error';
+      errorMessage.value = 'committee_error'.tr;
     } finally {
       isLoading.value = false;
     }

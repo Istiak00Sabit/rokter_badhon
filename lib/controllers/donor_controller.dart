@@ -109,8 +109,8 @@ class DonorController extends GetxController {
       clearForm();
       Get.back();
       Get.snackbar(
-        'সফল',
-        'রক্তদাতা যোগ করা হয়েছে।',
+        'success'.tr,
+        'donor_added'.tr,
         backgroundColor: Colors.green,
         colorText: Colors.white,
       );
@@ -151,8 +151,8 @@ class DonorController extends GetxController {
       clearForm();
       Get.back();
       Get.snackbar(
-        'সফল',
-        'রক্তদাতার তথ্য হালনাগাদ হয়েছে।',
+        'success'.tr,
+        'donor_updated'.tr,
         backgroundColor: Colors.green,
         colorText: Colors.white,
       );
@@ -183,17 +183,17 @@ class DonorController extends GetxController {
 
   void _showError(String code) {
     errorCode.value = code;
-    const messages = {
-      'permission_denied': 'এই কাজের অনুমতি নেই।',
-      'invalid_input': 'প্রয়োজনীয় তথ্য সঠিকভাবে দিন।',
-      'network_unavailable': 'নেটওয়ার্ক পাওয়া যাচ্ছে না। আবার চেষ্টা করুন।',
-      'query_unavailable': 'তালিকাটি এখন পাওয়া যাচ্ছে না।',
-      'malformed_data': 'রক্তদাতার সংরক্ষিত তথ্যটি সঠিক নয়।',
-      'operation_failed': 'কাজটি সম্পন্ন করা যায়নি। আবার চেষ্টা করুন।',
-    };
     Get.snackbar(
-      'ত্রুটি',
-      messages[code] ?? messages['operation_failed']!,
+      'error'.tr,
+      (const {
+            'permission_denied',
+            'invalid_input',
+            'network_unavailable',
+            'query_unavailable',
+            'malformed_data',
+          }.contains(code)
+          ? code
+          : 'operation_failed').tr,
       backgroundColor: Colors.red,
       colorText: Colors.white,
     );

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:intl/intl.dart';
 
 import '../constants/app_colors.dart';
 import '../constants/app_constants.dart';
 import '../controllers/blood_request_controller.dart';
+import '../localization/app_date_formatter.dart';
 import '../models/blood_request_model.dart';
 
 class BloodRequestScreen extends StatefulWidget {
@@ -26,7 +26,7 @@ class _BloodRequestScreenState extends State<BloodRequestScreen> {
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: AppColors.background,
     appBar: AppBar(
-      title: const Text('Blood requests'),
+      title: Text('blood_requests'.tr),
       backgroundColor: AppColors.primary,
       foregroundColor: AppColors.white,
       automaticallyImplyLeading: false,
@@ -39,7 +39,7 @@ class _BloodRequestScreenState extends State<BloodRequestScreen> {
       backgroundColor: AppColors.primary,
       foregroundColor: AppColors.white,
       icon: const Icon(Icons.add),
-      label: const Text('New request'),
+      label: Text('new_request'.tr),
     ),
     body: Obx(() {
       if (controller.isLoading.value) {
@@ -49,7 +49,7 @@ class _BloodRequestScreenState extends State<BloodRequestScreen> {
       }
       if (controller.errorCode.value.isNotEmpty) {
         return _StateMessage(
-          message: _error(controller.errorCode.value),
+          message: _error(controller.errorCode.value).tr,
           retry: controller.load,
         );
       }
@@ -60,16 +60,19 @@ class _BloodRequestScreenState extends State<BloodRequestScreen> {
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
           children: [
             if (controller.active.isEmpty)
-              const _Empty(text: 'No active blood requests.')
+              _Empty(text: 'no_active_requests'.tr)
             else
               ...controller.active.map((value) => _RequestCard(value: value)),
             if (controller.canViewTerminal &&
                 controller.terminal.isNotEmpty) ...[
-              const Padding(
-                padding: EdgeInsets.only(top: 18, bottom: 8),
+              Padding(
+                padding: const EdgeInsets.only(top: 18, bottom: 8),
                 child: Text(
-                  'Completed history',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  'completed_history'.tr,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
               ...controller.terminal.map((value) => _RequestCard(value: value)),
@@ -100,17 +103,17 @@ class _RequestCard extends StatelessWidget {
         ),
       ),
       title: Text(
-        value.patientName ?? 'Patient name unavailable',
+        value.patientName ?? 'patient_unavailable'.tr,
         style: const TextStyle(fontWeight: FontWeight.bold),
       ),
       subtitle: Text(
-        '${value.hospital}\n${value.location}${value.requiredAt == null ? '' : '\nNeeded: ${DateFormat.yMMMd().add_jm().format(value.requiredAt!)}'}\nContact: ${value.contactName} — ${value.contactPhone}',
+        '${value.hospital}\n${value.location}${value.requiredAt == null ? '' : '\n${'needed'.tr}: ${AppDateFormatter.dateTime(value.requiredAt!)}'}\n${'contact'.tr}: ${value.contactName} — ${value.contactPhone}',
       ),
       isThreeLine: true,
       trailing: value.status == 'active'
           ? null
           : Text(
-              value.status.toUpperCase(),
+              'status.${value.status}'.tr,
               style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
             ),
     ),
@@ -180,7 +183,7 @@ class _CreateBloodRequestScreenState extends State<CreateBloodRequestScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: const Text('New blood request'),
+      title: Text('new_blood_request'.tr),
       backgroundColor: AppColors.primary,
       foregroundColor: AppColors.white,
     ),
@@ -197,23 +200,23 @@ class _CreateBloodRequestScreenState extends State<CreateBloodRequestScreen> {
                 )
                 .toList(),
             onChanged: (value) => setState(() => bloodGroup = value!),
-            decoration: const InputDecoration(labelText: 'Blood group'),
+            decoration: InputDecoration(labelText: 'blood_group'.tr),
           ),
-          _field(patient, 'Patient name (optional)', required: false),
-          _field(hospital, 'Hospital'),
-          _field(location, 'Location'),
-          _field(contact, 'Contact name'),
-          _field(phone, 'Contact phone', phone: true),
+          _field(patient, 'patient_name_optional'.tr, required: false),
+          _field(hospital, 'hospital'.tr),
+          _field(location, 'location'.tr),
+          _field(contact, 'contact_name'.tr),
+          _field(phone, 'contact_phone'.tr, phone: true),
           ListTile(
             contentPadding: EdgeInsets.zero,
             title: Text(
               requiredAt == null
-                  ? 'Required time not specified'
-                  : DateFormat.yMMMd().format(requiredAt!),
+                  ? 'time_not_specified'.tr
+                  : AppDateFormatter.short(requiredAt!),
             ),
             trailing: TextButton(
               onPressed: pickDate,
-              child: const Text('Choose date'),
+              child: Text('choose_date'.tr),
             ),
           ),
           Obx(
@@ -225,7 +228,7 @@ class _CreateBloodRequestScreenState extends State<CreateBloodRequestScreen> {
                       height: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Text('Submit request'),
+                  : Text('submit_request'.tr),
             ),
           ),
         ],
@@ -244,7 +247,7 @@ class _CreateBloodRequestScreenState extends State<CreateBloodRequestScreen> {
       keyboardType: phone ? TextInputType.phone : TextInputType.text,
       decoration: InputDecoration(labelText: label),
       validator: (value) => required && (value == null || value.trim().isEmpty)
-          ? 'Required'
+          ? 'required'.tr
           : null,
     ),
   );
@@ -273,18 +276,18 @@ class _StateMessage extends StatelessWidget {
       children: [
         Text(message),
         const SizedBox(height: 12),
-        OutlinedButton(onPressed: retry, child: const Text('Retry')),
+        OutlinedButton(onPressed: retry, child: Text('retry'.tr)),
       ],
     ),
   );
 }
 
 String _error(String code) => switch (code) {
-  'permission_denied' => 'You do not have permission for this request.',
-  'query_unavailable' => 'The required request query is unavailable.',
-  'network_unavailable' => 'Blood requests are unavailable while offline.',
-  'malformed_data' => 'Blood request data failed its safety checks.',
-  'invalid_input' => 'Please check the request details.',
-  'session_unavailable' => 'Your admitted session is unavailable.',
-  _ => 'The request could not be completed.',
+  'permission_denied' => 'permission_denied',
+  'query_unavailable' => 'query_unavailable',
+  'network_unavailable' => 'network_unavailable',
+  'malformed_data' => 'malformed_data',
+  'invalid_input' => 'invalid_input',
+  'session_unavailable' => 'session_unavailable',
+  _ => 'request_error',
 };

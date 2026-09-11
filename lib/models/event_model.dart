@@ -91,16 +91,8 @@ class EventModel {
     );
   }
 
-  static String typeLabel(String key) => switch (key) {
-    'meeting' => 'সভা',
-    'blood_donation_campaign' => 'রক্তদান কর্মসূচি',
-    'awareness_program' => 'সচেতনতা কর্মসূচি',
-    'social_activity' => 'সামাজিক কার্যক্রম',
-    'celebration' => 'উদ্‌যাপন',
-    'emergency_activity' => 'জরুরি কার্যক্রম',
-    'other' => 'অন্যান্য',
-    _ => 'অজানা',
-  };
+  static String typeTranslationKey(String key) =>
+      eventTypes.contains(key) ? 'event_type.$key' : 'unknown';
 }
 
 void _exact(Map<String, dynamic> value, Set<String> fields, String label) {

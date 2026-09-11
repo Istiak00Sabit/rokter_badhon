@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../constants/app_colors.dart';
-import '../constants/app_strings.dart';
 import '../controllers/auth_controller.dart';
 import 'registration_screen.dart';
 
@@ -41,7 +40,7 @@ class LoginScreen extends StatelessWidget {
                       width: 90,
                       height: 90,
                       decoration: BoxDecoration(
-                        color: AppColors.white.withOpacity(0.2),
+                        color: AppColors.white.withValues(alpha: 0.2),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
@@ -51,8 +50,8 @@ class LoginScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    const Text(
-                      AppStrings.appName,
+                    Text(
+                      'app_name'.tr,
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
@@ -60,8 +59,8 @@ class LoginScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 6),
-                    const Text(
-                      AppStrings.orgLocation,
+                    Text(
+                      'org_location'.tr,
                       style: TextStyle(fontSize: 14, color: AppColors.white),
                     ),
                   ],
@@ -76,8 +75,8 @@ class LoginScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'লগইন করুন',
+                      Text(
+                        'login_title'.tr,
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -85,8 +84,8 @@ class LoginScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 6),
-                      const Text(
-                        'আপনার অ্যাকাউন্টে প্রবেশ করুন',
+                      Text(
+                        'login_subtitle'.tr,
                         style: TextStyle(
                           fontSize: 14,
                           color: AppColors.textGrey,
@@ -101,7 +100,7 @@ class LoginScreen extends StatelessWidget {
                         keyboardType: TextInputType.emailAddress,
                         autofillHints: const [AutofillHints.email],
                         decoration: InputDecoration(
-                          labelText: AppStrings.email,
+                          labelText: 'email'.tr,
                           prefixIcon: const Icon(
                             Icons.email_outlined,
                             color: AppColors.primary,
@@ -128,7 +127,7 @@ class LoginScreen extends StatelessWidget {
                           obscureText: obscurePassword.value,
                           autofillHints: const [AutofillHints.password],
                           decoration: InputDecoration(
-                            labelText: AppStrings.password,
+                            labelText: 'password'.tr,
                             prefixIcon: const Icon(
                               Icons.lock_outline,
                               color: AppColors.primary,
@@ -164,10 +163,21 @@ class LoginScreen extends StatelessWidget {
                       Align(
                         alignment: Alignment.centerRight,
                         child: TextButton(
-                          onPressed: () {},
-                          child: const Text(
-                            AppStrings.forgotPassword,
-                            style: TextStyle(color: AppColors.primary),
+                          onPressed: () async {
+                            final sent = await authController.sendPasswordReset(
+                              emailController.text.trim(),
+                            );
+                            if (sent) {
+                              Get.snackbar(
+                                'login'.tr,
+                                'reset_sent'.tr,
+                                snackPosition: SnackPosition.BOTTOM,
+                              );
+                            }
+                          },
+                          child: Text(
+                            'forgot_password'.tr,
+                            style: const TextStyle(color: AppColors.primary),
                           ),
                         ),
                       ),
@@ -221,9 +231,9 @@ class LoginScreen extends StatelessWidget {
                                 ? const CircularProgressIndicator(
                                     color: AppColors.white,
                                   )
-                                : const Text(
-                                    AppStrings.login,
-                                    style: TextStyle(
+                                : Text(
+                                    'login'.tr,
+                                    style: const TextStyle(
                                       fontSize: 18,
                                       fontWeight: FontWeight.bold,
                                       color: AppColors.white,
@@ -237,17 +247,16 @@ class LoginScreen extends StatelessWidget {
 
                       Center(
                         child: TextButton(
-                          onPressed: () => Get.to(
-                            () => const RegistrationScreen(),
-                          ),
-                          child: const Text('Request an account'),
+                          onPressed: () =>
+                              Get.to(() => const RegistrationScreen()),
+                          child: Text('request_account'.tr),
                         ),
                       ),
 
                       // Footer
                       Center(
                         child: Text(
-                          '© ${AppStrings.orgName} ${DateTime.now().year}',
+                          '© ${'org_name'.tr} ${DateTime.now().year}',
                           style: const TextStyle(
                             fontSize: 12,
                             color: AppColors.textGrey,

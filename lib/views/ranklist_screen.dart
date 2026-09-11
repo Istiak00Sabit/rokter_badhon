@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:get/get.dart';
 import '../constants/app_colors.dart';
 import '../constants/app_constants.dart';
 import '../models/donor_model.dart';
@@ -8,19 +9,15 @@ class RanklistScreen extends StatelessWidget {
   const RanklistScreen({super.key});
 
   Future<List<DonorModel>> _loadRanklist() async {
-    try {
-      final snapshot = await FirebaseFirestore.instance
-          .collection(AppConstants.donorsCollection)
-          .where('active', isEqualTo: true)
-          .orderBy('total_donations', descending: true)
-          .limit(50)
-          .get();
-      return snapshot.docs
-          .map((doc) => DonorModel.fromMap(doc.data(), doc.id))
-          .toList();
-    } catch (e) {
-      return [];
-    }
+    final snapshot = await FirebaseFirestore.instance
+        .collection(AppConstants.donorsCollection)
+        .where('active', isEqualTo: true)
+        .orderBy('total_donations', descending: true)
+        .limit(50)
+        .get();
+    return snapshot.docs
+        .map((doc) => DonorModel.fromMap(doc.data(), doc.id))
+        .toList();
   }
 
   @override
@@ -28,11 +25,10 @@ class RanklistScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('র‍্যাংকলিস্ট'),
+        title: Text('ranklist'.tr),
         backgroundColor: AppColors.primary,
         foregroundColor: AppColors.white,
         centerTitle: true,
-        automaticallyImplyLeading: false,
       ),
       body: FutureBuilder<List<DonorModel>>(
         future: _loadRanklist(),
@@ -40,6 +36,21 @@ class RanklistScreen extends StatelessWidget {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
               child: CircularProgressIndicator(color: AppColors.primary),
+            );
+          }
+          if (snapshot.hasError) {
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('ranklist_error'.tr),
+                  const SizedBox(height: 12),
+                  OutlinedButton(
+                    onPressed: () => (context as Element).markNeedsBuild(),
+                    child: Text('retry'.tr),
+                  ),
+                ],
+              ),
             );
           }
 
@@ -56,9 +67,12 @@ class RanklistScreen extends StatelessWidget {
                     color: AppColors.textLight,
                   ),
                   const SizedBox(height: 16),
-                  const Text(
-                    'এখনো কোনো রক্তদান রেকর্ড নেই',
-                    style: TextStyle(fontSize: 16, color: AppColors.textGrey),
+                  Text(
+                    'ranklist_empty'.tr,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: AppColors.textGrey,
+                    ),
                   ),
                 ],
               ),
@@ -105,9 +119,9 @@ class RanklistScreen extends StatelessWidget {
       ),
       child: Column(
         children: [
-          const Text(
-            'শীর্ষ রক্তদাতা',
-            style: TextStyle(
+          Text(
+            'top_donors'.tr,
+            style: const TextStyle(
               color: AppColors.white,
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -177,9 +191,9 @@ class RanklistScreen extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const Text(
-                  'বার',
-                  style: TextStyle(color: AppColors.white, fontSize: 10),
+                Text(
+                  'times'.tr,
+                  style: const TextStyle(color: AppColors.white, fontSize: 10),
                 ),
               ],
             ),
@@ -286,9 +300,12 @@ class RanklistScreen extends StatelessWidget {
                     color: AppColors.primary,
                   ),
                 ),
-                const Text(
-                  'বার',
-                  style: TextStyle(fontSize: 11, color: AppColors.textGrey),
+                Text(
+                  'times'.tr,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: AppColors.textGrey,
+                  ),
                 ),
               ],
             ),

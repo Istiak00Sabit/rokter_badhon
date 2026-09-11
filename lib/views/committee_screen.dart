@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../constants/app_colors.dart';
+import '../constants/app_constants.dart';
 import '../controllers/committee_controller.dart';
 import '../models/committee_member_model.dart';
 import '../models/committee_media_model.dart';
@@ -31,7 +32,7 @@ class _CommitteeScreenState extends State<CommitteeScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Current Committee'),
+        title: Text('current_committee'.tr),
         backgroundColor: AppColors.primary,
         foregroundColor: AppColors.white,
         centerTitle: true,
@@ -68,7 +69,7 @@ class _CommitteeScreenState extends State<CommitteeScreen> {
                       ),
                       icon: const Icon(Icons.history),
                       label: Text(
-                        'Past Committees (${controller.pastTerms.length})',
+                        '${'past_committees'.tr} (${controller.pastTerms.length})',
                       ),
                     ),
                   ),
@@ -77,16 +78,14 @@ class _CommitteeScreenState extends State<CommitteeScreen> {
                     child: OutlinedButton.icon(
                       onPressed: () => Get.to(() => const MemberListScreen()),
                       icon: const Icon(Icons.people_outline),
-                      label: const Text('Member Directory'),
+                      label: Text('member_directory'.tr),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
               if (roster == null)
-                const _EmptyCommittee(
-                  message: 'No current committee term is available.',
-                )
+                _EmptyCommittee(message: 'no_current_committee'.tr)
               else
                 CommitteeRosterView(roster: roster),
             ],
@@ -107,16 +106,14 @@ class PastCommitteesScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Past Committees'),
+        title: Text('past_committees'.tr),
         backgroundColor: AppColors.primary,
         foregroundColor: AppColors.white,
       ),
       body: Obx(() {
         final terms = controller.pastTerms;
         if (terms.isEmpty) {
-          return const _EmptyCommittee(
-            message: 'No past committee terms are available.',
-          );
+          return _EmptyCommittee(message: 'no_past_committees'.tr);
         }
         return ListView.separated(
           padding: const EdgeInsets.all(16),
@@ -203,7 +200,7 @@ class _PastCommitteeDetailScreenState extends State<PastCommitteeDetailScreen> {
           if (snapshot.hasError) {
             return _MessageState(
               icon: Icons.error_outline,
-              message: 'Committee history is unavailable: ${snapshot.error}',
+              message: 'committee_error'.tr,
               onRetry: _refresh,
             );
           }
@@ -255,17 +252,15 @@ class CommitteeRosterView extends StatelessWidget {
           style: const TextStyle(color: AppColors.textGrey),
         ),
         const SizedBox(height: 18),
-        const Text(
-          'Committee Gallery',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        Text(
+          'committee_gallery'.tr,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
         _CommitteeGallery(media: roster.gallery),
         const SizedBox(height: 18),
         if (roster.members.isEmpty)
-          const _EmptyCommittee(
-            message: 'No committee assignments are available for this term.',
-          )
+          _EmptyCommittee(message: 'no_assignments'.tr)
         else
           ...roster.members.map(_CommitteeMemberCard.new),
       ],
@@ -281,9 +276,9 @@ class _CommitteeGallery extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (media.isEmpty) {
-      return const Text(
-        'No gallery images are available for this term.',
-        style: TextStyle(color: AppColors.textGrey),
+      return Text(
+        'no_gallery_images'.tr,
+        style: const TextStyle(color: AppColors.textGrey),
       );
     }
     return SizedBox(
@@ -351,7 +346,7 @@ class _CommitteeMemberCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    member.position,
+                    AppConstants.positionLabel(member.position),
                     style: const TextStyle(
                       color: AppColors.primary,
                       fontWeight: FontWeight.bold,
@@ -359,7 +354,7 @@ class _CommitteeMemberCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    directory?.name ?? 'Directory entry unavailable',
+                    directory?.name ?? 'directory_unavailable'.tr,
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -372,7 +367,7 @@ class _CommitteeMemberCard extends StatelessWidget {
                     ),
                   if (directory?.bloodGroup?.isNotEmpty == true)
                     Text(
-                      'Blood group: ${directory!.bloodGroup}',
+                      '${'blood_group'.tr}: ${directory!.bloodGroup}',
                       style: const TextStyle(color: AppColors.textGrey),
                     ),
                 ],
@@ -464,7 +459,7 @@ class _MessageState extends StatelessWidget {
             const SizedBox(height: 12),
             Text(message, textAlign: TextAlign.center),
             const SizedBox(height: 12),
-            OutlinedButton(onPressed: onRetry, child: const Text('Retry')),
+            OutlinedButton(onPressed: onRetry, child: Text('retry'.tr)),
           ],
         ),
       ),

@@ -4,6 +4,7 @@ import '../constants/app_colors.dart';
 import '../constants/app_constants.dart';
 import '../controllers/donor_controller.dart';
 import '../models/donor_model.dart';
+import '../localization/app_date_formatter.dart';
 import 'add_donor_screen.dart';
 
 class DonorListScreen extends StatelessWidget {
@@ -13,7 +14,7 @@ class DonorListScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final DonorController controller = Get.put(DonorController());
     final RxString searchQuery = ''.obs;
-    final RxString selectedFilter = 'সব'.obs;
+    final RxString selectedFilter = 'all'.obs;
     final searchController = TextEditingController();
 
     // Load donors when screen opens
@@ -21,12 +22,12 @@ class DonorListScreen extends StatelessWidget {
       controller.loadDonors();
     });
 
-    final List<String> filters = ['সব', ...AppConstants.bloodGroups];
+    final List<String> filters = ['all', ...AppConstants.bloodGroups];
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('রক্তদাতা তালিকা'),
+        title: Text('donors'.tr),
         backgroundColor: AppColors.primary,
         foregroundColor: AppColors.white,
         centerTitle: true,
@@ -46,7 +47,9 @@ class DonorListScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    '${controller.donors.length} জন',
+                    'people_count'.trParams({
+                      'count': '${controller.donors.length}',
+                    }),
                     style: const TextStyle(
                       color: AppColors.white,
                       fontSize: 13,
@@ -72,7 +75,7 @@ class DonorListScreen extends StatelessWidget {
                   controller: searchController,
                   onChanged: (val) => searchQuery.value = val.trim(),
                   decoration: InputDecoration(
-                    hintText: 'নাম বা ফোন দিয়ে খুঁজুন...',
+                    hintText: 'search_donors'.tr,
                     prefixIcon: const Icon(
                       Icons.search,
                       color: AppColors.primary,
@@ -113,7 +116,7 @@ class DonorListScreen extends StatelessWidget {
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
                     itemCount: filters.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    separatorBuilder: (_, _) => const SizedBox(width: 8),
                     itemBuilder: (context, index) {
                       final filter = filters[index];
                       return Obx(() {
@@ -137,7 +140,7 @@ class DonorListScreen extends StatelessWidget {
                               ),
                             ),
                             child: Text(
-                              filter,
+                              filter == 'all' ? 'all_blood_groups'.tr : filter,
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: isSelected
@@ -179,10 +182,10 @@ class DonorListScreen extends StatelessWidget {
                         color: AppColors.primary,
                       ),
                       const SizedBox(height: 12),
-                      const Text('রক্তদাতার তালিকা লোড করা যায়নি।'),
+                      Text('donor_load_error'.tr),
                       TextButton(
                         onPressed: controller.loadDonors,
-                        child: const Text('আবার চেষ্টা করুন'),
+                        child: Text('retry'.tr),
                       ),
                     ],
                   ),
@@ -198,7 +201,7 @@ class DonorListScreen extends StatelessWidget {
                     ) ||
                     donor.phone.contains(searchQuery.value);
                 final matchesFilter =
-                    selectedFilter.value == 'সব' ||
+                    selectedFilter.value == 'all' ||
                     donor.bloodGroup == selectedFilter.value;
                 return matchesSearch && matchesFilter;
               }).toList();
@@ -214,17 +217,17 @@ class DonorListScreen extends StatelessWidget {
                         color: AppColors.textLight,
                       ),
                       const SizedBox(height: 16),
-                      const Text(
-                        'কোনো রক্তদাতা পাওয়া যায়নি',
-                        style: TextStyle(
+                      Text(
+                        'no_donors'.tr,
+                        style: const TextStyle(
                           fontSize: 16,
                           color: AppColors.textGrey,
                         ),
                       ),
                       const SizedBox(height: 8),
-                      const Text(
-                        'নতুন রক্তদাতা যোগ করুন',
-                        style: TextStyle(
+                      Text(
+                        'add_donor'.tr,
+                        style: const TextStyle(
                           fontSize: 13,
                           color: AppColors.textLight,
                         ),
@@ -240,7 +243,7 @@ class DonorListScreen extends StatelessWidget {
                 child: ListView.separated(
                   padding: const EdgeInsets.all(16),
                   itemCount: filtered.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 10),
+                  separatorBuilder: (_, _) => const SizedBox(height: 10),
                   itemBuilder: (context, index) {
                     return _buildDonorCard(filtered[index], controller);
                   },
@@ -262,9 +265,9 @@ class DonorListScreen extends StatelessWidget {
               },
               backgroundColor: AppColors.primary,
               icon: const Icon(Icons.person_add, color: AppColors.white),
-              label: const Text(
-                'নতুন রক্তদাতা',
-                style: TextStyle(
+              label: Text(
+                'add_donor'.tr,
+                style: const TextStyle(
                   color: AppColors.white,
                   fontWeight: FontWeight.bold,
                 ),
@@ -407,7 +410,7 @@ class DonorListScreen extends StatelessWidget {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          'সর্বশেষ নথিভুক্ত দান: ${donor.lastDonatedAt!.day}/${donor.lastDonatedAt!.month}/${donor.lastDonatedAt!.year}',
+                          '${'last_recorded_donation'.tr}: ${AppDateFormatter.short(donor.lastDonatedAt!)}',
                           style: const TextStyle(
                             fontSize: 12,
                             color: AppColors.textGrey,
@@ -423,7 +426,7 @@ class DonorListScreen extends StatelessWidget {
             // Call icon
             if (controller.canEdit)
               IconButton(
-                tooltip: 'তথ্য সম্পাদনা করুন',
+                tooltip: 'edit_donor'.tr,
                 onPressed: () async {
                   controller.beginEdit(donor);
                   await Get.to(() => const AddDonorScreen());
@@ -435,7 +438,7 @@ class DonorListScreen extends StatelessWidget {
               onPressed: () {
                 // Display the number without requesting device-call privileges.
                 Get.snackbar(
-                  'ফোন করুন',
+                  'call'.tr,
                   donor.phone,
                   snackPosition: SnackPosition.BOTTOM,
                   backgroundColor: AppColors.primary,

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:intl/intl.dart';
 
 import '../constants/app_colors.dart';
 import '../controllers/donation_controller.dart';
+import '../localization/app_date_formatter.dart';
 import '../models/donation_model.dart';
 
 class DonationHistoryScreen extends StatefulWidget {
@@ -25,7 +25,7 @@ class _DonationHistoryScreenState extends State<DonationHistoryScreen> {
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: AppColors.background,
     appBar: AppBar(
-      title: const Text('Donation history'),
+      title: Text('donation_history'.tr),
       backgroundColor: AppColors.primary,
       foregroundColor: AppColors.white,
     ),
@@ -37,13 +37,13 @@ class _DonationHistoryScreenState extends State<DonationHistoryScreen> {
       }
       if (controller.errorCode.value.isNotEmpty) {
         return _Message(
-          message: _error(controller.errorCode.value),
+          message: _error(controller.errorCode.value).tr,
           retry: controller.loadHistory,
         );
       }
       if (controller.donations.isEmpty) {
         return _Message(
-          message: 'No donation history is available.',
+          message: 'no_donation_history'.tr,
           retry: controller.loadHistory,
         );
       }
@@ -83,22 +83,22 @@ class _DonationCard extends StatelessWidget {
         value.donorNameSnapshot,
         style: const TextStyle(fontWeight: FontWeight.bold),
       ),
-      subtitle: Text(DateFormat.yMMMd().format(value.donationDate)),
+      subtitle: Text(AppDateFormatter.short(value.donationDate)),
       childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
       expandedCrossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (value.hospital != null) Text('Hospital: ${value.hospital}'),
-        if (value.location != null) Text('Location: ${value.location}'),
+        if (value.hospital != null) Text('${'hospital'.tr}: ${value.hospital}'),
+        if (value.location != null) Text('${'location'.tr}: ${value.location}'),
         if (value.recipientName != null)
-          Text('Recipient: ${value.recipientName}'),
+          Text('${'recipient'.tr}: ${value.recipientName}'),
         if (value.recipientContact != null)
-          Text('Contact: ${value.recipientContact}'),
+          Text('${'contact'.tr}: ${value.recipientContact}'),
         if (value.updatedAt != null)
-          const Padding(
-            padding: EdgeInsets.only(top: 6),
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
             child: Text(
-              'Corrected record',
-              style: TextStyle(color: AppColors.textGrey),
+              'corrected_record'.tr,
+              style: const TextStyle(color: AppColors.textGrey),
             ),
           ),
       ],
@@ -119,15 +119,15 @@ class _Message extends StatelessWidget {
         const SizedBox(height: 12),
         Text(message),
         const SizedBox(height: 12),
-        OutlinedButton(onPressed: retry, child: const Text('Retry')),
+        OutlinedButton(onPressed: retry, child: Text('retry'.tr)),
       ],
     ),
   );
 }
 
 String _error(String code) => switch (code) {
-  'permission_denied' => 'You do not have permission to view donation history.',
-  'network_unavailable' => 'Donation history is unavailable while offline.',
-  'malformed_data' => 'Donation data failed its safety checks.',
-  _ => 'Donation history could not be loaded.',
+  'permission_denied' => 'permission_denied',
+  'network_unavailable' => 'network_unavailable',
+  'malformed_data' => 'malformed_data',
+  _ => 'donation_error',
 };

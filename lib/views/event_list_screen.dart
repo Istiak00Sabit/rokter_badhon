@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:intl/intl.dart';
 
 import '../constants/app_colors.dart';
 import '../controllers/event_controller.dart';
+import '../localization/app_date_formatter.dart';
 import '../models/event_model.dart';
 import 'event_detail_screen.dart';
 
@@ -28,7 +28,7 @@ class _EventListScreenState extends State<EventListScreen> {
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: AppColors.background,
     appBar: AppBar(
-      title: const Text('Events'),
+      title: Text('events'.tr),
       backgroundColor: AppColors.primary,
       foregroundColor: AppColors.white,
     ),
@@ -40,13 +40,13 @@ class _EventListScreenState extends State<EventListScreen> {
       }
       if (controller.errorCode.value.isNotEmpty) {
         return _Message(
-          message: _error(controller.errorCode.value),
+          message: _error(controller.errorCode.value).tr,
           retry: controller.loadEvents,
         );
       }
       if (controller.activeEvents.isEmpty && controller.hiddenEvents.isEmpty) {
         return _Message(
-          message: 'No events are available.',
+          message: 'events_empty'.tr,
           retry: controller.loadEvents,
         );
       }
@@ -65,11 +65,14 @@ class _EventListScreenState extends State<EventListScreen> {
             ),
             if (controller.canReviewHidden &&
                 controller.hiddenEvents.isNotEmpty) ...[
-              const Padding(
-                padding: EdgeInsets.only(top: 16, bottom: 8),
+              Padding(
+                padding: const EdgeInsets.only(top: 16, bottom: 8),
                 child: Text(
-                  'Hidden events (review only)',
-                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                  'hidden_events'.tr,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
               ...controller.hiddenEvents.map(
@@ -122,9 +125,9 @@ class _EventCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (hidden)
-                  const Text(
-                    'HIDDEN',
-                    style: TextStyle(
+                  Text(
+                    'hidden'.tr.toUpperCase(),
+                    style: const TextStyle(
                       color: AppColors.primary,
                       fontWeight: FontWeight.bold,
                       fontSize: 12,
@@ -139,7 +142,7 @@ class _EventCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 7),
                 Text(
-                  '${EventModel.typeLabel(event.eventType)}  •  ${DateFormat.yMMMd().add_jm().format(event.eventDate)}',
+                  '${EventModel.typeTranslationKey(event.eventType).tr}  •  ${AppDateFormatter.dateTime(event.eventDate)}',
                   style: const TextStyle(color: AppColors.textGrey),
                 ),
                 if (event.location != null)
@@ -198,7 +201,7 @@ class _Message extends StatelessWidget {
           const SizedBox(height: 12),
           Text(message, textAlign: TextAlign.center),
           const SizedBox(height: 12),
-          OutlinedButton(onPressed: retry, child: const Text('Retry')),
+          OutlinedButton(onPressed: retry, child: Text('retry'.tr)),
         ],
       ),
     ),
@@ -206,9 +209,9 @@ class _Message extends StatelessWidget {
 }
 
 String _error(String code) => switch (code) {
-  'permission_denied' => 'You do not have permission to view these events.',
-  'query_unavailable' => 'The event query is not available yet.',
-  'network_unavailable' => 'Events are unavailable while offline.',
-  'malformed_data' => 'Event data failed its safety checks.',
-  _ => 'Events could not be loaded.',
+  'permission_denied' => 'permission_denied',
+  'query_unavailable' => 'query_unavailable',
+  'network_unavailable' => 'network_unavailable',
+  'malformed_data' => 'malformed_data',
+  _ => 'events_error',
 };

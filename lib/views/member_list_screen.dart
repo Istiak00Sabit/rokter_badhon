@@ -4,7 +4,6 @@ import 'package:get/get.dart';
 import '../constants/app_colors.dart';
 import '../controllers/member_controller.dart';
 import '../models/user_directory_model.dart';
-import 'add_member_screen.dart';
 
 class MemberListScreen extends StatelessWidget {
   const MemberListScreen({super.key});
@@ -14,16 +13,17 @@ class MemberListScreen extends StatelessWidget {
     final controller = Get.put(MemberController());
     final searchQuery = ''.obs;
     final searchController = TextEditingController();
-    WidgetsBinding.instance.addPostFrameCallback((_) => controller.loadMembers());
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => controller.loadMembers(),
+    );
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Member directory'),
+        title: Text('member_directory'.tr),
         backgroundColor: AppColors.primary,
         foregroundColor: AppColors.white,
         centerTitle: true,
-        automaticallyImplyLeading: false,
         actions: [
           Obx(
             () => Padding(
@@ -42,7 +42,7 @@ class MemberListScreen extends StatelessWidget {
               controller: searchController,
               onChanged: (value) => searchQuery.value = value.trim(),
               decoration: InputDecoration(
-                hintText: 'Search by name, phone, profession, or blood group',
+                hintText: 'search_members'.tr,
                 prefixIcon: const Icon(Icons.search, color: AppColors.primary),
                 filled: true,
                 fillColor: AppColors.background,
@@ -60,16 +60,32 @@ class MemberListScreen extends StatelessWidget {
                   child: CircularProgressIndicator(color: AppColors.primary),
                 );
               }
+              if (controller.errorCode.value.isNotEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('directory_error'.tr),
+                      const SizedBox(height: 12),
+                      OutlinedButton(
+                        onPressed: controller.loadMembers,
+                        child: Text('retry'.tr),
+                      ),
+                    ],
+                  ),
+                );
+              }
               final query = searchQuery.value.toLowerCase();
               final filtered = controller.members.where((member) {
                 if (query.isEmpty) return true;
                 return member.name.toLowerCase().contains(query) ||
                     member.phone.toLowerCase().contains(query) ||
-                    (member.profession?.toLowerCase().contains(query) ?? false) ||
+                    (member.profession?.toLowerCase().contains(query) ??
+                        false) ||
                     (member.bloodGroup?.toLowerCase().contains(query) ?? false);
               }).toList();
               if (filtered.isEmpty) {
-                return const Center(child: Text('No active directory entries found.'));
+                return Center(child: Text('no_directory_entries'.tr));
               }
               return RefreshIndicator(
                 onRefresh: controller.loadMembers,
@@ -84,12 +100,6 @@ class MemberListScreen extends StatelessWidget {
             }),
           ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Get.to(() => const AddMemberScreen()),
-        backgroundColor: AppColors.primary,
-        icon: const Icon(Icons.person_add, color: AppColors.white),
-        label: const Text('Add member', style: TextStyle(color: AppColors.white)),
       ),
     );
   }
@@ -123,11 +133,15 @@ class MemberListScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(member.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text(
+                  member.name,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
                 if (member.phone.isNotEmpty) Text(member.phone),
-                if (member.profession?.isNotEmpty == true) Text(member.profession!),
+                if (member.profession?.isNotEmpty == true)
+                  Text(member.profession!),
                 if (member.bloodGroup?.isNotEmpty == true)
-                  Text('Blood group: ${member.bloodGroup}'),
+                  Text('${'blood_group'.tr}: ${member.bloodGroup}'),
               ],
             ),
           ),

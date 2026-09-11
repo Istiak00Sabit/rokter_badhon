@@ -4,6 +4,9 @@ import 'package:get/get.dart';
 import '../constants/app_colors.dart';
 import '../constants/app_constants.dart';
 import '../controllers/auth_controller.dart';
+import '../controllers/localization_controller.dart';
+import '../localization/app_translations.dart';
+import '../localization/app_date_formatter.dart';
 import '../models/profile_update.dart';
 import '../models/user_model.dart';
 
@@ -18,7 +21,7 @@ class ProfileScreen extends StatelessWidget {
       backgroundColor: AppColors.background,
 
       appBar: AppBar(
-        title: const Text('প্রোফাইল'),
+        title: Text('profile'.tr),
 
         backgroundColor: AppColors.primary,
 
@@ -148,7 +151,7 @@ class ProfileScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
 
                   children: [
-                    _sectionTitle('ব্যক্তিগত তথ্য'),
+                    _sectionTitle('personal_info'.tr),
 
                     const SizedBox(height: 12),
 
@@ -156,53 +159,55 @@ class ProfileScreen extends StatelessWidget {
                       if (user.email?.isNotEmpty == true)
                         _buildInfoRow(
                           Icons.email_outlined,
-                          'ইমেইল',
+                          'email'.tr,
                           user.email!,
                         ),
 
                       if (user.phone.isNotEmpty)
-                        _buildInfoRow(Icons.phone_outlined, 'ফোন', user.phone),
+                        _buildInfoRow(
+                          Icons.phone_outlined,
+                          'phone'.tr,
+                          user.phone,
+                        ),
 
                       if (user.bloodGroup?.isNotEmpty == true)
                         _buildInfoRow(
                           Icons.water_drop_outlined,
-                          'রক্তের গ্রুপ',
+                          'blood_group'.tr,
                           user.bloodGroup!,
                         ),
 
                       if (user.address?.isNotEmpty == true)
                         _buildInfoRow(
                           Icons.location_on_outlined,
-                          'ঠিকানা',
+                          'address'.tr,
                           user.address!,
                         ),
                     ]),
 
                     const SizedBox(height: 16),
 
-                    _sectionTitle('অ্যাকাউন্টের তথ্য'),
+                    _sectionTitle('account_info'.tr),
 
                     const SizedBox(height: 12),
 
                     _buildInfoCard([
                       _buildInfoRow(
                         Icons.badge_outlined,
-                        'ভূমিকা',
+                        'role'.tr,
                         AppConstants.roleLabel(user.accessRole),
                       ),
 
                       _buildInfoRow(
                         Icons.calendar_today_outlined,
-                        'যোগদানের তারিখ',
-                        '${user.createdAt.day}/'
-                            '${user.createdAt.month}/'
-                            '${user.createdAt.year}',
+                        'joined'.tr,
+                        AppDateFormatter.short(user.createdAt),
                       ),
 
                       _buildInfoRow(
                         Icons.check_circle_outline,
-                        'অ্যাকাউন্ট স্ট্যাটাস',
-                        user.active ? 'সক্রিয়' : 'নিষ্ক্রিয়',
+                        'account_status'.tr,
+                        user.active ? 'active'.tr : 'inactive'.tr,
 
                         valueColor: user.active
                             ? AppColors.success
@@ -218,9 +223,13 @@ class ProfileScreen extends StatelessWidget {
                         onPressed: () =>
                             _editProfile(context, authController, user),
                         icon: const Icon(Icons.edit_outlined),
-                        label: const Text('Edit profile'),
+                        label: Text('edit_profile'.tr),
                       ),
                     ),
+
+                    const SizedBox(height: 12),
+
+                    _languageSelector(),
 
                     const SizedBox(height: 12),
 
@@ -236,24 +245,26 @@ class ProfileScreen extends StatelessWidget {
                         onPressed: () {
                           Get.dialog(
                             AlertDialog(
-                              title: const Text('লগআউট'),
+                              title: Text('logout'.tr),
 
-                              content: const Text('আপনি কি লগআউট করতে চান?'),
+                              content: Text('logout_confirm'.tr),
 
                               actions: [
                                 TextButton(
                                   onPressed: () => Get.back(),
 
-                                  child: const Text('না'),
+                                  child: Text('no'.tr),
                                 ),
 
                                 TextButton(
                                   onPressed: () => authController.logout(),
 
-                                  child: const Text(
-                                    'হ্যাঁ',
+                                  child: Text(
+                                    'yes'.tr,
 
-                                    style: TextStyle(color: AppColors.primary),
+                                    style: const TextStyle(
+                                      color: AppColors.primary,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -267,10 +278,10 @@ class ProfileScreen extends StatelessWidget {
                           color: AppColors.primary,
                         ),
 
-                        label: const Text(
-                          'লগআউট',
+                        label: Text(
+                          'logout'.tr,
 
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: AppColors.primary,
 
                             fontSize: 16,
@@ -315,24 +326,24 @@ class ProfileScreen extends StatelessWidget {
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Edit profile'),
+        title: Text('edit_profile'.tr),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _editField(name, 'Name'),
-              _editField(phone, 'Phone'),
-              _editField(bloodGroup, 'Blood group'),
-              _editField(profession, 'Profession'),
-              _editField(address, 'Address'),
-              _editField(language, 'Preferred language'),
+              _editField(name, 'name'.tr),
+              _editField(phone, 'phone'.tr),
+              _editField(bloodGroup, 'blood_group'.tr),
+              _editField(profession, 'profession'.tr),
+              _editField(address, 'address'.tr),
+              _editField(language, 'preferred_language'.tr),
             ],
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
+            child: Text('cancel'.tr),
           ),
           TextButton(
             onPressed: () async {
@@ -354,7 +365,7 @@ class ProfileScreen extends StatelessWidget {
                 );
               }
             },
-            child: const Text('Save'),
+            child: Text('save'.tr),
           ),
         ],
       ),
@@ -374,6 +385,26 @@ class ProfileScreen extends StatelessWidget {
   String? _nullableText(String value) {
     final trimmed = value.trim();
     return trimmed.isEmpty ? null : trimmed;
+  }
+
+  Widget _languageSelector() {
+    final controller = Get.find<LocalizationController>();
+    return Obx(
+      () => SegmentedButton<String>(
+        segments: [
+          ButtonSegment(
+            value: AppTranslations.bangla,
+            label: Text('bangla'.tr),
+          ),
+          ButtonSegment(
+            value: AppTranslations.english,
+            label: Text('english'.tr),
+          ),
+        ],
+        selected: {controller.locale.value.languageCode},
+        onSelectionChanged: (values) => controller.setLanguage(values.single),
+      ),
+    );
   }
 
   // =========================================================

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../constants/app_colors.dart';
-import '../constants/app_strings.dart';
 import '../controllers/dashboard_controller.dart';
 import '../models/notice_model.dart';
 import '../views/add_donor_screen.dart';
@@ -30,6 +29,24 @@ class DashboardScreen extends StatelessWidget {
             child: CircularProgressIndicator(color: AppColors.primary),
           );
         }
+        if (controller.errorCode.value.isNotEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('dashboard_error'.tr, textAlign: TextAlign.center),
+                  const SizedBox(height: 12),
+                  OutlinedButton(
+                    onPressed: controller.loadDashboard,
+                    child: Text('retry'.tr),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
 
         return RefreshIndicator(
           onRefresh: controller.refresh,
@@ -53,16 +70,17 @@ class DashboardScreen extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           Text(
-                            'আসসালামুয়ালাইকুম,',
+                            'greeting'.tr,
                             style: TextStyle(
                               fontSize: 14,
-                              color: AppColors.white.withOpacity(0.8),
+                              color: AppColors.white.withValues(alpha: 0.8),
                             ),
                           ),
                           const SizedBox(height: 4),
                           Obx(
                             () => Text(
-                              controller.currentUser.value?.name ?? 'Admin',
+                              controller.currentUser.value?.name ??
+                                  'unknown'.tr,
                               style: const TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
@@ -72,10 +90,10 @@ class DashboardScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            AppStrings.orgLocation,
+                            'org_location'.tr,
                             style: TextStyle(
                               fontSize: 13,
-                              color: AppColors.white.withOpacity(0.8),
+                              color: AppColors.white.withValues(alpha: 0.8),
                             ),
                           ),
                         ],
@@ -92,8 +110,8 @@ class DashboardScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Summary section title
-                      const Text(
-                        'সারসংক্ষেপ',
+                      Text(
+                        'dashboard_summary'.tr,
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -116,7 +134,7 @@ class DashboardScreen extends StatelessWidget {
                             onTap: () => Get.to(() => const DonorListScreen()),
                             child: Obx(
                               () => _buildStatCard(
-                                title: 'মোট রক্তদাতা',
+                                title: 'total_donors'.tr,
                                 value: '${controller.totalDonors.value}',
                                 icon: Icons.water_drop,
                                 color: AppColors.primary,
@@ -128,7 +146,7 @@ class DashboardScreen extends StatelessWidget {
                             onTap: () => Get.to(() => const MemberListScreen()),
                             child: Obx(
                               () => _buildStatCard(
-                                title: 'মোট সদস্য',
+                                title: 'total_members'.tr,
                                 value: '${controller.totalMembers.value}',
                                 icon: Icons.people,
                                 color: const Color(0xFF1976D2),
@@ -138,15 +156,18 @@ class DashboardScreen extends StatelessWidget {
                           // This month donations card
                           GestureDetector(
                             onTap: () => Get.snackbar(
-                              'রক্তদানের তথ্য',
-                              'এই মাসে মোট ${controller.thisMonthDonations.value} টি রক্তদান হয়েছে',
+                              'donation_information'.tr,
+                              'month_donation_count'.trParams({
+                                'count':
+                                    '${controller.thisMonthDonations.value}',
+                              }),
                               snackPosition: SnackPosition.BOTTOM,
                               backgroundColor: AppColors.primary,
                               colorText: AppColors.white,
                             ),
                             child: Obx(
                               () => _buildStatCard(
-                                title: 'এই মাসে রক্তদান',
+                                title: 'month_donations'.tr,
                                 value: '${controller.thisMonthDonations.value}',
                                 icon: Icons.favorite,
                                 color: const Color(0xFF43A047),
@@ -159,7 +180,7 @@ class DashboardScreen extends StatelessWidget {
                                 Get.to(() => const BloodRequestScreen()),
                             child: Obx(
                               () => _buildStatCard(
-                                title: 'জরুরি অনুরোধ',
+                                title: 'emergency_requests'.tr,
                                 value: '${controller.activeRequests.value}',
                                 icon: Icons.emergency,
                                 color: const Color(0xFFFB8C00),
@@ -172,8 +193,8 @@ class DashboardScreen extends StatelessWidget {
                       const SizedBox(height: 24),
 
                       // Quick actions
-                      const Text(
-                        'দ্রুত অ্যাকশন',
+                      Text(
+                        'quick_actions'.tr,
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -185,14 +206,26 @@ class DashboardScreen extends StatelessWidget {
                       Row(
                         children: [
                           Expanded(
-                            child: _buildActionButton(
-                              title: 'রক্তদাতা যোগ করুন',
-                              icon: Icons.person_add,
-                              onTap: () async {
-                                await Get.to(() => const AddDonorScreen());
-                                controller.refresh();
-                              },
-                            ),
+                            child:
+                                _canCreateDonor(
+                                  controller.currentUser.value?.accessRole,
+                                )
+                                ? _buildActionButton(
+                                    title: 'add_donor'.tr,
+                                    icon: Icons.person_add,
+                                    onTap: () async {
+                                      await Get.to(
+                                        () => const AddDonorScreen(),
+                                      );
+                                      controller.refresh();
+                                    },
+                                  )
+                                : _buildActionButton(
+                                    title: 'donors'.tr,
+                                    icon: Icons.water_drop_outlined,
+                                    onTap: () =>
+                                        Get.to(() => const DonorListScreen()),
+                                  ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -201,14 +234,14 @@ class DashboardScreen extends StatelessWidget {
                                   controller.currentUser.value?.accessRole,
                                 )
                                 ? _buildActionButton(
-                                    title: 'রক্তদানের ইতিহাস',
+                                    title: 'donation_history'.tr,
                                     icon: Icons.history,
                                     onTap: () => Get.to(
                                       () => const DonationHistoryScreen(),
                                     ),
                                   )
                                 : _buildActionButton(
-                                    title: 'সদস্য তালিকা',
+                                    title: 'member_directory'.tr,
                                     icon: Icons.people_outline,
                                     onTap: () =>
                                         Get.to(() => const MemberListScreen()),
@@ -221,7 +254,7 @@ class DashboardScreen extends StatelessWidget {
                         children: [
                           Expanded(
                             child: _buildActionButton(
-                              title: 'র‍্যাংকলিস্ট',
+                              title: 'ranklist'.tr,
                               icon: Icons.emoji_events,
                               onTap: () => Get.to(() => const RanklistScreen()),
                             ),
@@ -229,7 +262,7 @@ class DashboardScreen extends StatelessWidget {
                           const SizedBox(width: 12),
                           Expanded(
                             child: _buildActionButton(
-                              title: 'অনুষ্ঠান',
+                              title: 'events'.tr,
                               icon: Icons.event,
                               onTap: () =>
                                   Get.to(() => const EventListScreen()),
@@ -246,7 +279,7 @@ class DashboardScreen extends StatelessWidget {
                           children: [
                             Expanded(
                               child: _buildActionButton(
-                                title: 'Pending registrations',
+                                title: 'pending_registrations'.tr,
                                 icon: Icons.how_to_reg,
                                 onTap: () => Get.to(
                                   () => const RegistrationReviewScreen(),
@@ -258,7 +291,7 @@ class DashboardScreen extends StatelessWidget {
                               const SizedBox(width: 12),
                               Expanded(
                                 child: _buildActionButton(
-                                  title: 'Audit history',
+                                  title: 'audit_history'.tr,
                                   icon: Icons.policy_outlined,
                                   onTap: () =>
                                       Get.to(() => const AuditLogScreen()),
@@ -276,8 +309,8 @@ class DashboardScreen extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
-                            'নোটিশ বোর্ড',
+                          Text(
+                            'notice_board'.tr,
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -286,9 +319,9 @@ class DashboardScreen extends StatelessWidget {
                           ),
                           TextButton(
                             onPressed: () => Get.to(() => const NoticeScreen()),
-                            child: const Text(
-                              'সব দেখুন',
-                              style: TextStyle(color: AppColors.primary),
+                            child: Text(
+                              'view_all'.tr,
+                              style: const TextStyle(color: AppColors.primary),
                             ),
                           ),
                         ],
@@ -308,10 +341,12 @@ class DashboardScreen extends StatelessWidget {
                                     color: AppColors.textLight,
                                   ),
                                 ),
-                                child: const Center(
+                                child: Center(
                                   child: Text(
-                                    'কোনো নোটিশ নেই',
-                                    style: TextStyle(color: AppColors.textGrey),
+                                    'no_notices'.tr,
+                                    style: const TextStyle(
+                                      color: AppColors.textGrey,
+                                    ),
                                   ),
                                 ),
                               )
@@ -351,7 +386,7 @@ class DashboardScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -399,7 +434,7 @@ class DashboardScreen extends StatelessWidget {
           border: Border.all(color: AppColors.primaryLight),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -486,3 +521,5 @@ bool _canViewDonationHistory(String? role) =>
 
 bool _canReviewRegistrations(String? role) =>
     role == 'developer_admin' || role == 'leader';
+
+bool _canCreateDonor(String? role) => role != null && role != 'member';

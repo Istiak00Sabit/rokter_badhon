@@ -67,9 +67,9 @@ class UserService {
     try {
       currentUser = UserModel.fromMap(userData, userId);
       currentDirectory = UserDirectoryModel.fromMap(directoryData, userId);
-    } on FormatException catch (error) {
-      throw ProfileUpdateException(
-        'Profile or directory data is malformed; trusted operator repair is required: $error',
+    } on FormatException {
+      throw const ProfileUpdateException(
+        'Profile or directory data is malformed; trusted operator repair is required.',
       );
     }
 
@@ -110,10 +110,7 @@ class UserService {
     await batch.commit();
   }
 
-  static bool _sameMap(
-    Map<String, dynamic> left,
-    Map<String, dynamic> right,
-  ) {
+  static bool _sameMap(Map<String, dynamic> left, Map<String, dynamic> right) {
     if (left.length != right.length) return false;
     for (final entry in left.entries) {
       if (!right.containsKey(entry.key) || right[entry.key] != entry.value) {

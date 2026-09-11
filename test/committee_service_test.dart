@@ -198,7 +198,7 @@ void main() {
       final screenSource = File(
         'lib/views/committee_screen.dart',
       ).readAsStringSync();
-      expect(screenSource, contains('No gallery images are available'));
+      expect(screenSource, contains("'no_gallery_images'.tr"));
       expect(screenSource, contains('errorBuilder:'));
       expect(screenSource, contains('roster.term.groupPhotoUrl'));
       expect(screenSource, isNot(contains('.add(')));

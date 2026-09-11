@@ -1,3 +1,5 @@
+import 'package:get/get.dart';
+
 class AppConstants {
   // Blood groups
   static const List<String> bloodGroups = [
@@ -15,10 +17,10 @@ class AppConstants {
   static const List<String> genders = ['male', 'female', 'other'];
 
   static String genderLabel(String gender) => switch (gender) {
-    'male' => 'পুরুষ',
-    'female' => 'মহিলা',
-    'other' => 'অন্যান্য',
-    _ => 'অজানা',
+    'male' => 'gender.male'.tr,
+    'female' => 'gender.female'.tr,
+    'other' => 'gender.other'.tr,
+    _ => 'unknown'.tr,
   };
 
   // =========================================================
@@ -30,22 +32,22 @@ class AppConstants {
   static const String roleExecutive = 'executive';
   static const String roleCommittee = 'committee';
   static const String roleMember = 'member';
+  static const Set<String> roles = {
+    roleDeveloperAdmin,
+    roleLeader,
+    roleExecutive,
+    roleCommittee,
+    roleMember,
+  };
 
-  static String roleLabel(String role) {
-    switch (role) {
-      case roleDeveloperAdmin:
-        return 'ডেভেলপার অ্যাডমিন';
-      case roleLeader:
-        return 'Leader';
-      case roleExecutive:
-        return 'Executive';
-      case roleCommittee:
-        return 'কার্যনির্বাহী সদস্য';
-      case roleMember:
-        return 'সাধারণ সদস্য';
-      default:
-        return 'Unavailable';
-    }
+  static String roleLabel(String role) =>
+      roles.contains(role) ? 'role.$role'.tr : 'unknown'.tr;
+
+  static String positionLabel(String position) {
+    final translated = 'position.$position'.tr;
+    return translated == 'position.$position'
+        ? position.replaceAll('_', ' ')
+        : translated;
   }
 
   // Firestore collections

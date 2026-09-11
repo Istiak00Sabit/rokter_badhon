@@ -22,6 +22,7 @@ class DashboardController extends GetxController {
 
   // Loading
   final RxBool isLoading = true.obs;
+  final RxString errorCode = ''.obs;
 
   @override
   void onInit() {
@@ -32,6 +33,7 @@ class DashboardController extends GetxController {
   Future<void> loadDashboard() async {
     try {
       isLoading.value = true;
+      errorCode.value = '';
 
       // Current user data আনো
       currentUser.value = await _authService.getCurrentUserData();
@@ -52,8 +54,10 @@ class DashboardController extends GetxController {
       thisMonthDonations.value = results[2] as int;
       activeRequests.value = results[3] as int;
       notices.assignAll(results[4] as List<NoticeModel>);
-    } catch (e) {
-      print('Dashboard error: $e');
+    } on DashboardServiceException catch (error) {
+      errorCode.value = error.code;
+    } catch (_) {
+      errorCode.value = 'unexpected';
     } finally {
       isLoading.value = false;
     }

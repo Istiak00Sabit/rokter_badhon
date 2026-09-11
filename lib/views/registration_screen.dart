@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 import '../constants/app_colors.dart';
 import '../models/registration_request_model.dart';
@@ -35,10 +36,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         !_email.text.contains('@') ||
         _password.text.length < 6 ||
         _password.text != _passwordConfirmation.text) {
-      setState(
-        () => _message =
-            'Enter a name, phone, valid email, and matching passwords.',
-      );
+      setState(() => _message = 'registration_invalid');
       return;
     }
     setState(() {
@@ -55,16 +53,14 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     setState(() {
       _loading = false;
       _message = switch (result.state) {
-        RegistrationSubmissionState.submitted =>
-          'Registration request submitted. Check your email for verification.',
+        RegistrationSubmissionState.submitted => 'registration_submitted',
         RegistrationSubmissionState.submittedVerificationEmailFailed =>
-          'Request submitted, but the verification email was not sent. Sign in again to resend it.',
+          'registration_submitted_email_failed',
         RegistrationSubmissionState.submittedSignOutFailed =>
-          'Request submitted, but automatic sign-out failed. Sign out before leaving this screen. Error: ${result.error}',
+          'registration_submitted_signout_failed',
         RegistrationSubmissionState.authCreatedRequestFailed =>
-          'Your sign-in account was created, but the registration request was not saved. Stay signed in and retry later or contact support. Error: ${result.error}',
-        RegistrationSubmissionState.failed =>
-          'Registration could not start: ${result.error}',
+          'registration_request_failed',
+        RegistrationSubmissionState.failed => 'registration_failed',
       };
     });
     if (result.requestSubmitted && _authService.currentUser != null) {
@@ -81,12 +77,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       setState(() {
         _emailVerified = verified;
         _request = request;
-        _message ??= request == null
-            ? 'Registration status is unavailable.'
-            : null;
+        _message ??= request == null ? 'status_unavailable' : null;
       });
-    } catch (error) {
-      if (mounted) setState(() => _message = 'Status unavailable: $error');
+    } catch (_) {
+      if (mounted) setState(() => _message = 'status_unavailable');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -94,7 +88,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   Future<void> _submitForExistingAccount() async {
     if (_name.text.trim().isEmpty || _phone.text.trim().isEmpty) {
-      setState(() => _message = 'Enter your name and phone.');
+      setState(() => _message = 'name_phone_required');
       return;
     }
     setState(() => _loading = true);
@@ -104,12 +98,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         phone: _phone.text,
       );
       _message = result.state == RegistrationSubmissionState.submitted
-          ? 'Registration request submitted.'
-          : 'Request submitted, but automatic sign-out failed. Sign out before leaving this screen. Error: ${result.error}';
+          ? 'registration_submitted'
+          : 'registration_submitted_signout_failed';
       if (_authService.currentUser != null) await _refreshStatus();
-    } catch (error) {
+    } catch (_) {
       if (mounted) {
-        setState(() => _message = 'Request submission failed: $error');
+        setState(() => _message = 'registration_failed');
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -119,9 +113,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   Future<void> _resendVerification() async {
     try {
       await _authService.resendEmailVerification();
-      if (mounted) setState(() => _message = 'Verification email sent.');
-    } catch (error) {
-      if (mounted) setState(() => _message = 'Verification email failed: $error');
+      if (mounted) setState(() => _message = 'verification_sent');
+    } catch (_) {
+      if (mounted) setState(() => _message = 'verification_failed');
     }
   }
 
@@ -141,7 +135,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Registration request'),
+        title: Text('registration_request'.tr),
         backgroundColor: AppColors.primary,
         foregroundColor: AppColors.white,
       ),
@@ -151,45 +145,50 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (!signedIn) ...[
-              _field(_name, 'Name'),
-              _field(_phone, 'Phone', type: TextInputType.phone),
-              _field(_email, 'Email', type: TextInputType.emailAddress),
-              _field(_password, 'Password', obscure: true),
+              _field(_name, 'name'.tr),
+              _field(_phone, 'phone'.tr, type: TextInputType.phone),
+              _field(_email, 'email'.tr, type: TextInputType.emailAddress),
+              _field(_password, 'password'.tr, obscure: true),
               _field(
                 _passwordConfirmation,
-                'Confirm password',
+                'confirm_password'.tr,
                 obscure: true,
               ),
               ElevatedButton(
                 onPressed: _loading ? null : _register,
-                child: const Text('Submit registration request'),
+                child: Text('submit_registration'.tr),
               ),
             ],
             if (signedIn) ...[
               Text(
-                'Request status: ${_statusLabel(_request)}',
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                '${'request_status'.tr}: ${_statusLabel(_request)}',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 8),
-              Text('Email verified: ${_emailVerified ? 'yes' : 'no'}'),
+              Text(
+                '${'email_verified'.tr}: ${_emailVerified ? 'yes'.tr : 'no'.tr}',
+              ),
               if (_request == null) ...[
                 const SizedBox(height: 16),
-                _field(_name, 'Name'),
-                _field(_phone, 'Phone', type: TextInputType.phone),
+                _field(_name, 'name'.tr),
+                _field(_phone, 'phone'.tr, type: TextInputType.phone),
                 ElevatedButton(
                   onPressed: _loading ? null : _submitForExistingAccount,
-                  child: const Text('Retry request submission'),
+                  child: Text('retry_submission'.tr),
                 ),
               ],
               const SizedBox(height: 16),
               OutlinedButton(
                 onPressed: _loading ? null : _refreshStatus,
-                child: const Text('Refresh status and verification'),
+                child: Text('refresh_status'.tr),
               ),
               if (!_emailVerified)
                 OutlinedButton(
                   onPressed: _loading ? null : _resendVerification,
-                  child: const Text('Resend verification email'),
+                  child: Text('resend_verification'.tr),
                 ),
             ],
             if (_loading)
@@ -200,7 +199,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             if (_message != null)
               Padding(
                 padding: const EdgeInsets.only(top: 16),
-                child: Text(_message!),
+                child: Text(_message!.tr),
               ),
           ],
         ),
@@ -229,11 +228,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   }
 
   String _statusLabel(RegistrationRequestModel? request) {
-    if (request == null) return 'unavailable';
+    if (request == null) return 'status_unavailable'.tr;
     return switch (request.status) {
-      RegistrationRequestStatus.pending => 'pending',
-      RegistrationRequestStatus.approved => 'approved',
-      RegistrationRequestStatus.rejected => 'rejected',
+      RegistrationRequestStatus.pending => 'status.pending'.tr,
+      RegistrationRequestStatus.approved => 'status.approved'.tr,
+      RegistrationRequestStatus.rejected => 'status.rejected'.tr,
     };
   }
 }

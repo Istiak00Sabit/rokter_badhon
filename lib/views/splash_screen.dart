@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../constants/app_colors.dart';
-import '../constants/app_strings.dart';
 import '../controllers/auth_controller.dart';
 import '../models/auth_session.dart';
 import 'main_navigation_screen.dart';
@@ -83,7 +82,7 @@ class _SplashScreenState extends State<SplashScreen>
                   width: 100,
                   height: 100,
                   decoration: BoxDecoration(
-                    color: AppColors.white.withOpacity(0.2),
+                    color: AppColors.white.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
@@ -93,8 +92,8 @@ class _SplashScreenState extends State<SplashScreen>
                   ),
                 ),
                 const SizedBox(height: 24),
-                const Text(
-                  AppStrings.appName,
+                Text(
+                  'app_name'.tr,
                   style: TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
@@ -102,13 +101,13 @@ class _SplashScreenState extends State<SplashScreen>
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  AppStrings.appTagline,
+                Text(
+                  'tagline'.tr,
                   style: TextStyle(fontSize: 16, color: AppColors.white),
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  AppStrings.orgLocation,
+                Text(
+                  'org_location'.tr,
                   style: TextStyle(fontSize: 14, color: AppColors.white),
                 ),
                 const SizedBox(height: 60),

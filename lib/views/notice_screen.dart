@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:intl/intl.dart';
 
 import '../constants/app_colors.dart';
 import '../controllers/notice_controller.dart';
+import '../localization/app_date_formatter.dart';
 import '../models/notice_model.dart';
 
 class NoticeScreen extends StatefulWidget {
@@ -25,7 +25,7 @@ class _NoticeScreenState extends State<NoticeScreen> {
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: AppColors.background,
     appBar: AppBar(
-      title: const Text('Notices'),
+      title: Text('notices'.tr),
       backgroundColor: AppColors.primary,
       foregroundColor: AppColors.white,
     ),
@@ -37,13 +37,13 @@ class _NoticeScreenState extends State<NoticeScreen> {
       }
       if (controller.errorCode.value.isNotEmpty) {
         return _Message(
-          text: _error(controller.errorCode.value),
+          text: _error(controller.errorCode.value).tr,
           retry: controller.load,
         );
       }
       if (controller.published.isEmpty && controller.unpublished.isEmpty) {
         return _Message(
-          text: 'No notices are available.',
+          text: 'no_notices_available'.tr,
           retry: controller.load,
         );
       }
@@ -58,11 +58,14 @@ class _NoticeScreenState extends State<NoticeScreen> {
             ),
             if (controller.canViewUnpublished &&
                 controller.unpublished.isNotEmpty) ...[
-              const Padding(
-                padding: EdgeInsets.only(top: 18, bottom: 8),
+              Padding(
+                padding: const EdgeInsets.only(top: 18, bottom: 8),
                 child: Text(
-                  'Draft and archived review',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  'unpublished_review'.tr,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
               ...controller.unpublished.map(
@@ -93,7 +96,7 @@ class _NoticeCard extends StatelessWidget {
         style: const TextStyle(fontWeight: FontWeight.bold),
       ),
       subtitle: Text(
-        '${DateFormat.yMMMd().format(notice.createdAt)}${notice.status == 'published' ? '' : ' • ${notice.status.toUpperCase()}'}',
+        '${AppDateFormatter.short(notice.createdAt)}${notice.status == 'published' ? '' : ' • ${'status.${notice.status}'.tr}'}',
       ),
       trailing: const Icon(Icons.chevron_right),
       onTap: () => Get.to(() => NoticeDetailScreen(notice: notice)),
@@ -108,7 +111,7 @@ class NoticeDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: AppColors.background,
     appBar: AppBar(
-      title: const Text('Notice'),
+      title: Text('notice'.tr),
       backgroundColor: AppColors.primary,
       foregroundColor: AppColors.white,
     ),
@@ -116,13 +119,13 @@ class NoticeDetailScreen extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       children: [
         if (notice.important)
-          const Row(
+          Row(
             children: [
-              Icon(Icons.priority_high, color: AppColors.primary),
-              SizedBox(width: 6),
+              const Icon(Icons.priority_high, color: AppColors.primary),
+              const SizedBox(width: 6),
               Text(
-                'Important',
-                style: TextStyle(
+                'important'.tr,
+                style: const TextStyle(
                   color: AppColors.primary,
                   fontWeight: FontWeight.bold,
                 ),
@@ -136,14 +139,14 @@ class NoticeDetailScreen extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          DateFormat.yMMMMd().add_jm().format(notice.createdAt),
+          AppDateFormatter.dateTime(notice.createdAt),
           style: const TextStyle(color: AppColors.textGrey),
         ),
         if (notice.status != 'published')
           Padding(
             padding: const EdgeInsets.only(top: 6),
             child: Text(
-              notice.status.toUpperCase(),
+              'status.${notice.status}'.tr,
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
@@ -165,16 +168,16 @@ class _Message extends StatelessWidget {
       children: [
         Text(text),
         const SizedBox(height: 12),
-        OutlinedButton(onPressed: retry, child: const Text('Retry')),
+        OutlinedButton(onPressed: retry, child: Text('retry'.tr)),
       ],
     ),
   );
 }
 
 String _error(String code) => switch (code) {
-  'permission_denied' => 'You do not have permission to view these notices.',
-  'query_unavailable' => 'The notice query is unavailable.',
-  'network_unavailable' => 'Notices are unavailable while offline.',
-  'malformed_data' => 'Notice data failed its safety checks.',
-  _ => 'Notices could not be loaded.',
+  'permission_denied' => 'permission_denied',
+  'query_unavailable' => 'query_unavailable',
+  'network_unavailable' => 'network_unavailable',
+  'malformed_data' => 'malformed_data',
+  _ => 'notices_error',
 };

@@ -3,6 +3,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../constants/app_constants.dart';
 import '../models/notice_model.dart';
 
+class DashboardServiceException implements Exception {
+  final String code;
+  const DashboardServiceException(this.code);
+}
+
 class DashboardService {
   final FirebaseFirestore _firestore;
   final DateTime Function() _utcNow;
@@ -23,8 +28,8 @@ class DashboardService {
           .get();
 
       return snapshot.docs.length;
-    } catch (e) {
-      return 0;
+    } on FirebaseException catch (error) {
+      throw DashboardServiceException(_code(error));
     }
   }
 
@@ -40,8 +45,8 @@ class DashboardService {
           .get();
 
       return snapshot.docs.length;
-    } catch (e) {
-      return 0;
+    } on FirebaseException catch (error) {
+      throw DashboardServiceException(_code(error));
     }
   }
 
@@ -71,8 +76,8 @@ class DashboardService {
           .get();
 
       return snapshot.docs.length;
-    } catch (e) {
-      return 0;
+    } on FirebaseException catch (error) {
+      throw DashboardServiceException(_code(error));
     }
   }
 
@@ -88,8 +93,8 @@ class DashboardService {
           .get();
 
       return snapshot.docs.length;
-    } catch (e) {
-      return 0;
+    } on FirebaseException catch (error) {
+      throw DashboardServiceException(_code(error));
     }
   }
 
@@ -109,8 +114,17 @@ class DashboardService {
       return snapshot.docs
           .map((doc) => NoticeModel.fromMap(doc.data(), doc.id))
           .toList(growable: false);
-    } catch (e) {
-      return [];
+    } on FormatException {
+      throw const DashboardServiceException('malformed_data');
+    } on FirebaseException catch (error) {
+      throw DashboardServiceException(_code(error));
     }
   }
 }
+
+String _code(FirebaseException error) => switch (error.code) {
+  'permission-denied' => 'permission_denied',
+  'failed-precondition' => 'query_unavailable',
+  'unavailable' || 'network-request-failed' => 'network_unavailable',
+  _ => 'firestore_error',
+};

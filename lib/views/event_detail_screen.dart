@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:get/get.dart';
 
 import '../constants/app_colors.dart';
+import '../localization/app_date_formatter.dart';
 import '../models/event_media_model.dart';
 import '../models/event_model.dart';
 import '../services/event_service.dart';
@@ -50,7 +51,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: AppColors.background,
     appBar: AppBar(
-      title: const Text('Event details'),
+      title: Text('event_details'.tr),
       backgroundColor: AppColors.primary,
       foregroundColor: AppColors.white,
     ),
@@ -67,7 +68,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
             child: OutlinedButton.icon(
               onPressed: _reload,
               icon: const Icon(Icons.refresh),
-              label: const Text('Gallery unavailable — retry'),
+              label: Text('gallery_retry'.tr),
             ),
           );
         }
@@ -96,13 +97,11 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
               const SizedBox(height: 10),
               _Info(
                 icon: Icons.category_outlined,
-                text: EventModel.typeLabel(value.event.eventType),
+                text: EventModel.typeTranslationKey(value.event.eventType).tr,
               ),
               _Info(
                 icon: Icons.schedule,
-                text: DateFormat.yMMMMd().add_jm().format(
-                  value.event.eventDate,
-                ),
+                text: AppDateFormatter.dateTime(value.event.eventDate),
               ),
               if (value.event.location != null)
                 _Info(
@@ -114,15 +113,18 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                 Text(value.event.description!),
               ],
               const SizedBox(height: 22),
-              const Text(
-                'Gallery',
-                style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
+              Text(
+                'gallery'.tr,
+                style: const TextStyle(
+                  fontSize: 19,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 10),
               if (value.gallery.isEmpty)
-                const Text(
-                  'No gallery images are available.',
-                  style: TextStyle(color: AppColors.textGrey),
+                Text(
+                  'no_gallery_images'.tr,
+                  style: const TextStyle(color: AppColors.textGrey),
                 )
               else
                 SizedBox(
@@ -184,15 +186,15 @@ class _Gallery extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(top: 6),
             child: Text(
-              '${media.active ? '' : '[HIDDEN] '}${media.caption!}',
+              '${media.active ? '' : '${'hidden'.tr.toUpperCase()} '}${media.caption!}',
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
           ),
         if (media.caption == null && !media.active)
-          const Padding(
-            padding: EdgeInsets.only(top: 6),
-            child: Text('[HIDDEN]'),
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text('hidden'.tr.toUpperCase()),
           ),
       ],
     ),
