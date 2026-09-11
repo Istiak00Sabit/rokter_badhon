@@ -51,7 +51,9 @@ service cloud.firestore {
         && getAfter(directoryPath(id)).data == projection(after);
     }
     match /registration_requests/{uid} {
-      allow get: if unlinkedOwn(uid);
+      allow get: if unlinkedOwn(uid)
+        || (admitted() && editorial() && resource.data.status == 'pending');
+      allow list: if admitted() && editorial() && resource.data.status == 'pending';
       allow create: if unlinkedOwn(uid)
         && request.resource.data.keys().hasAll(['auth_uid','name','phone','email','status','requested_at',
           'approved_by','approved_at','rejected_by','rejected_at','linked_user_id'])

@@ -12,6 +12,8 @@ import '../views/event_list_screen.dart';
 import '../views/member_list_screen.dart';
 import '../views/notice_screen.dart';
 import '../views/ranklist_screen.dart';
+import '../views/registration_review_screen.dart';
+import '../views/audit_log_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -236,6 +238,38 @@ class DashboardScreen extends StatelessWidget {
                         ],
                       ),
 
+                      if (_canReviewRegistrations(
+                        controller.currentUser.value?.accessRole,
+                      )) ...[
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildActionButton(
+                                title: 'Pending registrations',
+                                icon: Icons.how_to_reg,
+                                onTap: () => Get.to(
+                                  () => const RegistrationReviewScreen(),
+                                ),
+                              ),
+                            ),
+                            if (controller.currentUser.value?.accessRole ==
+                                'developer_admin') ...[
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _buildActionButton(
+                                  title: 'Audit history',
+                                  icon: Icons.policy_outlined,
+                                  onTap: () =>
+                                      Get.to(() => const AuditLogScreen()),
+                                ),
+                              ),
+                            ] else
+                              const Spacer(),
+                          ],
+                        ),
+                      ],
+
                       const SizedBox(height: 24),
 
                       // Notice board
@@ -449,3 +483,6 @@ class DashboardScreen extends StatelessWidget {
 
 bool _canViewDonationHistory(String? role) =>
     role == 'developer_admin' || role == 'leader' || role == 'executive';
+
+bool _canReviewRegistrations(String? role) =>
+    role == 'developer_admin' || role == 'leader';

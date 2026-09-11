@@ -20,6 +20,15 @@ import { correctDonation, recordDonation } from './src/donation.js';
 import { cancelBloodRequest, editBloodRequest, fulfillBloodRequest } from './src/blood_request.js';
 import { archiveNotice, createNotice, editNotice, publishNotice } from './src/notice.js';
 import {
+  assignAccessRole,
+  createAuthLink,
+  createOrganizationUser,
+  replaceAuthLink,
+  setLoginEnabled,
+  setUserActive,
+  updateOwnPhoto,
+} from './src/account.js';
+import {
   addEventMedia,
   createEvent,
   editEventMediaCaption,
@@ -95,6 +104,51 @@ async function main() {
     });
   } else if (command === 'reject') {
     result = await rejectRegistration(dependencies);
+  } else if (command === 'create-user') {
+    result = await createOrganizationUser({
+      ...dependencies,
+      name: options.name,
+      phone: options.phone,
+      email: options.email === 'null' ? null : options.email,
+      bloodGroup: options['blood-group'] === 'null' ? null : options['blood-group'],
+      profession: options.profession === 'null' ? null : options.profession,
+      address: options.address === 'null' ? null : options.address,
+      photoUrl: options['photo-url'] === 'null' ? null : options['photo-url'],
+      preferredLanguage: options['preferred-language'] === 'null' ? null : options['preferred-language'],
+    });
+  } else if (command === 'assign-role') {
+    result = await assignAccessRole({ ...dependencies, userId: options['user-id'], targetRole: options.role });
+  } else if (['disable-user', 'reactivate-user', 'disable-leader', 'reactivate-leader'].includes(command)) {
+    result = await setUserActive({
+      ...dependencies,
+      userId: options['user-id'],
+      active: command.startsWith('reactivate-'),
+      leaderTarget: command.endsWith('-leader'),
+    });
+  } else if (['enable-login', 'disable-login', 'enable-leader-login', 'disable-leader-login'].includes(command)) {
+    result = await setLoginEnabled({
+      ...dependencies,
+      userId: options['user-id'],
+      enabled: command.startsWith('enable-'),
+      leaderTarget: command.includes('leader'),
+    });
+  } else if (command === 'create-auth-link' || command === 'create-leader-auth-link') {
+    result = await createAuthLink({
+      ...dependencies,
+      userId: options['user-id'],
+      targetAuthUid: options['target-auth-uid'],
+      leaderTarget: command === 'create-leader-auth-link',
+    });
+  } else if (command === 'replace-auth-link' || command === 'replace-leader-auth-link') {
+    result = await replaceAuthLink({
+      ...dependencies,
+      userId: options['user-id'],
+      oldAuthUid: options['old-auth-uid'],
+      newAuthUid: options['new-auth-uid'],
+      leaderTarget: command === 'replace-leader-auth-link',
+    });
+  } else if (command === 'update-own-photo') {
+    result = await updateOwnPhoto({ ...dependencies, photoUrl: options['photo-url'] === 'null' ? null : options['photo-url'] });
   } else if (command === 'bootstrap-developer-admin' || command === 'recover-developer-admin') {
     const protectedDependencies = {
       db: dependencies.db,

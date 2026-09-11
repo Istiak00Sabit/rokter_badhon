@@ -90,6 +90,19 @@ test('registration overwrite/update/delete/list/other read denied', async () => 
   await assertFails(getDocs(collection(c, 'registration_requests')));
   await assertFails(getDoc(doc(c, 'registration_requests/other')));
 });
+for (const role of ['developer_admin','leader','executive','committee','member']) {
+  test(`${role}: pending registration review audience is exact`, async () => {
+    await seed('users/person-own', user({ access_role: role }));
+    await seed('registration_requests/pending-review', request({ auth_uid: 'pending-review', requested_at: stamp }));
+    await seed('registration_requests/rejected-review', request({ auth_uid: 'rejected-review', status: 'rejected', requested_at: stamp, rejected_by: 'person-own', rejected_at: stamp }));
+    const c = db(); const allowed = role === 'developer_admin' || role === 'leader';
+    await (allowed ? assertSucceeds : assertFails)(getDoc(doc(c, 'registration_requests/pending-review')));
+    await (allowed ? assertSucceeds : assertFails)(getDocs(query(collection(c, 'registration_requests'), where('status','==','pending'))));
+    await assertFails(getDoc(doc(c, 'registration_requests/rejected-review')));
+    await assertFails(getDocs(query(collection(c, 'registration_requests'), where('status','==','rejected'))));
+    await assertFails(getDocs(collection(c, 'registration_requests')));
+  });
+}
 for (const link of [{ active: true, user_id: 'person-own' }, { active: false, user_id: 'person-own' }, { active: true, user_id: 'missing' }, {}]) {
   test(`present link disqualifies registration: ${JSON.stringify(link)}`, async () => {
     await seed('auth_links/applicant', link);
