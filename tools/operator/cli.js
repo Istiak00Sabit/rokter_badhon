@@ -16,6 +16,16 @@ import {
 import { AdmissionError } from './src/policy.js';
 import { rolloverCommitteeTerm } from './src/committee_term.js';
 import { deactivateDonor } from './src/donor.js';
+import {
+  addEventMedia,
+  createEvent,
+  editEventMediaCaption,
+  hideEvent,
+  hideEventMedia,
+  setEventCover,
+  setEventMediaOrder,
+  updateEvent,
+} from './src/event.js';
 import { assertSafeTarget } from './src/safety.js';
 
 function parseArguments(values) {
@@ -164,13 +174,65 @@ async function main() {
       ...dependencies,
       donorId: options['donor-id'],
     });
+  } else if (command === 'create-event') {
+    result = await createEvent({
+      ...dependencies,
+      title: options.title,
+      description: options.description === 'null' ? null : options.description,
+      eventType: options['event-type'],
+      eventDate: parseNullableTimestamp(options['event-date'], 'event-date'),
+      location: options.location === 'null' ? null : options.location,
+      coverImageUrl: options['cover-image-url'] === 'null' ? null : options['cover-image-url'],
+    });
+  } else if (command === 'edit-event') {
+    result = await updateEvent({
+      ...dependencies,
+      eventId: options['event-id'],
+      title: options.title,
+      description: options.description === undefined ? undefined : options.description === 'null' ? null : options.description,
+      eventType: options['event-type'],
+      eventDate: options['event-date'] === undefined ? undefined : parseNullableTimestamp(options['event-date'], 'event-date'),
+      location: options.location === undefined ? undefined : options.location === 'null' ? null : options.location,
+    });
+  } else if (command === 'hide-event') {
+    result = await hideEvent({ ...dependencies, eventId: options['event-id'] });
+  } else if (command === 'set-event-cover') {
+    result = await setEventCover({
+      ...dependencies,
+      eventId: options['event-id'],
+      coverImageUrl: options['cover-image-url'] === 'null' ? null : options['cover-image-url'],
+    });
+  } else if (command === 'add-event-media') {
+    result = await addEventMedia({
+      ...dependencies,
+      eventId: options['event-id'],
+      imageUrl: options['image-url'],
+      caption: options.caption === 'null' ? null : options.caption,
+      sortOrder: Number(options['sort-order']),
+      provider: options.provider === 'null' ? null : options.provider,
+      providerPublicId: options['provider-public-id'] === 'null' ? null : options['provider-public-id'],
+    });
+  } else if (command === 'edit-event-media-caption') {
+    result = await editEventMediaCaption({
+      ...dependencies,
+      mediaId: options['media-id'],
+      caption: options.caption === 'null' ? null : options.caption,
+    });
+  } else if (command === 'set-event-media-order') {
+    result = await setEventMediaOrder({
+      ...dependencies,
+      mediaId: options['media-id'],
+      sortOrder: Number(options['sort-order']),
+    });
+  } else if (command === 'hide-event-media') {
+    result = await hideEventMedia({ ...dependencies, mediaId: options['media-id'] });
   } else {
     throw new AdmissionError(
       'invalid_argument',
-      'Unknown command. Use an explicitly reviewed registration, developer-admin, committee-assignment, or committee-media operation.',
+      'Unknown command. Use an explicitly reviewed registration, organization, donor, or event operation.',
     );
   }
-  console.log(`${result.action}; operation_id=${result.operationId}${result.userId ? `; user_id=${result.userId}` : ''}${result.assignmentId ? `; assignment_id=${result.assignmentId}` : ''}${result.mediaId ? `; media_id=${result.mediaId}` : ''}${result.termId ? `; term_id=${result.termId}` : ''}${result.donorId ? `; donor_id=${result.donorId}` : ''}`);
+  console.log(`${result.action}; operation_id=${result.operationId}${result.userId ? `; user_id=${result.userId}` : ''}${result.assignmentId ? `; assignment_id=${result.assignmentId}` : ''}${result.mediaId ? `; media_id=${result.mediaId}` : ''}${result.termId ? `; term_id=${result.termId}` : ''}${result.donorId ? `; donor_id=${result.donorId}` : ''}${result.eventId ? `; event_id=${result.eventId}` : ''}`);
 }
 
 main().catch((error) => {

@@ -134,3 +134,16 @@ Production Architecture v1.2.1 — Free V1. Architecture status: frozen for impl
 - **Analyzer:** Direct installed analysis-server validation reported 0 errors and 0 warnings; existing information-level diagnostics remain outside this unit.
 - **Production:** Untouched; no Firebase/Auth/provider access, deployment, migration, production data mutation or paid service occurred. Operator production guard remains intact.
 - **Exact next task:** Phase 3 Events + Event Media — strict models/read UX and trusted audited editorial operations.
+
+## Phase 4B — Events and Event Media
+
+- **Status:** Implemented and validated in local/synthetic paths; no production execution.
+- **Schema/read UX:** Added exact-schema Event and EventMedia parsing with recognized event types, strict Firestore Timestamps/nullability, bounded text, HTTPS-only image URLs, nonnegative deterministic media ordering, and consistent event update metadata. Admitted users can reach active events from the dashboard, open details, and view ordered active galleries. Developer_admin/leader can also review hidden events; empty, denied, malformed, offline, query-unavailable, and broken-image states fail safely with retry/fallback UI.
+- **Flutter boundary:** Event Flutter code is read-only. It queries `events(active, event_date desc)` and `event_media(event_id, active, sort_order, document ID)` only; no client create/edit/hide/delete or upload path was added.
+- **Trusted editorial operations:** Added emulator-guarded operator commands for event create/edit/hide, cover set/clear, and event-media add/caption edit/order change/hide. Every command resolves Auth UID → exact active auth link → admitted User and authorizes only developer_admin/leader. Mutations and minimal audit evidence are transactional and operation-ID protected; event/media identity and creation/upload provenance stay immutable, and no delete/unhide command exists.
+- **External provider boundary:** No provider was selected or contacted. Only approved HTTPS URLs and optional generic provider metadata can be stored; no image bytes, credentials, Firebase Storage, Functions, Run, billing, or paid service was added.
+- **Rules/indexes:** Existing Rules already enforce admitted active-event/media reads, developer_admin/leader hidden review, and deny all Flutter event/media writes. Existing event and media indexes match the implemented query shapes; no Rules/index change was required.
+- **Tests:** Operator synthetic regression suite passed 61/61. Focused Flutter event/model/source suite passed 4/4 through direct offline frontend compilation and `flutter_tester`. Full Flutter application frontend compilation completed successfully.
+- **Analyzer:** Direct installed analysis-server validation reported 0 errors and 0 warnings. New event files were clean after lint correction; existing information-only diagnostics remain outside this unit.
+- **Production:** Untouched; no deployment, credentials, network/provider call, production Firebase/Auth/Firestore access, data mutation, or migration occurred. The operator demo-project plus Firestore/Auth emulator guard remains mandatory.
+- **Exact next task:** Phase 4C — strict Donation lifecycle, atomic donor aggregate maintenance, history UX, and trusted correction handling.

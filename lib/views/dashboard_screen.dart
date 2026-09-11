@@ -5,6 +5,7 @@ import '../constants/app_strings.dart';
 import '../controllers/dashboard_controller.dart';
 import '../views/add_donor_screen.dart';
 import '../views/donor_list_screen.dart';
+import '../views/event_list_screen.dart';
 import '../views/member_list_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
@@ -37,9 +38,7 @@ class DashboardScreen extends StatelessWidget {
                 automaticallyImplyLeading: false,
                 flexibleSpace: FlexibleSpaceBar(
                   background: Container(
-                    decoration: const BoxDecoration(
-                      color: AppColors.primary,
-                    ),
+                    decoration: const BoxDecoration(color: AppColors.primary),
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(20, 60, 20, 20),
                       child: Column(
@@ -54,14 +53,16 @@ class DashboardScreen extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 4),
-                          Obx(() => Text(
-                                controller.currentUser.value?.name ?? 'Admin',
-                                style: const TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.white,
-                                ),
-                              )),
+                          Obx(
+                            () => Text(
+                              controller.currentUser.value?.name ?? 'Admin',
+                              style: const TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.white,
+                              ),
+                            ),
+                          ),
                           const SizedBox(height: 4),
                           Text(
                             AppStrings.orgLocation,
@@ -106,23 +107,26 @@ class DashboardScreen extends StatelessWidget {
                           // Total donors card
                           GestureDetector(
                             onTap: () => Get.to(() => const DonorListScreen()),
-                            child: Obx(() => _buildStatCard(
-                                  title: 'মোট রক্তদাতা',
-                                  value: '${controller.totalDonors.value}',
-                                  icon: Icons.water_drop,
-                                  color: AppColors.primary,
-                                )),
+                            child: Obx(
+                              () => _buildStatCard(
+                                title: 'মোট রক্তদাতা',
+                                value: '${controller.totalDonors.value}',
+                                icon: Icons.water_drop,
+                                color: AppColors.primary,
+                              ),
+                            ),
                           ),
                           // Total members card
                           GestureDetector(
-                            onTap: () =>
-                                Get.to(() => const MemberListScreen()),
-                            child: Obx(() => _buildStatCard(
-                                  title: 'মোট সদস্য',
-                                  value: '${controller.totalMembers.value}',
-                                  icon: Icons.people,
-                                  color: const Color(0xFF1976D2),
-                                )),
+                            onTap: () => Get.to(() => const MemberListScreen()),
+                            child: Obx(
+                              () => _buildStatCard(
+                                title: 'মোট সদস্য',
+                                value: '${controller.totalMembers.value}',
+                                icon: Icons.people,
+                                color: const Color(0xFF1976D2),
+                              ),
+                            ),
                           ),
                           // This month donations card
                           GestureDetector(
@@ -133,13 +137,14 @@ class DashboardScreen extends StatelessWidget {
                               backgroundColor: AppColors.primary,
                               colorText: AppColors.white,
                             ),
-                            child: Obx(() => _buildStatCard(
-                                  title: 'এই মাসে রক্তদান',
-                                  value:
-                                      '${controller.thisMonthDonations.value}',
-                                  icon: Icons.favorite,
-                                  color: const Color(0xFF43A047),
-                                )),
+                            child: Obx(
+                              () => _buildStatCard(
+                                title: 'এই মাসে রক্তদান',
+                                value: '${controller.thisMonthDonations.value}',
+                                icon: Icons.favorite,
+                                color: const Color(0xFF43A047),
+                              ),
+                            ),
                           ),
                           // Active requests card
                           GestureDetector(
@@ -150,12 +155,14 @@ class DashboardScreen extends StatelessWidget {
                               backgroundColor: const Color(0xFFFB8C00),
                               colorText: AppColors.white,
                             ),
-                            child: Obx(() => _buildStatCard(
-                                  title: 'জরুরি অনুরোধ',
-                                  value: '${controller.activeRequests.value}',
-                                  icon: Icons.emergency,
-                                  color: const Color(0xFFFB8C00),
-                                )),
+                            child: Obx(
+                              () => _buildStatCard(
+                                title: 'জরুরি অনুরোধ',
+                                value: '${controller.activeRequests.value}',
+                                icon: Icons.emergency,
+                                color: const Color(0xFFFB8C00),
+                              ),
+                            ),
                           ),
                         ],
                       ),
@@ -206,19 +213,17 @@ class DashboardScreen extends StatelessWidget {
                             child: _buildActionButton(
                               title: 'রক্ত খুঁজুন',
                               icon: Icons.search,
-                              onTap: () => Get.to(() => const DonorListScreen()),
+                              onTap: () =>
+                                  Get.to(() => const DonorListScreen()),
                             ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: _buildActionButton(
-                              title: 'জরুরি অনুরোধ',
-                              icon: Icons.emergency,
-                              onTap: () => Get.snackbar(
-                                'শীঘ্রই আসছে',
-                                'জরুরি অনুরোধ ফিচার শীঘ্রই যোগ হবে!',
-                                snackPosition: SnackPosition.BOTTOM,
-                              ),
+                              title: 'অনুষ্ঠান',
+                              icon: Icons.event,
+                              onTap: () =>
+                                  Get.to(() => const EventListScreen()),
                             ),
                           ),
                         ],
@@ -254,31 +259,35 @@ class DashboardScreen extends StatelessWidget {
                       const SizedBox(height: 8),
 
                       // Notices list
-                      Obx(() => controller.notices.isEmpty
-                          ? Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.all(20),
-                              decoration: BoxDecoration(
-                                color: AppColors.white,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: AppColors.textLight),
-                              ),
-                              child: const Center(
-                                child: Text(
-                                  'কোনো নোটিশ নেই',
-                                  style: TextStyle(color: AppColors.textGrey),
+                      Obx(
+                        () => controller.notices.isEmpty
+                            ? Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(20),
+                                decoration: BoxDecoration(
+                                  color: AppColors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: AppColors.textLight,
+                                  ),
                                 ),
+                                child: const Center(
+                                  child: Text(
+                                    'কোনো নোটিশ নেই',
+                                    style: TextStyle(color: AppColors.textGrey),
+                                  ),
+                                ),
+                              )
+                            : ListView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: controller.notices.length,
+                                itemBuilder: (context, index) {
+                                  final notice = controller.notices[index];
+                                  return _buildNoticeCard(notice);
+                                },
                               ),
-                            )
-                          : ListView.builder(
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              itemCount: controller.notices.length,
-                              itemBuilder: (context, index) {
-                                final notice = controller.notices[index];
-                                return _buildNoticeCard(notice);
-                              },
-                            )),
+                      ),
 
                       const SizedBox(height: 20),
                     ],
@@ -329,10 +338,7 @@ class DashboardScreen extends StatelessWidget {
               ),
               Text(
                 title,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppColors.textGrey,
-                ),
+                style: const TextStyle(fontSize: 12, color: AppColors.textGrey),
               ),
             ],
           ),
