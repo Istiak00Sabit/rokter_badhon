@@ -33,6 +33,10 @@
     { "collectionGroup": "blood_requests", "queryScope": "COLLECTION", "fields": [
       { "fieldPath": "status", "order": "ASCENDING" },
       { "fieldPath": "created_at", "order": "DESCENDING" }
+    ] },
+    { "collectionGroup": "notices", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "status", "order": "ASCENDING" },
+      { "fieldPath": "created_at", "order": "DESCENDING" }
     ] }
   ],
   "fieldOverrides": []

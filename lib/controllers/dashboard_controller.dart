@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 import '../services/dashboard_service.dart';
 import '../services/auth_services.dart';
 import '../models/user_model.dart';
+import '../models/notice_model.dart';
 
 class DashboardController extends GetxController {
   final DashboardService _dashboardService = DashboardService();
@@ -14,7 +15,7 @@ class DashboardController extends GetxController {
   final RxInt activeRequests = 0.obs;
 
   // Notices
-  final RxList notices = [].obs;
+  final RxList<NoticeModel> notices = <NoticeModel>[].obs;
 
   // Current user
   final Rx<UserModel?> currentUser = Rx<UserModel?>(null);
@@ -50,7 +51,7 @@ class DashboardController extends GetxController {
       totalMembers.value = results[1] as int;
       thisMonthDonations.value = results[2] as int;
       activeRequests.value = results[3] as int;
-      notices.value = results[4] as List;
+      notices.assignAll(results[4] as List<NoticeModel>);
     } catch (e) {
       print('Dashboard error: $e');
     } finally {

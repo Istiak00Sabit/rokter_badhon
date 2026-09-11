@@ -18,6 +18,7 @@ import { rolloverCommitteeTerm } from './src/committee_term.js';
 import { deactivateDonor } from './src/donor.js';
 import { correctDonation, recordDonation } from './src/donation.js';
 import { cancelBloodRequest, editBloodRequest, fulfillBloodRequest } from './src/blood_request.js';
+import { archiveNotice, createNotice, editNotice, publishNotice } from './src/notice.js';
 import {
   addEventMedia,
   createEvent,
@@ -52,6 +53,13 @@ function parseNullableTimestamp(value, label) {
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) throw new AdmissionError('invalid_argument', `${label} is invalid.`);
   return Timestamp.fromDate(parsed);
+}
+
+function parseBoolean(value, label, { optional = false } = {}) {
+  if (value === undefined && optional) return undefined;
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  throw new AdmissionError('invalid_argument', `${label} must be true or false.`);
 }
 
 async function main() {
@@ -208,6 +216,14 @@ async function main() {
     result = await fulfillBloodRequest({ ...dependencies, requestId: options['request-id'] });
   } else if (command === 'cancel-blood-request') {
     result = await cancelBloodRequest({ ...dependencies, requestId: options['request-id'] });
+  } else if (command === 'create-notice') {
+    result = await createNotice({ ...dependencies, title: options.title, body: options.body, important: parseBoolean(options.important, 'important') });
+  } else if (command === 'edit-notice') {
+    result = await editNotice({ ...dependencies, noticeId: options['notice-id'], title: options.title, body: options.body, important: parseBoolean(options.important, 'important', { optional: true }) });
+  } else if (command === 'publish-notice') {
+    result = await publishNotice({ ...dependencies, noticeId: options['notice-id'] });
+  } else if (command === 'archive-notice') {
+    result = await archiveNotice({ ...dependencies, noticeId: options['notice-id'] });
   } else if (command === 'create-event') {
     result = await createEvent({
       ...dependencies,
@@ -266,7 +282,7 @@ async function main() {
       'Unknown command. Use an explicitly reviewed registration, organization, donor, or event operation.',
     );
   }
-  console.log(`${result.action}; operation_id=${result.operationId}${result.userId ? `; user_id=${result.userId}` : ''}${result.assignmentId ? `; assignment_id=${result.assignmentId}` : ''}${result.mediaId ? `; media_id=${result.mediaId}` : ''}${result.termId ? `; term_id=${result.termId}` : ''}${result.donorId ? `; donor_id=${result.donorId}` : ''}${result.eventId ? `; event_id=${result.eventId}` : ''}${result.donationId ? `; donation_id=${result.donationId}` : ''}${result.requestId ? `; request_id=${result.requestId}` : ''}`);
+  console.log(`${result.action}; operation_id=${result.operationId}${result.userId ? `; user_id=${result.userId}` : ''}${result.assignmentId ? `; assignment_id=${result.assignmentId}` : ''}${result.mediaId ? `; media_id=${result.mediaId}` : ''}${result.termId ? `; term_id=${result.termId}` : ''}${result.donorId ? `; donor_id=${result.donorId}` : ''}${result.eventId ? `; event_id=${result.eventId}` : ''}${result.donationId ? `; donation_id=${result.donationId}` : ''}${result.requestId ? `; request_id=${result.requestId}` : ''}${result.noticeId ? `; notice_id=${result.noticeId}` : ''}`);
 }
 
 main().catch((error) => {

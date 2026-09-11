@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../constants/app_constants.dart';
+import '../models/notice_model.dart';
 
 class DashboardService {
   final FirebaseFirestore _firestore;
@@ -96,17 +97,18 @@ class DashboardService {
   // LATEST NOTICES
   // =========================================================
 
-  Future<List<Map<String, dynamic>>> getLatestNotices() async {
+  Future<List<NoticeModel>> getLatestNotices() async {
     try {
-      final QuerySnapshot snapshot = await _firestore
+      final snapshot = await _firestore
           .collection(AppConstants.noticesCollection)
-          .orderBy('date', descending: true)
+          .where('status', isEqualTo: 'published')
+          .orderBy('created_at', descending: true)
           .limit(3)
           .get();
 
-      return snapshot.docs.map((doc) {
-        return {...doc.data() as Map<String, dynamic>, 'id': doc.id};
-      }).toList();
+      return snapshot.docs
+          .map((doc) => NoticeModel.fromMap(doc.data(), doc.id))
+          .toList(growable: false);
     } catch (e) {
       return [];
     }

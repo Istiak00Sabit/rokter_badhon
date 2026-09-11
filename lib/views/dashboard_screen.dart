@@ -3,12 +3,14 @@ import 'package:get/get.dart';
 import '../constants/app_colors.dart';
 import '../constants/app_strings.dart';
 import '../controllers/dashboard_controller.dart';
+import '../models/notice_model.dart';
 import '../views/add_donor_screen.dart';
 import '../views/blood_request_screen.dart';
 import '../views/donor_list_screen.dart';
 import '../views/donation_history_screen.dart';
 import '../views/event_list_screen.dart';
 import '../views/member_list_screen.dart';
+import '../views/notice_screen.dart';
 import '../views/ranklist_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
@@ -249,11 +251,7 @@ class DashboardScreen extends StatelessWidget {
                             ),
                           ),
                           TextButton(
-                            onPressed: () => Get.snackbar(
-                              'শীঘ্রই আসছে',
-                              'নোটিশ বোর্ড ফিচার শীঘ্রই যোগ হবে!',
-                              snackPosition: SnackPosition.BOTTOM,
-                            ),
+                            onPressed: () => Get.to(() => const NoticeScreen()),
                             child: const Text(
                               'সব দেখুন',
                               style: TextStyle(color: AppColors.primary),
@@ -400,49 +398,50 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildNoticeCard(Map<String, dynamic> notice) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: notice['important'] == true
-              ? AppColors.primary
-              : AppColors.textLight,
-        ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (notice['important'] == true)
-            const Icon(Icons.campaign, color: AppColors.primary, size: 20),
-          if (notice['important'] == true) const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  notice['title'] ?? '',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textDark,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  notice['body'] ?? '',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: AppColors.textGrey,
-                  ),
-                ),
-              ],
-            ),
+  Widget _buildNoticeCard(NoticeModel notice) {
+    return InkWell(
+      onTap: () => Get.to(() => NoticeDetailScreen(notice: notice)),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: notice.important ? AppColors.primary : AppColors.textLight,
           ),
-        ],
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (notice.important)
+              const Icon(Icons.campaign, color: AppColors.primary, size: 20),
+            if (notice.important) const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    notice.title,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textDark,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    notice.body,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textGrey,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -173,3 +173,15 @@ Production Architecture v1.2.1 — Free V1. Architecture status: frozen for impl
 - **Rules:** Firestore Rules source was unchanged and its latest completed emulator evidence remains 76/76. A rerun attempt in this checkout could not spawn the installed Java process under the Windows sandbox; this was an environment limitation, not a Rules failure.
 - **Production:** Untouched; no deployment, credentials, production Firebase/Auth/Firestore access, mutation, or migration occurred. Trusted commands retain the mandatory demo-project and Firestore/Auth emulator guard.
 - **Exact next task:** Phase 4E — canonical Notice lifecycle, role-scoped published/unpublished reads, working UI, and trusted draft/edit/publish/archive operations.
+
+## Phase 4E — Notice Lifecycle
+
+- **Status:** Implemented and validated in local/synthetic paths; no production execution.
+- **Canonical schema/read UX:** Replaced the legacy parser with the exact frozen Notice schema and strict Firestore Timestamp, status, Boolean, actor-ID and update-pair validation. Published notices are available to every admitted role. Developer_admin/leader alone issue separate draft and archived review queries. The notice list/detail UI provides explicit loading, empty, denied, malformed, offline and retry states without client mutation controls.
+- **Trusted operations:** Added `create-notice`, `edit-notice`, `publish-notice` and `archive-notice` for developer_admin/leader only. Draft creation, draft/published editing and one-way publish/archive transitions are transactional, append-only audited and operation-ID protected. Exact transition retries return receipts without duplicate writes; archived notices cannot be edited/restored and no delete path exists. CLI Boolean arguments now reject values other than exact `true`/`false`.
+- **Dashboard integration:** Dashboard notice cards now consume strict typed canonical records, query published notices by `created_at`, open detail safely and expose a working all-notices route. The former notice placeholder path was removed.
+- **Indexes:** Added only the justified `notices(status, created_at desc)` composite index used by published and privileged review lists.
+- **Tests:** Operator synthetic regression suite passed 79/79, including exact schemas, role denials, lifecycle transitions, idempotent retry, operation reuse rejection, malformed state and rollback. Focused Flutter Notice model/source tests passed 3/3, and the full Flutter application frontend compiled successfully.
+- **Analyzer/Rules:** Direct installed analysis-server validation reported 0 errors and 0 warnings. Firestore Rules source was unchanged; its latest completed emulator evidence remains 76/76.
+- **Production:** Untouched; no deployment, credentials, production Firebase/Auth/Firestore access, mutation, migration or external provider call occurred. Trusted commands retain the mandatory demo-project and Firestore/Auth emulator guard.
+- **Exact next task:** Phase 5A — trusted identity, User, role, login-state and Auth-link capability completion with exact authorization and audit coverage.
