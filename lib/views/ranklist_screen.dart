@@ -16,8 +16,7 @@ class RanklistScreen extends StatelessWidget {
           .limit(50)
           .get();
       return snapshot.docs
-          .map((doc) =>
-              DonorModel.fromMap(doc.data(), doc.id))
+          .map((doc) => DonorModel.fromMap(doc.data(), doc.id))
           .toList();
     } catch (e) {
       return [];
@@ -40,7 +39,8 @@ class RanklistScreen extends StatelessWidget {
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
-                child: CircularProgressIndicator(color: AppColors.primary));
+              child: CircularProgressIndicator(color: AppColors.primary),
+            );
           }
 
           final donors = snapshot.data ?? [];
@@ -50,12 +50,16 @@ class RanklistScreen extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.emoji_events_outlined,
-                      size: 64, color: AppColors.textLight),
+                  Icon(
+                    Icons.emoji_events_outlined,
+                    size: 64,
+                    color: AppColors.textLight,
+                  ),
                   const SizedBox(height: 16),
-                  const Text('এখনো কোনো রক্তদান রেকর্ড নেই',
-                      style: TextStyle(
-                          fontSize: 16, color: AppColors.textGrey)),
+                  const Text(
+                    'এখনো কোনো রক্তদান রেকর্ড নেই',
+                    style: TextStyle(fontSize: 16, color: AppColors.textGrey),
+                  ),
                 ],
               ),
             );
@@ -75,9 +79,11 @@ class RanklistScreen extends StatelessWidget {
                 const SizedBox(height: 16),
 
                 // Rest of the list
-                ...donors.asMap().entries.skip(donors.length >= 3 ? 3 : 0).map(
-                      (entry) => _buildRankCard(entry.key + 1, entry.value),
-                    ),
+                ...donors
+                    .asMap()
+                    .entries
+                    .skip(donors.length >= 3 ? 3 : 0)
+                    .map((entry) => _buildRankCard(entry.key + 1, entry.value)),
               ],
             ),
           );
@@ -99,11 +105,14 @@ class RanklistScreen extends StatelessWidget {
       ),
       child: Column(
         children: [
-          const Text('শীর্ষ রক্তদাতা',
-              style: TextStyle(
-                  color: AppColors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold)),
+          const Text(
+            'শীর্ষ রক্তদাতা',
+            style: TextStyle(
+              color: AppColors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           const SizedBox(height: 16),
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
@@ -132,15 +141,18 @@ class RanklistScreen extends StatelessWidget {
         Text(
           donor.name.split(' ').first,
           style: const TextStyle(
-              color: AppColors.white,
-              fontSize: 12,
-              fontWeight: FontWeight.bold),
+            color: AppColors.white,
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+          ),
           overflow: TextOverflow.ellipsis,
         ),
         Text(
           donor.bloodGroup,
           style: TextStyle(
-              color: AppColors.white.withValues(alpha: 0.8), fontSize: 11),
+            color: AppColors.white.withValues(alpha: 0.8),
+            fontSize: 11,
+          ),
         ),
         const SizedBox(height: 4),
         Container(
@@ -160,13 +172,15 @@ class RanklistScreen extends StatelessWidget {
                 Text(
                   '${donor.totalDonations}',
                   style: const TextStyle(
-                      color: AppColors.white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold),
+                    color: AppColors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-                const Text('বার',
-                    style:
-                        TextStyle(color: AppColors.white, fontSize: 10)),
+                const Text(
+                  'বার',
+                  style: TextStyle(color: AppColors.white, fontSize: 10),
+                ),
               ],
             ),
           ),
@@ -203,11 +217,14 @@ class RanklistScreen extends StatelessWidget {
                 border: Border.all(color: AppColors.textLight),
               ),
               child: Center(
-                child: Text('$rank',
-                    style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textGrey)),
+                child: Text(
+                  '$rank',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textGrey,
+                  ),
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -221,11 +238,14 @@ class RanklistScreen extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               child: Center(
-                child: Text(donor.bloodGroup,
-                    style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary)),
+                child: Text(
+                  donor.bloodGroup,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
+                  ),
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -235,15 +255,22 @@ class RanklistScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(donor.name,
+                  Text(
+                    donor.name,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textDark,
+                    ),
+                  ),
+                  if (donor.union?.isNotEmpty ?? false)
+                    Text(
+                      donor.union!,
                       style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textDark)),
-                  if (donor.union.isNotEmpty)
-                    Text(donor.union,
-                        style: const TextStyle(
-                            fontSize: 12, color: AppColors.textGrey)),
+                        fontSize: 12,
+                        color: AppColors.textGrey,
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -251,14 +278,18 @@ class RanklistScreen extends StatelessWidget {
             // Donation count
             Column(
               children: [
-                Text('${donor.totalDonations}',
-                    style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary)),
-                const Text('বার',
-                    style:
-                        TextStyle(fontSize: 11, color: AppColors.textGrey)),
+                Text(
+                  '${donor.totalDonations}',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
+                  ),
+                ),
+                const Text(
+                  'বার',
+                  style: TextStyle(fontSize: 11, color: AppColors.textGrey),
+                ),
               ],
             ),
           ],

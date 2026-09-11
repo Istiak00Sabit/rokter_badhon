@@ -67,7 +67,7 @@ class DashboardService {
   Future<int> getActiveRequests() async {
     try {
       final QuerySnapshot snapshot = await _firestore
-          .collection(AppConstants.requestsCollection)
+          .collection(AppConstants.bloodRequestsCollection)
           .where('status', isEqualTo: 'active')
           .get();
 

@@ -14,7 +14,13 @@ class AddDonorScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('নতুন রক্তদাতা যোগ করুন'),
+        title: Obx(
+          () => Text(
+            controller.editingDonorId.value == null
+                ? 'নতুন রক্তদাতা যোগ করুন'
+                : 'রক্তদাতার তথ্য সম্পাদনা',
+          ),
+        ),
         backgroundColor: AppColors.primary,
         foregroundColor: AppColors.white,
         centerTitle: true,
@@ -38,11 +44,17 @@ class AddDonorScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AppColors.primaryLight,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                border: Border.all(
+                  color: AppColors.primary.withValues(alpha: 0.3),
+                ),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.info_outline, color: AppColors.primary, size: 20),
+                  const Icon(
+                    Icons.info_outline,
+                    color: AppColors.primary,
+                    size: 20,
+                  ),
                   const SizedBox(width: 10),
                   const Expanded(
                     child: Text(
@@ -82,27 +94,32 @@ class AddDonorScreen extends StatelessWidget {
             const SizedBox(height: 14),
 
             // Blood Group
-            Obx(() => _buildDropdown(
-                  label: 'রক্তের গ্রুপ *',
-                  icon: Icons.water_drop_outlined,
-                  value: controller.selectedBloodGroup.value.isEmpty
-                      ? null
-                      : controller.selectedBloodGroup.value,
-                  items: AppConstants.bloodGroups,
-                  onChanged: (val) => controller.selectedBloodGroup.value = val!,
-                )),
+            Obx(
+              () => _buildDropdown(
+                label: 'রক্তের গ্রুপ *',
+                icon: Icons.water_drop_outlined,
+                value: controller.selectedBloodGroup.value.isEmpty
+                    ? null
+                    : controller.selectedBloodGroup.value,
+                items: AppConstants.bloodGroups,
+                onChanged: (val) => controller.selectedBloodGroup.value = val!,
+              ),
+            ),
             const SizedBox(height: 14),
 
             // Gender
-            Obx(() => _buildDropdown(
-                  label: 'লিঙ্গ *',
-                  icon: Icons.wc_outlined,
-                  value: controller.selectedGender.value.isEmpty
-                      ? null
-                      : controller.selectedGender.value,
-                  items: AppConstants.genders,
-                  onChanged: (val) => controller.selectedGender.value = val!,
-                )),
+            Obx(
+              () => _buildDropdown(
+                label: 'লিঙ্গ *',
+                icon: Icons.wc_outlined,
+                value: controller.selectedGender.value.isEmpty
+                    ? null
+                    : controller.selectedGender.value,
+                items: AppConstants.genders,
+                itemLabel: AppConstants.genderLabel,
+                onChanged: (val) => controller.selectedGender.value = val!,
+              ),
+            ),
 
             const SizedBox(height: 20),
             _sectionTitle('ঠিকানা'),
@@ -118,24 +135,26 @@ class AddDonorScreen extends StatelessWidget {
             const SizedBox(height: 14),
 
             // Union
-            Obx(() => _buildDropdown(
-                  label: 'ইউনিয়ন / পৌরসভা',
-                  icon: Icons.location_on_outlined,
-                  value: controller.selectedUnion.value.isEmpty
-                      ? null
-                      : controller.selectedUnion.value,
-                  items: AppConstants.unions,
-                  onChanged: (val) => controller.selectedUnion.value = val!,
-                )),
+            Obx(
+              () => _buildDropdown(
+                label: 'ইউনিয়ন / পৌরসভা',
+                icon: Icons.location_on_outlined,
+                value: controller.selectedUnion.value.isEmpty
+                    ? null
+                    : controller.selectedUnion.value,
+                items: AppConstants.unions,
+                onChanged: (val) => controller.selectedUnion.value = val!,
+              ),
+            ),
             const SizedBox(height: 14),
 
-            // Upazilla & District (static - read only)
+            // Upazila & District (static - read only)
             Row(
               children: [
                 Expanded(
                   child: _buildReadOnlyField(
                     label: 'উপজেলা',
-                    value: AppConstants.upazilla,
+                    value: AppConstants.upazila,
                     icon: Icons.map_outlined,
                   ),
                 ),
@@ -150,119 +169,56 @@ class AddDonorScreen extends StatelessWidget {
               ],
             ),
 
-            const SizedBox(height: 20),
-            _sectionTitle('রক্তদানের তথ্য'),
-            const SizedBox(height: 12),
-
-            // Last donated date
-            Obx(() => GestureDetector(
-                  onTap: () async {
-                    final picked = await showDatePicker(
-                      context: context,
-                      initialDate: DateTime.now(),
-                      firstDate: DateTime(2000),
-                      lastDate: DateTime.now(),
-                      builder: (context, child) {
-                        return Theme(
-                          data: Theme.of(context).copyWith(
-                            colorScheme: const ColorScheme.light(
-                              primary: AppColors.primary,
-                            ),
-                          ),
-                          child: child!,
-                        );
-                      },
-                    );
-                    if (picked != null) {
-                      controller.lastDonatedDate.value = picked;
-                    }
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 16),
-                    decoration: BoxDecoration(
-                      color: AppColors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.textLight),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.calendar_today_outlined,
-                            color: AppColors.primary, size: 20),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'সর্বশেষ রক্তদানের তারিখ',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.textGrey,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                controller.lastDonatedDate.value == null
-                                    ? 'তারিখ বেছে নিন (না থাকলে খালি রাখুন)'
-                                    : '${controller.lastDonatedDate.value!.day}/${controller.lastDonatedDate.value!.month}/${controller.lastDonatedDate.value!.year}',
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  color: controller.lastDonatedDate.value == null
-                                      ? AppColors.textGrey
-                                      : AppColors.textDark,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (controller.lastDonatedDate.value != null)
-                          GestureDetector(
-                            onTap: () => controller.lastDonatedDate.value = null,
-                            child: const Icon(Icons.clear,
-                                color: AppColors.textGrey, size: 18),
-                          ),
-                      ],
-                    ),
-                  ),
-                )),
+            const SizedBox(height: 14),
+            _buildTextField(
+              controller: controller.professionController,
+              label: 'পেশা',
+              hint: 'পেশা লিখুন (ঐচ্ছিক)',
+              icon: Icons.work_outline,
+            ),
 
             const SizedBox(height: 32),
 
             // Submit button
-            Obx(() => SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed: controller.isLoading.value
-                        ? null
-                        : controller.addDonor,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+            Obx(
+              () => SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: controller.isLoading.value
+                      ? null
+                      : controller.saveDonor,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    child: controller.isLoading.value
-                        ? const CircularProgressIndicator(
-                            color: AppColors.white, strokeWidth: 2)
-                        : const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.person_add, color: AppColors.white),
-                              SizedBox(width: 8),
-                              Text(
-                                'রক্তদাতা যোগ করুন',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.white,
-                                ),
-                              ),
-                            ],
-                          ),
                   ),
-                )),
+                  child: controller.isLoading.value
+                      ? const CircularProgressIndicator(
+                          color: AppColors.white,
+                          strokeWidth: 2,
+                        )
+                      : Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.person_add, color: AppColors.white),
+                            SizedBox(width: 8),
+                            Text(
+                              controller.editingDonorId.value == null
+                                  ? 'রক্তদাতা যোগ করুন'
+                                  : 'তথ্য সংরক্ষণ করুন',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                ),
+              ),
+            ),
 
             const SizedBox(height: 20),
           ],
@@ -320,8 +276,10 @@ class AddDonorScreen extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.primary, width: 2),
         ),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
       ),
     );
   }
@@ -332,6 +290,7 @@ class AddDonorScreen extends StatelessWidget {
     required String? value,
     required List<String> items,
     required Function(String?) onChanged,
+    String Function(String)? itemLabel,
   }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -351,18 +310,23 @@ class AddDonorScreen extends StatelessWidget {
               Text(label, style: const TextStyle(color: AppColors.textGrey)),
             ],
           ),
-          icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.textGrey),
+          icon: const Icon(
+            Icons.keyboard_arrow_down,
+            color: AppColors.textGrey,
+          ),
           items: items
-              .map((item) => DropdownMenuItem(
-                    value: item,
-                    child: Row(
-                      children: [
-                        Icon(icon, color: AppColors.primary, size: 18),
-                        const SizedBox(width: 12),
-                        Text(item),
-                      ],
-                    ),
-                  ))
+              .map(
+                (item) => DropdownMenuItem(
+                  value: item,
+                  child: Row(
+                    children: [
+                      Icon(icon, color: AppColors.primary, size: 18),
+                      const SizedBox(width: 12),
+                      Text(itemLabel?.call(item) ?? item),
+                    ],
+                  ),
+                ),
+              )
               .toList(),
           onChanged: onChanged,
         ),
@@ -389,12 +353,14 @@ class AddDonorScreen extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label,
-                  style: const TextStyle(
-                      fontSize: 11, color: AppColors.textGrey)),
-              Text(value,
-                  style: const TextStyle(
-                      fontSize: 14, color: AppColors.textDark)),
+              Text(
+                label,
+                style: const TextStyle(fontSize: 11, color: AppColors.textGrey),
+              ),
+              Text(
+                value,
+                style: const TextStyle(fontSize: 14, color: AppColors.textDark),
+              ),
             ],
           ),
         ],

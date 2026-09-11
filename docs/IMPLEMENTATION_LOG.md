@@ -122,3 +122,15 @@ Production Architecture v1.2.1 — Free V1. Architecture status: frozen for impl
 - **Validation:** Operator tests passed 50/50 and direct Flutter analysis remained at 0 errors/0 warnings. Rules/index code was unchanged; the offline Rules rerun could not spawn the installed Java process under the repository sandbox, so the prior 76/76 emulator result remains the latest Rules execution evidence.
 - **Production:** Untouched. All operator commands retain the explicit demo-project plus Firestore/Auth emulator guard.
 - **Exact next task:** Phase 4A — strict donor schema and donor lifecycle integration.
+
+## Phase 4A — Strict Donor Schema and Lifecycle
+
+- **Status:** Implemented and validated in local/synthetic paths; no production execution.
+- **Schema/client:** Replaced the legacy donor parser with the exact frozen 18-field schema. Required fields, Firestore Timestamps, nullable values, nonnegative totals, document/actor IDs and HTTPS photo URLs now fail closed. Removed runtime `photo`, `upazilla`, `last_donated`, implicit active/default values and the clinical-eligibility badge.
+- **Create/edit UX:** New donors use the Rules-compatible initial state (`active = true`, null link/date, zero total, trusted server timestamps and current linked User actors). The form no longer accepts a historical donation date. Creation is available only to developer_admin/leader/executive/committee; profile editing is available only to developer_admin/leader/executive. Member mutation controls are absent. Read/query/schema errors no longer become successful empty lists.
+- **Trusted deactivation:** Added operator-only `deactivate-donor` for developer_admin/leader. It validates exact current donor and admitted operator state, changes only active/updated metadata, retains the donor, and writes the minimal append-only audit in the same transaction. Inactive, malformed, lower-role and reused-operation attempts fail without partial writes.
+- **Related cleanup:** Dashboard active requests now references canonical `blood_requests`; ranklist consumes nullable canonical donor presentation fields. Existing donor indexes still match active-name and active-total query shapes.
+- **Tests:** Operator synthetic suite passed 53/53. Firestore Rules emulator suite passed 76/76. The focused donor Flutter/model suite passed 4/4 through direct offline frontend compilation and `flutter_tester`; the standard Flutter wrapper remains blocked by sandbox child-process execution, not a test failure.
+- **Analyzer:** Direct installed analysis-server validation reported 0 errors and 0 warnings; existing information-level diagnostics remain outside this unit.
+- **Production:** Untouched; no Firebase/Auth/provider access, deployment, migration, production data mutation or paid service occurred. Operator production guard remains intact.
+- **Exact next task:** Phase 3 Events + Event Media — strict models/read UX and trusted audited editorial operations.

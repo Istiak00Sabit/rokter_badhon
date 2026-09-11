@@ -32,27 +32,31 @@ class DonorListScreen extends StatelessWidget {
         centerTitle: true,
         automaticallyImplyLeading: false,
         actions: [
-          Obx(() => Padding(
-                padding: const EdgeInsets.only(right: 12),
-                child: Center(
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.white.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      '${controller.donors.length} জন',
-                      style: const TextStyle(
-                        color: AppColors.white,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
+          Obx(
+            () => Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${controller.donors.length} জন',
+                    style: const TextStyle(
+                      color: AppColors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
-              )),
+              ),
+            ),
+          ),
         ],
       ),
       body: Column(
@@ -69,18 +73,26 @@ class DonorListScreen extends StatelessWidget {
                   onChanged: (val) => searchQuery.value = val.trim(),
                   decoration: InputDecoration(
                     hintText: 'নাম বা ফোন দিয়ে খুঁজুন...',
-                    prefixIcon: const Icon(Icons.search,
-                        color: AppColors.primary, size: 20),
-                    suffixIcon: Obx(() => searchQuery.value.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear,
-                                color: AppColors.textGrey, size: 18),
-                            onPressed: () {
-                              searchController.clear();
-                              searchQuery.value = '';
-                            },
-                          )
-                        : const SizedBox()),
+                    prefixIcon: const Icon(
+                      Icons.search,
+                      color: AppColors.primary,
+                      size: 20,
+                    ),
+                    suffixIcon: Obx(
+                      () => searchQuery.value.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(
+                                Icons.clear,
+                                color: AppColors.textGrey,
+                                size: 18,
+                              ),
+                              onPressed: () {
+                                searchController.clear();
+                                searchQuery.value = '';
+                              },
+                            )
+                          : const SizedBox(),
+                    ),
                     filled: true,
                     fillColor: AppColors.background,
                     border: OutlineInputBorder(
@@ -88,7 +100,9 @@ class DonorListScreen extends StatelessWidget {
                       borderSide: BorderSide.none,
                     ),
                     contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -108,7 +122,9 @@ class DonorListScreen extends StatelessWidget {
                           onTap: () => selectedFilter.value = filter,
                           child: Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 14, vertical: 6),
+                              horizontal: 14,
+                              vertical: 6,
+                            ),
                             decoration: BoxDecoration(
                               color: isSelected
                                   ? AppColors.primary
@@ -152,14 +168,37 @@ class DonorListScreen extends StatelessWidget {
                 );
               }
 
+              if (controller.errorCode.value.isNotEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.error_outline,
+                        size: 48,
+                        color: AppColors.primary,
+                      ),
+                      const SizedBox(height: 12),
+                      const Text('রক্তদাতার তালিকা লোড করা যায়নি।'),
+                      TextButton(
+                        onPressed: controller.loadDonors,
+                        child: const Text('আবার চেষ্টা করুন'),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
               // Apply search + filter
               final filtered = controller.donors.where((donor) {
-                final matchesSearch = searchQuery.value.isEmpty ||
-                    donor.name
-                        .toLowerCase()
-                        .contains(searchQuery.value.toLowerCase()) ||
+                final matchesSearch =
+                    searchQuery.value.isEmpty ||
+                    donor.name.toLowerCase().contains(
+                      searchQuery.value.toLowerCase(),
+                    ) ||
                     donor.phone.contains(searchQuery.value);
-                final matchesFilter = selectedFilter.value == 'সব' ||
+                final matchesFilter =
+                    selectedFilter.value == 'সব' ||
                     donor.bloodGroup == selectedFilter.value;
                 return matchesSearch && matchesFilter;
               }).toList();
@@ -169,9 +208,11 @@ class DonorListScreen extends StatelessWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.water_drop_outlined,
-                          size: 64,
-                          color: AppColors.textLight),
+                      Icon(
+                        Icons.water_drop_outlined,
+                        size: 64,
+                        color: AppColors.textLight,
+                      ),
                       const SizedBox(height: 16),
                       const Text(
                         'কোনো রক্তদাতা পাওয়া যায়নি',
@@ -201,7 +242,7 @@ class DonorListScreen extends StatelessWidget {
                   itemCount: filtered.length,
                   separatorBuilder: (_, __) => const SizedBox(height: 10),
                   itemBuilder: (context, index) {
-                    return _buildDonorCard(filtered[index]);
+                    return _buildDonorCard(filtered[index], controller);
                   },
                 ),
               );
@@ -211,28 +252,29 @@ class DonorListScreen extends StatelessWidget {
       ),
 
       // FAB to add donor
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          await Get.to(() => const AddDonorScreen());
-          // Reload list after returning from add screen
-          controller.loadDonors();
-        },
-        backgroundColor: AppColors.primary,
-        icon: const Icon(Icons.person_add, color: AppColors.white),
-        label: const Text(
-          'নতুন রক্তদাতা',
-          style: TextStyle(
-            color: AppColors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
+      floatingActionButton: controller.canCreate
+          ? FloatingActionButton.extended(
+              onPressed: () async {
+                controller.clearForm();
+                await Get.to(() => const AddDonorScreen());
+                // Reload list after returning from add screen
+                controller.loadDonors();
+              },
+              backgroundColor: AppColors.primary,
+              icon: const Icon(Icons.person_add, color: AppColors.white),
+              label: const Text(
+                'নতুন রক্তদাতা',
+                style: TextStyle(
+                  color: AppColors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            )
+          : null,
     );
   }
 
-  Widget _buildDonorCard(DonorModel donor) {
-    final bool eligible = donor.isEligible;
-
+  Widget _buildDonorCard(DonorModel donor, DonorController controller) {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.white,
@@ -289,34 +331,16 @@ class DonorListScreen extends StatelessWidget {
                           ),
                         ),
                       ),
-                      // Eligible badge
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: eligible
-                              ? const Color(0xFFE8F5E9)
-                              : const Color(0xFFFFF3E0),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          eligible ? '✓ দিতে পারবেন' : '⏳ অপেক্ষা',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: eligible
-                                ? const Color(0xFF2E7D32)
-                                : const Color(0xFFE65100),
-                          ),
-                        ),
-                      ),
                     ],
                   ),
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Icon(Icons.phone_outlined,
-                          size: 13, color: AppColors.textGrey),
+                      const Icon(
+                        Icons.phone_outlined,
+                        size: 13,
+                        color: AppColors.textGrey,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         donor.phone,
@@ -325,13 +349,16 @@ class DonorListScreen extends StatelessWidget {
                           color: AppColors.textGrey,
                         ),
                       ),
-                      if (donor.gender.isNotEmpty) ...[
+                      if (donor.gender?.isNotEmpty ?? false) ...[
                         const SizedBox(width: 12),
-                        const Icon(Icons.person_outline,
-                            size: 13, color: AppColors.textGrey),
+                        const Icon(
+                          Icons.person_outline,
+                          size: 13,
+                          color: AppColors.textGrey,
+                        ),
                         const SizedBox(width: 4),
                         Text(
-                          donor.gender,
+                          AppConstants.genderLabel(donor.gender!),
                           style: const TextStyle(
                             fontSize: 13,
                             color: AppColors.textGrey,
@@ -340,18 +367,24 @@ class DonorListScreen extends StatelessWidget {
                       ],
                     ],
                   ),
-                  if (donor.union.isNotEmpty || donor.village.isNotEmpty) ...[
+                  if ((donor.union?.isNotEmpty ?? false) ||
+                      (donor.village?.isNotEmpty ?? false)) ...[
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        const Icon(Icons.location_on_outlined,
-                            size: 13, color: AppColors.textGrey),
+                        const Icon(
+                          Icons.location_on_outlined,
+                          size: 13,
+                          color: AppColors.textGrey,
+                        ),
                         const SizedBox(width: 4),
                         Expanded(
                           child: Text(
                             [
-                              if (donor.village.isNotEmpty) donor.village,
-                              if (donor.union.isNotEmpty) donor.union,
+                              if (donor.village?.isNotEmpty ?? false)
+                                donor.village!,
+                              if (donor.union?.isNotEmpty ?? false)
+                                donor.union!,
                             ].join(', '),
                             style: const TextStyle(
                               fontSize: 12,
@@ -363,15 +396,18 @@ class DonorListScreen extends StatelessWidget {
                       ],
                     ),
                   ],
-                  if (donor.lastDonated != null) ...[
+                  if (donor.lastDonatedAt != null) ...[
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        const Icon(Icons.calendar_today_outlined,
-                            size: 13, color: AppColors.textGrey),
+                        const Icon(
+                          Icons.calendar_today_outlined,
+                          size: 13,
+                          color: AppColors.textGrey,
+                        ),
                         const SizedBox(width: 4),
                         Text(
-                          'শেষ দান: ${donor.lastDonated!.day}/${donor.lastDonated!.month}/${donor.lastDonated!.year}',
+                          'সর্বশেষ নথিভুক্ত দান: ${donor.lastDonatedAt!.day}/${donor.lastDonatedAt!.month}/${donor.lastDonatedAt!.year}',
                           style: const TextStyle(
                             fontSize: 12,
                             color: AppColors.textGrey,
@@ -385,9 +421,19 @@ class DonorListScreen extends StatelessWidget {
             ),
 
             // Call icon
+            if (controller.canEdit)
+              IconButton(
+                tooltip: 'তথ্য সম্পাদনা করুন',
+                onPressed: () async {
+                  controller.beginEdit(donor);
+                  await Get.to(() => const AddDonorScreen());
+                  controller.loadDonors();
+                },
+                icon: const Icon(Icons.edit_outlined, color: AppColors.primary),
+              ),
             IconButton(
               onPressed: () {
-                // TODO: launch phone call
+                // Display the number without requesting device-call privileges.
                 Get.snackbar(
                   'ফোন করুন',
                   donor.phone,
@@ -403,8 +449,11 @@ class DonorListScreen extends StatelessWidget {
                   color: AppColors.primaryLight,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.call,
-                    color: AppColors.primary, size: 18),
+                child: const Icon(
+                  Icons.call,
+                  color: AppColors.primary,
+                  size: 18,
+                ),
               ),
             ),
           ],

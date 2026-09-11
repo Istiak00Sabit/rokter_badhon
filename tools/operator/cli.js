@@ -15,6 +15,7 @@ import {
 } from './src/committee_media.js';
 import { AdmissionError } from './src/policy.js';
 import { rolloverCommitteeTerm } from './src/committee_term.js';
+import { deactivateDonor } from './src/donor.js';
 import { assertSafeTarget } from './src/safety.js';
 
 function parseArguments(values) {
@@ -158,13 +159,18 @@ async function main() {
         ? null
         : options['group-photo-url'],
     });
+  } else if (command === 'deactivate-donor') {
+    result = await deactivateDonor({
+      ...dependencies,
+      donorId: options['donor-id'],
+    });
   } else {
     throw new AdmissionError(
       'invalid_argument',
       'Unknown command. Use an explicitly reviewed registration, developer-admin, committee-assignment, or committee-media operation.',
     );
   }
-  console.log(`${result.action}; operation_id=${result.operationId}${result.userId ? `; user_id=${result.userId}` : ''}${result.assignmentId ? `; assignment_id=${result.assignmentId}` : ''}${result.mediaId ? `; media_id=${result.mediaId}` : ''}${result.termId ? `; term_id=${result.termId}` : ''}`);
+  console.log(`${result.action}; operation_id=${result.operationId}${result.userId ? `; user_id=${result.userId}` : ''}${result.assignmentId ? `; assignment_id=${result.assignmentId}` : ''}${result.mediaId ? `; media_id=${result.mediaId}` : ''}${result.termId ? `; term_id=${result.termId}` : ''}${result.donorId ? `; donor_id=${result.donorId}` : ''}`);
 }
 
 main().catch((error) => {

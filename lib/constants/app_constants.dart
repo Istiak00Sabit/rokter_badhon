@@ -1,18 +1,25 @@
 class AppConstants {
   // Blood groups
   static const List<String> bloodGroups = [
-    'A+', 'A-',
-    'B+', 'B-',
-    'AB+', 'AB-',
-    'O+', 'O-',
+    'A+',
+    'A-',
+    'B+',
+    'B-',
+    'AB+',
+    'AB-',
+    'O+',
+    'O-',
   ];
 
   // Gender
-  static const List<String> genders = [
-    'পুরুষ',
-    'মহিলা',
-    'অন্যান্য',
-  ];
+  static const List<String> genders = ['male', 'female', 'other'];
+
+  static String genderLabel(String gender) => switch (gender) {
+    'male' => 'পুরুষ',
+    'female' => 'মহিলা',
+    'other' => 'অন্যান্য',
+    _ => 'অজানা',
+  };
 
   // =========================================================
   // USER ROLES
@@ -41,17 +48,14 @@ class AppConstants {
     }
   }
 
-  // Donation eligibility
-  static const int eligibilityDays = 90;
-
   // Firestore collections
   static const String donorsCollection = 'donors';
   static const String donationsCollection = 'donations';
-  static const String requestsCollection = 'requests';
+  static const String bloodRequestsCollection = 'blood_requests';
   static const String noticesCollection = 'notices';
 
   // Address
-  static const String upazilla = 'ঘাটাইল';
+  static const String upazila = 'ঘাটাইল';
   static const String district = 'টাঙ্গাইল';
 
   static const List<String> unions = [
