@@ -17,6 +17,7 @@ import { AdmissionError } from './src/policy.js';
 import { rolloverCommitteeTerm } from './src/committee_term.js';
 import { deactivateDonor } from './src/donor.js';
 import { correctDonation, recordDonation } from './src/donation.js';
+import { cancelBloodRequest, editBloodRequest, fulfillBloodRequest } from './src/blood_request.js';
 import {
   addEventMedia,
   createEvent,
@@ -195,6 +196,18 @@ async function main() {
       recipientName: options['recipient-name'] === undefined ? undefined : options['recipient-name'] === 'null' ? null : options['recipient-name'],
       recipientContact: options['recipient-contact'] === undefined ? undefined : options['recipient-contact'] === 'null' ? null : options['recipient-contact'],
     });
+  } else if (command === 'edit-blood-request') {
+    result = await editBloodRequest({
+      ...dependencies, requestId: options['request-id'], bloodGroup: options['blood-group'],
+      patientName: options['patient-name'] === undefined ? undefined : options['patient-name'] === 'null' ? null : options['patient-name'],
+      hospital: options.hospital, location: options.location, contactName: options['contact-name'],
+      contactPhone: options['contact-phone'],
+      requiredAt: options['required-at'] === undefined ? undefined : parseNullableTimestamp(options['required-at'], 'required-at'),
+    });
+  } else if (command === 'fulfill-blood-request') {
+    result = await fulfillBloodRequest({ ...dependencies, requestId: options['request-id'] });
+  } else if (command === 'cancel-blood-request') {
+    result = await cancelBloodRequest({ ...dependencies, requestId: options['request-id'] });
   } else if (command === 'create-event') {
     result = await createEvent({
       ...dependencies,
@@ -253,7 +266,7 @@ async function main() {
       'Unknown command. Use an explicitly reviewed registration, organization, donor, or event operation.',
     );
   }
-  console.log(`${result.action}; operation_id=${result.operationId}${result.userId ? `; user_id=${result.userId}` : ''}${result.assignmentId ? `; assignment_id=${result.assignmentId}` : ''}${result.mediaId ? `; media_id=${result.mediaId}` : ''}${result.termId ? `; term_id=${result.termId}` : ''}${result.donorId ? `; donor_id=${result.donorId}` : ''}${result.eventId ? `; event_id=${result.eventId}` : ''}${result.donationId ? `; donation_id=${result.donationId}` : ''}`);
+  console.log(`${result.action}; operation_id=${result.operationId}${result.userId ? `; user_id=${result.userId}` : ''}${result.assignmentId ? `; assignment_id=${result.assignmentId}` : ''}${result.mediaId ? `; media_id=${result.mediaId}` : ''}${result.termId ? `; term_id=${result.termId}` : ''}${result.donorId ? `; donor_id=${result.donorId}` : ''}${result.eventId ? `; event_id=${result.eventId}` : ''}${result.donationId ? `; donation_id=${result.donationId}` : ''}${result.requestId ? `; request_id=${result.requestId}` : ''}`);
 }
 
 main().catch((error) => {

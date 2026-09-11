@@ -4,10 +4,12 @@ import '../constants/app_colors.dart';
 import '../constants/app_strings.dart';
 import '../controllers/dashboard_controller.dart';
 import '../views/add_donor_screen.dart';
+import '../views/blood_request_screen.dart';
 import '../views/donor_list_screen.dart';
 import '../views/donation_history_screen.dart';
 import '../views/event_list_screen.dart';
 import '../views/member_list_screen.dart';
+import '../views/ranklist_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -149,13 +151,8 @@ class DashboardScreen extends StatelessWidget {
                           ),
                           // Active requests card
                           GestureDetector(
-                            onTap: () => Get.snackbar(
-                              'জরুরি অনুরোধ',
-                              'বর্তমানে ${controller.activeRequests.value} টি জরুরি অনুরোধ আছে',
-                              snackPosition: SnackPosition.BOTTOM,
-                              backgroundColor: const Color(0xFFFB8C00),
-                              colorText: AppColors.white,
-                            ),
+                            onTap: () =>
+                                Get.to(() => const BloodRequestScreen()),
                             child: Obx(
                               () => _buildStatCard(
                                 title: 'জরুরি অনুরোধ',
@@ -220,10 +217,9 @@ class DashboardScreen extends StatelessWidget {
                         children: [
                           Expanded(
                             child: _buildActionButton(
-                              title: 'রক্ত খুঁজুন',
-                              icon: Icons.search,
-                              onTap: () =>
-                                  Get.to(() => const DonorListScreen()),
+                              title: 'র‍্যাংকলিস্ট',
+                              icon: Icons.emoji_events,
+                              onTap: () => Get.to(() => const RanklistScreen()),
                             ),
                           ),
                           const SizedBox(width: 12),

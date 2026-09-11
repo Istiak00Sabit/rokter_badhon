@@ -29,6 +29,10 @@
     { "collectionGroup": "donors", "queryScope": "COLLECTION", "fields": [
       { "fieldPath": "active", "order": "ASCENDING" },
       { "fieldPath": "total_donations", "order": "DESCENDING" }
+    ] },
+    { "collectionGroup": "blood_requests", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "status", "order": "ASCENDING" },
+      { "fieldPath": "created_at", "order": "DESCENDING" }
     ] }
   ],
   "fieldOverrides": []

@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../constants/app_colors.dart';
 import 'committee_screen.dart';
+import 'blood_request_screen.dart';
 import 'dashboard_screen.dart';
 import 'donor_list_screen.dart';
-import 'ranklist_screen.dart';
 import 'profile_screen.dart';
 
 class NavigationController extends GetxController {
@@ -21,8 +21,8 @@ class MainNavigationScreen extends StatelessWidget {
   static final List<Widget> _screens = [
     const DashboardScreen(),
     const DonorListScreen(),
+    const BloodRequestScreen(),
     const CommitteeScreen(),
-    const RanklistScreen(),
     const ProfileScreen(),
   ];
 
@@ -61,14 +61,14 @@ class MainNavigationScreen extends StatelessWidget {
               label: 'রক্তদাতা',
             ),
             BottomNavigationBarItem(
+              icon: Icon(Icons.emergency_outlined),
+              activeIcon: Icon(Icons.emergency),
+              label: 'অনুরোধ',
+            ),
+            BottomNavigationBarItem(
               icon: Icon(Icons.groups_outlined),
               activeIcon: Icon(Icons.groups),
               label: 'কমিটি',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.emoji_events_outlined),
-              activeIcon: Icon(Icons.emoji_events),
-              label: 'র‍্যাংকলিস্ট',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.person_outline),
