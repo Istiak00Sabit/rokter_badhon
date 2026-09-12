@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../constants/app_colors.dart';
+import '../controllers/auth_controller.dart';
+import '../models/auth_session.dart';
 import 'committee_screen.dart';
 import 'blood_request_screen.dart';
 import 'dashboard_screen.dart';
@@ -15,8 +17,16 @@ class NavigationController extends GetxController {
   }
 }
 
-class MainNavigationScreen extends StatelessWidget {
+class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
+
+  @override
+  State<MainNavigationScreen> createState() => _MainNavigationScreenState();
+}
+
+class _MainNavigationScreenState extends State<MainNavigationScreen>
+    with WidgetsBindingObserver {
+  bool _refreshingSession = false;
 
   static final List<Widget> _screens = [
     const DashboardScreen(),
@@ -25,6 +35,49 @@ class MainNavigationScreen extends StatelessWidget {
     const CommitteeScreen(),
     const ProfileScreen(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refreshProtectedSession();
+    }
+  }
+
+  Future<void> _refreshProtectedSession() async {
+    if (_refreshingSession || !Get.isRegistered<AuthController>()) return;
+    _refreshingSession = true;
+    final controller = Get.find<AuthController>();
+    final previousRole = controller.currentUser.value?.accessRole;
+    try {
+      final refreshed = await controller.restoreSession();
+      if (!mounted) return;
+      if (ProtectedSessionPolicy.requiresReauthentication(
+        previousRole: previousRole,
+        refreshed: refreshed,
+      )) {
+        try {
+          await controller.logout();
+        } catch (_) {
+          // logout() clears local protected state in finally; an unavailable
+          // remote sign-out must not surface as an unhandled lifecycle error.
+        }
+      }
+    } finally {
+      _refreshingSession = false;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

@@ -70,11 +70,15 @@ class AuthController extends GetxController {
 
   // Logout function
   Future<void> logout() async {
-    await _authService.logout();
-    currentUser.value = null;
-    sessionState.value = AuthSessionState.unauthenticated;
-    errorMessage.value = '';
-    Get.offAll(() => const LoginScreen());
+    try {
+      await _authService.logout();
+    } finally {
+      // Local protected state must be cleared even when remote sign-out fails.
+      currentUser.value = null;
+      sessionState.value = AuthSessionState.unauthenticated;
+      errorMessage.value = '';
+      Get.offAll(() => const LoginScreen());
+    }
   }
 
   Future<bool> sendPasswordReset(String email) async {

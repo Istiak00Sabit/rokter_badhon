@@ -32,6 +32,105 @@ class RegistrationSubmissionResult {
   bool get authAccountCreated => state != RegistrationSubmissionState.failed;
 }
 
+class RegistrationIdentity {
+  final String uid;
+  final String email;
+
+  const RegistrationIdentity({required this.uid, required this.email});
+}
+
+class RegistrationWorkflow {
+  const RegistrationWorkflow._();
+
+  static Future<RegistrationSubmissionResult> createAndSubmit({
+    required RegistrationApplicantInput applicant,
+    required Future<RegistrationIdentity> Function() createIdentity,
+    required Future<void> Function(RegistrationIdentity identity)
+    sendVerification,
+    required Future<void> Function(
+      RegistrationIdentity identity,
+      Map<String, dynamic> payload,
+    )
+    writeRequest,
+    required Future<void> Function() signOut,
+  }) async {
+    late final RegistrationIdentity identity;
+    try {
+      identity = await createIdentity();
+    } catch (error) {
+      return RegistrationSubmissionResult(
+        RegistrationSubmissionState.failed,
+        error: error,
+      );
+    }
+
+    var verificationSent = false;
+    try {
+      await sendVerification(identity);
+      verificationSent = true;
+    } catch (_) {
+      // Request submission remains recoverable when email delivery fails.
+    }
+
+    return submitExisting(
+      identity: identity,
+      applicant: RegistrationApplicantInput(
+        name: applicant.name,
+        phone: applicant.phone,
+        // Firebase Auth's returned email is authoritative for Rules binding.
+        email: identity.email,
+      ),
+      writeRequest: writeRequest,
+      signOut: signOut,
+      emailVerificationSent: verificationSent,
+    );
+  }
+
+  static Future<RegistrationSubmissionResult> submitExisting({
+    required RegistrationIdentity identity,
+    required RegistrationApplicantInput applicant,
+    required Future<void> Function(
+      RegistrationIdentity identity,
+      Map<String, dynamic> payload,
+    )
+    writeRequest,
+    required Future<void> Function() signOut,
+    bool emailVerificationSent = true,
+  }) async {
+    try {
+      final payload = RegistrationRequestPayload.create(
+        authUid: identity.uid,
+        authenticatedEmail: identity.email,
+        applicant: applicant,
+      );
+      await writeRequest(identity, payload);
+    } catch (error) {
+      return RegistrationSubmissionResult(
+        RegistrationSubmissionState.authCreatedRequestFailed,
+        error: error,
+        emailVerificationSent: emailVerificationSent,
+      );
+    }
+
+    try {
+      await signOut();
+    } catch (error) {
+      return RegistrationSubmissionResult(
+        RegistrationSubmissionState.submittedSignOutFailed,
+        error: error,
+        emailVerificationSent: emailVerificationSent,
+      );
+    }
+
+    return RegistrationSubmissionResult(
+      emailVerificationSent
+          ? RegistrationSubmissionState.submitted
+          : RegistrationSubmissionState.submittedVerificationEmailFailed,
+      emailVerificationSent: emailVerificationSent,
+    );
+  }
+}
+
 class AuthService {
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
@@ -140,69 +239,34 @@ class AuthService {
     required String password,
   }) async {
     User? createdUser;
-    var verificationSent = false;
-    try {
-      final credential = await _auth.createUserWithEmailAndPassword(
-        email: email.trim(),
-        password: password,
-      );
-      createdUser = credential.user;
-      final authenticatedEmail = createdUser?.email;
-      if (createdUser == null || authenticatedEmail == null) {
-        throw StateError('Firebase Auth did not return an account identity.');
-      }
-
-      try {
-        await createdUser.sendEmailVerification();
-        verificationSent = true;
-      } catch (_) {
-        // The request is still submitted below. Resend remains available.
-      }
-
-      final applicant = RegistrationApplicantInput(
+    return RegistrationWorkflow.createAndSubmit(
+      applicant: RegistrationApplicantInput(
         name: name.trim(),
         phone: phone.trim(),
-        email: authenticatedEmail,
-      );
-      final payload = RegistrationRequestPayload.create(
-        authUid: createdUser.uid,
-        authenticatedEmail: authenticatedEmail,
-        applicant: applicant,
-      );
-      await _firestore
+        email: email.trim(),
+      ),
+      createIdentity: () async {
+        final credential = await _auth.createUserWithEmailAndPassword(
+          email: email.trim(),
+          password: password,
+        );
+        createdUser = credential.user;
+        final authenticatedEmail = createdUser?.email;
+        if (createdUser == null || authenticatedEmail == null) {
+          throw StateError('Firebase Auth did not return an account identity.');
+        }
+        return RegistrationIdentity(
+          uid: createdUser!.uid,
+          email: authenticatedEmail,
+        );
+      },
+      sendVerification: (_) => createdUser!.sendEmailVerification(),
+      writeRequest: (identity, payload) => _firestore
           .collection('registration_requests')
-          .doc(createdUser.uid)
-          .set(payload);
-
-      try {
-        await _auth.signOut();
-      } catch (error) {
-        return RegistrationSubmissionResult(
-          RegistrationSubmissionState.submittedSignOutFailed,
-          error: error,
-          emailVerificationSent: verificationSent,
-        );
-      }
-
-      return RegistrationSubmissionResult(
-        verificationSent
-            ? RegistrationSubmissionState.submitted
-            : RegistrationSubmissionState.submittedVerificationEmailFailed,
-        emailVerificationSent: verificationSent,
-      );
-    } catch (error) {
-      if (createdUser != null) {
-        return RegistrationSubmissionResult(
-          RegistrationSubmissionState.authCreatedRequestFailed,
-          error: error,
-          emailVerificationSent: verificationSent,
-        );
-      }
-      return RegistrationSubmissionResult(
-        RegistrationSubmissionState.failed,
-        error: error,
-      );
-    }
+          .doc(identity.uid)
+          .set(payload),
+      signOut: _auth.signOut,
+    );
   }
 
   Future<RegistrationRequestModel?> getOwnRegistrationRequest() async {
@@ -226,30 +290,19 @@ class AuthService {
     if (user == null || email == null) {
       throw StateError('An authenticated account with email is required.');
     }
-    final payload = RegistrationRequestPayload.create(
-      authUid: user.uid,
-      authenticatedEmail: email,
+    return RegistrationWorkflow.submitExisting(
+      identity: RegistrationIdentity(uid: user.uid, email: email),
       applicant: RegistrationApplicantInput(
         name: name.trim(),
         phone: phone.trim(),
         email: email,
       ),
+      writeRequest: (identity, payload) => _firestore
+          .collection('registration_requests')
+          .doc(identity.uid)
+          .set(payload),
+      signOut: _auth.signOut,
     );
-    await _firestore
-        .collection('registration_requests')
-        .doc(user.uid)
-        .set(payload);
-    try {
-      await _auth.signOut();
-      return const RegistrationSubmissionResult(
-        RegistrationSubmissionState.submitted,
-      );
-    } catch (error) {
-      return RegistrationSubmissionResult(
-        RegistrationSubmissionState.submittedSignOutFailed,
-        error: error,
-      );
-    }
   }
 
   Future<bool> refreshEmailVerification() async {

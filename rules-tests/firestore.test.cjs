@@ -231,6 +231,47 @@ test('revocation prevents subsequent profile batch and protected reads', async (
   await assertFails(batchProfile({ name: 'Changed' }, { name: 'Changed' }, c));
   await assertFails(getDoc(doc(c, 'users/person-own')));
 });
+test('registration-to-admission emulator flow fails closed after live revocation', async () => {
+  const applicant = db('applicant');
+  await assertSucceeds(setDoc(doc(applicant, 'registration_requests/applicant'), request()));
+
+  const admitted = user({
+    name: 'Synthetic Applicant',
+    phone: '00000000001',
+    email: 'applicant@example.test',
+  });
+  await env.withSecurityRulesDisabled(async context => {
+    const admin = context.firestore();
+    const batch = writeBatch(admin);
+    batch.update(doc(admin, 'registration_requests/applicant'), {
+      status: 'approved',
+      approved_by: 'person-own',
+      approved_at: stamp,
+      linked_user_id: 'person-applicant',
+    });
+    batch.set(doc(admin, 'users/person-applicant'), admitted);
+    batch.set(doc(admin, 'user_directory/person-applicant'), projection(admitted));
+    batch.set(doc(admin, 'auth_links/applicant'), {
+      user_id: 'person-applicant',
+      active: true,
+      created_at: stamp,
+      created_by: 'person-own',
+    });
+    await batch.commit();
+  });
+
+  await assertSucceeds(getDoc(doc(applicant, 'users/person-applicant')));
+  await assertSucceeds(getDoc(doc(applicant, 'user_directory/person-applicant')));
+
+  await seed('users/person-applicant', { ...admitted, login_enabled: false });
+  await assertFails(getDoc(doc(applicant, 'users/person-applicant')));
+  await assertFails(getDoc(doc(applicant, 'user_directory/person-applicant')));
+  await assertFails(updateDoc(doc(applicant, 'users/person-applicant'), {
+    address: 'Must not commit',
+    updated_at: serverTimestamp(),
+    updated_by: 'person-applicant',
+  }));
+});
 test('legacy and unknown collections/subcollections denied even to developer_admin', async () => {
   await seed('users/person-own', user({ access_role: 'developer_admin' }));
   const c = db();

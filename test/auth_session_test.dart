@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rokter_badhon/models/auth_link_model.dart';
@@ -100,5 +102,76 @@ void main() {
       ),
       AuthSessionState.error,
     );
+  });
+
+  test(
+    'an admitted session exits protected UI after every revocation state',
+    () {
+      for (final state in AuthSessionState.values.where(
+        (state) => state != AuthSessionState.admitted,
+      )) {
+        expect(
+          ProtectedSessionPolicy.requiresReauthentication(
+            previousRole: 'member',
+            refreshed: AuthSessionResult(state),
+          ),
+          isTrue,
+          reason: '$state must fail closed',
+        );
+      }
+    },
+  );
+
+  test(
+    'role changes require reauthentication while an unchanged role stays',
+    () {
+      expect(
+        ProtectedSessionPolicy.requiresReauthentication(
+          previousRole: 'member',
+          refreshed: AuthSessionResult(
+            AuthSessionState.admitted,
+            user: user(accessRole: 'member'),
+          ),
+        ),
+        isFalse,
+      );
+      expect(
+        ProtectedSessionPolicy.requiresReauthentication(
+          previousRole: 'member',
+          refreshed: AuthSessionResult(
+            AuthSessionState.admitted,
+            user: user(accessRole: 'committee'),
+          ),
+        ),
+        isTrue,
+      );
+      expect(
+        ProtectedSessionPolicy.requiresReauthentication(
+          previousRole: null,
+          refreshed: AuthSessionResult(AuthSessionState.admitted, user: user()),
+        ),
+        isTrue,
+      );
+    },
+  );
+
+  test('protected navigation refreshes on resume and clears stale access', () {
+    final navigation = File(
+      'lib/views/main_navigation_screen.dart',
+    ).readAsStringSync();
+    final controller = File(
+      'lib/controllers/auth_controller.dart',
+    ).readAsStringSync();
+    expect(navigation, contains('with WidgetsBindingObserver'));
+    expect(navigation, contains('AppLifecycleState.resumed'));
+    expect(navigation, contains('controller.restoreSession()'));
+    expect(
+      navigation,
+      contains('ProtectedSessionPolicy.requiresReauthentication'),
+    );
+    expect(navigation, contains('await controller.logout()'));
+    expect(controller, contains('finally'));
+    expect(controller, contains('currentUser.value = null'));
+    expect(controller, contains('AuthSessionState.unauthenticated'));
   });
 }

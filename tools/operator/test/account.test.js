@@ -91,3 +91,51 @@ test('malformed or stale target projection fails before any privileged write', a
   const base = fixture({ entries: [[`user_directory/${TARGET}`, { ...directoryFor(user()), name: 'Stale' }]] }); await denied(setUserActive({ ...common(base, 'q-1'), userId: TARGET, active: false }), 'projection_mismatch'); assert.equal(base.db.documents.has('audit_logs/q-1'), false);
   const protectedBase = fixture({ target: user({ access_role: 'developer_admin' }) }); await denied(setUserActive({ ...common(protectedBase, 'q-2'), userId: TARGET, active: false }), 'protected_admin');
 });
+
+test('organization user to admitted account flow is exact and audited end to end', async () => {
+  const base = fixture();
+  const created = await createOrganizationUser({
+    ...common(base, 'flow-create'),
+    name: 'Flow User',
+    phone: '01999999999',
+    email: 'flow@example.test',
+    bloodGroup: 'O+',
+    profession: null,
+    address: null,
+    photoUrl: null,
+    preferredLanguage: 'bn',
+  });
+  base.auth.users.set('flow-auth', {
+    uid: 'flow-auth',
+    email: 'flow@example.test',
+    emailVerified: true,
+    disabled: false,
+  });
+  await createAuthLink({
+    ...common(base, 'flow-link'),
+    userId: created.userId,
+    targetAuthUid: 'flow-auth',
+  });
+  await setLoginEnabled({
+    ...common(base, 'flow-login'),
+    userId: created.userId,
+    enabled: true,
+  });
+  await assignAccessRole({
+    ...common(base, 'flow-role'),
+    userId: created.userId,
+    targetRole: 'committee',
+  });
+
+  const admitted = base.db.documents.get(`users/${created.userId}`);
+  assert.equal(admitted.active, true);
+  assert.equal(admitted.login_enabled, true);
+  assert.equal(admitted.access_role, 'committee');
+  assert.equal(base.db.documents.get('auth_links/flow-auth').user_id, created.userId);
+  assert.deepEqual(base.db.documents.get(`user_directory/${created.userId}`), directoryFor(admitted));
+  assert.deepEqual(
+    ['flow-create', 'flow-link', 'flow-login', 'flow-role'].map((id) =>
+      base.db.documents.get(`audit_logs/${id}`).operation_id),
+    ['flow-create', 'flow-link', 'flow-login', 'flow-role'],
+  );
+});

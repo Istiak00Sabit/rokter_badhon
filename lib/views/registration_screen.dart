@@ -97,10 +97,19 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         name: _name.text,
         phone: _phone.text,
       );
-      _message = result.state == RegistrationSubmissionState.submitted
-          ? 'registration_submitted'
-          : 'registration_submitted_signout_failed';
-      if (_authService.currentUser != null) await _refreshStatus();
+      _message = switch (result.state) {
+        RegistrationSubmissionState.submitted => 'registration_submitted',
+        RegistrationSubmissionState.submittedVerificationEmailFailed =>
+          'registration_submitted_email_failed',
+        RegistrationSubmissionState.submittedSignOutFailed =>
+          'registration_submitted_signout_failed',
+        RegistrationSubmissionState.authCreatedRequestFailed =>
+          'registration_request_failed',
+        RegistrationSubmissionState.failed => 'registration_failed',
+      };
+      if (result.requestSubmitted && _authService.currentUser != null) {
+        await _refreshStatus();
+      }
     } catch (_) {
       if (mounted) {
         setState(() => _message = 'registration_failed');

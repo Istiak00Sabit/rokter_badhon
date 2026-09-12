@@ -50,3 +50,15 @@ class AuthSessionPolicy {
     return AuthSessionState.admitted;
   }
 }
+
+class ProtectedSessionPolicy {
+  const ProtectedSessionPolicy._();
+
+  static bool requiresReauthentication({
+    required String? previousRole,
+    required AuthSessionResult refreshed,
+  }) {
+    if (!refreshed.isAdmitted) return true;
+    return previousRole == null || refreshed.user!.accessRole != previousRole;
+  }
+}
