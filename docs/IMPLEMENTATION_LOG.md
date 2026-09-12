@@ -233,3 +233,10 @@ Production Architecture v1.2.1 — Free V1. Architecture status: frozen for impl
 - **Validation:** All 18 Flutter test files passed (73/73), all trusted-operator tests passed (94/94), and the Firestore Rules emulator suite passed (82/82). The full Flutter application frontend compiled, the persistent analysis server returned zero diagnostics for all 81 Dart files in `lib/` and `test/`, and `git diff --check` plus repository legacy/TODO/secret/Storage/hosted-execution scans passed. The ordinary Flutter/Firebase CLI wrappers could not spawn their child processes in this Windows sandbox, so the same installed frontend, `flutter_tester`, analysis server, Firestore emulator JAR and Node test entry points were run directly and completed successfully.
 - **Production:** Untouched. No production Firebase/Auth/Firestore read or write, deployment, migration, credential use, signing, provider action, billing change or distribution occurred. The local operator production guard remains intact.
 - **Exact next task:** The owner first captures and compares deployed production Rules/index/config and project identity, then approves operator/recovery custody and migration reconciliation before any controlled signed release validation.
+
+## Flutter Asset Configuration and Standard CLI Verification
+
+- **Asset fix:** Removed the unused `assets/images/` and `assets/icons/` declarations from `pubspec.yaml`. Neither directory exists, and no Flutter source or test references either path, so the stale declarations caused the asset-bundling error.
+- **Standard Flutter CLI:** `flutter analyze` passed with no issues, all Flutter tests passed 73/73, and `flutter build apk --debug` completed successfully. The APK is at `build/app/outputs/flutter-apk/app-debug.apk`.
+- **Regression suites:** The trusted-operator suite passed 94/94. The Firestore Rules emulator suite passed 82/82 using the explicit `demo-rokter-badhon` project and local Firestore emulator.
+- **Production:** Untouched. No production Firebase/Auth/Firestore access, deployment, mutation, migration, credential use, signing, provider action, billing change, or distribution occurred.
