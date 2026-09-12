@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:get/get.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -30,6 +31,11 @@ class MyApp extends StatelessWidget {
         translations: AppTranslations(),
         locale: localization.locale.value,
         fallbackLocale: const Locale(AppTranslations.bangla),
+        supportedLocales: const [
+          Locale(AppTranslations.bangla),
+          Locale(AppTranslations.english),
+        ],
+        localizationsDelegates: GlobalMaterialLocalizations.delegates,
         home: const SplashScreen(),
       ),
     );

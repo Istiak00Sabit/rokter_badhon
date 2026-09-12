@@ -26,17 +26,34 @@ void main() {
     expect(controller, contains("const Locale(AppTranslations.bangla).obs"));
     expect(controller, contains("stored == AppTranslations.english"));
     expect(controller, contains("setString(_preferenceKey, normalized)"));
-    expect(main, contains("fallbackLocale: const Locale(AppTranslations.bangla)"));
+    expect(
+      main,
+      contains("fallbackLocale: const Locale(AppTranslations.bangla)"),
+    );
   });
 
-  test('language-neutral keys and Free V1 dependency boundary remain intact', () {
-    final donorList = File('lib/views/donor_list_screen.dart').readAsStringSync();
-    final eventModel = File('lib/models/event_model.dart').readAsStringSync();
-    final pubspec = File('pubspec.yaml').readAsStringSync();
+  test(
+    'language-neutral keys and Free V1 dependency boundary remain intact',
+    () {
+      final donorList = File(
+        'lib/views/donor_list_screen.dart',
+      ).readAsStringSync();
+      final eventModel = File('lib/models/event_model.dart').readAsStringSync();
+      final pubspec = File('pubspec.yaml').readAsStringSync();
+      final generatedDesktopSources = [
+        'windows/flutter/generated_plugin_registrant.cc',
+        'windows/flutter/generated_plugins.cmake',
+        'macos/Flutter/GeneratedPluginRegistrant.swift',
+        'linux/flutter/generated_plugin_registrant.cc',
+        'linux/flutter/generated_plugins.cmake',
+      ].map((path) => File(path).readAsStringSync()).join('\n');
 
-    expect(donorList, contains("selectedFilter = 'all'.obs"));
-    expect(eventModel, contains("'event_type.\$key'"));
-    expect(pubspec, isNot(contains('firebase_storage')));
-    expect(pubspec, isNot(contains('image_picker')));
-  });
+      expect(donorList, contains("selectedFilter = 'all'.obs"));
+      expect(eventModel, contains("'event_type.\$key'"));
+      expect(pubspec, isNot(contains('firebase_storage')));
+      expect(pubspec, isNot(contains('image_picker')));
+      expect(generatedDesktopSources, isNot(contains('firebase_storage')));
+      expect(generatedDesktopSources, isNot(contains('file_selector_')));
+    },
+  );
 }

@@ -77,21 +77,8 @@ class ProfileScreen extends StatelessWidget {
                         border: Border.all(color: AppColors.white, width: 2),
                       ),
 
-                      child: Center(
-                        child: Text(
-                          user.name.isNotEmpty
-                              ? user.name[0].toUpperCase()
-                              : 'A',
-
-                          style: const TextStyle(
-                            fontSize: 36,
-
-                            fontWeight: FontWeight.bold,
-
-                            color: AppColors.white,
-                          ),
-                        ),
-                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: _ProfileAvatar(user: user),
                     ),
 
                     const SizedBox(height: 12),
@@ -536,6 +523,36 @@ class ProfileScreen extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ProfileAvatar extends StatelessWidget {
+  final UserModel user;
+
+  const _ProfileAvatar({required this.user});
+
+  @override
+  Widget build(BuildContext context) {
+    final fallback = ColoredBox(
+      color: AppColors.primary,
+      child: Center(
+        child: Text(
+          user.name.isEmpty ? '?' : user.name[0].toUpperCase(),
+          style: const TextStyle(
+            fontSize: 36,
+            fontWeight: FontWeight.bold,
+            color: AppColors.white,
+          ),
+        ),
+      ),
+    );
+    final photoUrl = user.photoUrl;
+    if (photoUrl == null) return fallback;
+    return Image.network(
+      photoUrl,
+      fit: BoxFit.cover,
+      errorBuilder: (_, _, _) => fallback,
     );
   }
 }

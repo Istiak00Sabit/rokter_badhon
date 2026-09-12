@@ -175,7 +175,7 @@ class _CreateBloodRequestScreenState extends State<CreateBloodRequestScreen> {
       Navigator.of(context).pop();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_error(widget.controller.errorCode.value))),
+        SnackBar(content: Text(_error(widget.controller.errorCode.value).tr)),
       );
     }
   }
