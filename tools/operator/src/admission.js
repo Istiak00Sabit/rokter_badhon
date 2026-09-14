@@ -3,6 +3,7 @@ import {
   authorizeOperator,
   authorizeTargetRole,
   parseAuthLink,
+  parseDirectory,
   parsePendingRequest,
   parseUser,
   projectDirectory,
@@ -243,5 +244,72 @@ export async function rejectRegistration({
       reason: reason.trim(),
     });
     return { action: 'rejected', operationId };
+  });
+}
+
+export async function linkRegistrationToExistingUser({
+  db, auth, serverTimestamp, operatorUid, applicantUid, targetUserId, operationId, reason,
+}) {
+  validateCommonInput({ operatorUid, applicantUid, operationId, reason });
+  validateId(targetUserId, 'target User ID');
+  const [operatorAuth, applicantAuth] = await Promise.all([
+    getAuthRecord(auth, operatorUid, 'Operator'),
+    getAuthRecord(auth, applicantUid, 'Applicant'),
+  ]);
+  const requestReference = db.collection('registration_requests').doc(applicantUid);
+  const linkReference = db.collection('auth_links').doc(applicantUid);
+  const userReference = db.collection('users').doc(targetUserId);
+  const directoryReference = db.collection('user_directory').doc(targetUserId);
+  const auditReference = db.collection('audit_logs').doc(operationId);
+
+  return db.runTransaction(async (transaction) => {
+    const operator = await resolveOperator(transaction, db, operatorUid, operatorAuth);
+    const requestSnapshot = await transaction.get(requestReference);
+    const request = parsePendingRequest(requireDocument(requestSnapshot, 'Registration request'), applicantUid);
+    const [linkSnapshot, userSnapshot, directorySnapshot, auditSnapshot,
+      phoneUsers, phoneDirectory, existingLinks] = await Promise.all([
+        transaction.get(linkReference), transaction.get(userReference),
+        transaction.get(directoryReference), transaction.get(auditReference),
+        transaction.get(db.collection('users').where('phone', '==', request.phone)),
+        transaction.get(db.collection('user_directory').where('phone', '==', request.phone)),
+        transaction.get(db.collection('auth_links').where('user_id', '==', targetUserId).where('active', '==', true)),
+      ]);
+    validateApplicantAuth(applicantAuth, request);
+    const target = parseUser(requireDocument(userSnapshot, 'Target User'), targetUserId);
+    const directory = parseDirectory(requireDocument(directorySnapshot, 'Target user_directory'), targetUserId);
+    if (operator.access_role !== 'developer_admin' && target.access_role === 'leader') {
+      throw new AdmissionError('unauthorized_target', 'Only developer_admin may link a leader account.');
+    }
+    if (target.access_role === 'developer_admin' || !target.active || target.login_enabled) {
+      throw new AdmissionError('invalid_target_state', 'Target must be an active login-disabled non-developer-admin User.');
+    }
+    if (target.phone !== request.phone || (target.email !== null && target.email !== request.email)) {
+      throw new AdmissionError('identity_mismatch', 'Reviewed User phone/email does not match the registration request.');
+    }
+    if (phoneUsers.docs.length !== 1 || phoneUsers.docs[0].id !== targetUserId ||
+        phoneDirectory.docs.length !== 1 || phoneDirectory.docs[0].id !== targetUserId ||
+        directory.phone !== request.phone || Object.keys(projectDirectory(target)).some((key) => directory[key] !== projectDirectory(target)[key])) {
+      throw new AdmissionError('ambiguous_identity', 'Phone identity is missing, duplicated, or inconsistent; reviewed repair is required.');
+    }
+    if (linkSnapshot.exists || !existingLinks.empty) throw new AdmissionError('link_conflict', 'Applicant or target User already has an Auth link.');
+    if (auditSnapshot.exists) throw new AdmissionError('operation_reused', 'Operation ID has already been used.');
+    transaction.update(userReference, {
+      email: request.email, login_enabled: true, updated_at: serverTimestamp(), updated_by: operator.id,
+    });
+    transaction.create(linkReference, {
+      user_id: targetUserId, active: true, created_at: serverTimestamp(), created_by: operator.id,
+    });
+    transaction.update(requestReference, {
+      status: 'approved', approved_by: operator.id, approved_at: serverTimestamp(), linked_user_id: targetUserId,
+    });
+    transaction.create(auditReference, {
+      action: 'registration.link_existing', actor_user_id: operator.id, actor_auth_uid: operatorUid,
+      target_path: requestReference.path, occurred_at: serverTimestamp(), operation_id: operationId,
+      outcome: 'committed', changes: {
+        linked_user_id: { after: targetUserId }, login_enabled: { before: false, after: true },
+        email: { before: target.email, after: request.email },
+      }, reason: reason.trim(),
+    });
+    return { action: 'registration-linked-existing-user', userId: targetUserId, operationId };
   });
 }

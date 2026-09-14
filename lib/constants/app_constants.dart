@@ -52,6 +52,7 @@ class AppConstants {
 
   // Firestore collections
   static const String donorsCollection = 'donors';
+  static const String donorSubmissionsCollection = 'donor_submissions';
   static const String donationsCollection = 'donations';
   static const String bloodRequestsCollection = 'blood_requests';
   static const String noticesCollection = 'notices';

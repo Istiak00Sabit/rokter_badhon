@@ -39,6 +39,11 @@ void main() {
       expect(login, contains("'login'.tr"));
       expect(login, contains("'register'.tr"));
       expect(registration, contains("'register'.tr"));
+      final dashboard = File(
+        'lib/views/dashboard_screen.dart',
+      ).readAsStringSync();
+      expect(dashboard, contains('AuthLanguageSwitch(onPrimary: true)'));
+      expect(dashboard, contains("'app_name'.tr"));
     },
   );
 

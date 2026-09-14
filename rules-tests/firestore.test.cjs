@@ -289,6 +289,12 @@ const donor = (extra = {}) => ({ name: 'Synthetic Donor', phone: '00000000000', 
   gender: null, photo_url: null, village: null, union: null, upazila: 'Synthetic', district: 'Synthetic',
   profession: null, linked_user_id: null, active: true, last_donated_at: null, total_donations: 0,
   created_at: serverTimestamp(), created_by: 'person-own', ...metadata(), ...extra });
+const donorPayload = (extra = {}) => ({ name: 'Synthetic Donor', phone: '00000000000', blood_group: 'A+',
+  gender: null, photo_url: null, village: null, union: null, upazila: 'Synthetic', district: 'Synthetic',
+  profession: null, ...extra });
+const donorSubmission = (extra = {}) => ({ donor_payload: donorPayload(), committee_assignment_id: 'active',
+  submitted_by: 'person-own', submitted_at: serverTimestamp(), status: 'pending', approved_by: null,
+  approved_at: null, rejected_by: null, rejected_at: null, rejection_reason: null, donor_id: null, ...extra });
 const blood = (extra = {}) => ({ blood_group: 'A+', patient_name: null, hospital: 'Synthetic Hospital',
   location: 'Synthetic Location', contact_name: 'Synthetic Contact', contact_phone: '00000000000',
   required_at: null, status: 'active', created_by: 'person-own', created_at: serverTimestamp(),
@@ -389,7 +395,7 @@ for (const role of roles) {
       await assertFails(updateDoc(ref, col === 'committee_terms' ? { group_photo_url: 'https://example.test/new' } : { active: false }));
       await assertFails(deleteDoc(ref));
     }
-    await expectRead(role !== 'member', setDoc(doc(c, 'donors/new'), donor()));
+    await assertFails(setDoc(doc(c, 'donors/new'), donor()));
     await expectRead(roles.indexOf(role) < 3, updateDoc(doc(c, 'donors/active'), { phone: '00000000001', ...metadata() }));
     await assertFails(updateDoc(doc(c, 'donors/hidden'), { phone: '00000000001', ...metadata() }));
     for (const extra of [{ active: false }, { total_donations: 1 }, { last_donated_at: stamp },
@@ -407,7 +413,7 @@ for (const role of roles) {
     }
   });
 }
-test('donor exact create schema and metadata reject fabrication, missing fields and wrong types', async () => {
+test('active donor cannot be fabricated directly and existing donor profile edits remain constrained', async () => {
   await seed('users/person-own', user({ access_role: 'developer_admin' }));
   const ref = doc(db(), 'donors/new');
   for (const extra of [{ total_donations: 1 }, { total_donations: -1 }, { total_donations: 0.5 },
@@ -419,8 +425,9 @@ test('donor exact create schema and metadata reject fabrication, missing fields 
     const missing = donor(); delete missing[field]; await assertFails(setDoc(ref, missing));
     await assertFails(setDoc(ref, donor({ [field]: [] })));
   }
-  await assertSucceeds(setDoc(ref, donor({ gender: 'other', photo_url: 'https://example.test/photo',
+  await assertFails(setDoc(ref, donor({ gender: 'other', photo_url: 'https://example.test/photo',
     village: 'Synthetic', union: 'Synthetic', profession: 'Synthetic' })));
+  await seed('donors/new', donor({ photo_url: 'https://example.test/original', created_at: stamp, updated_at: stamp }));
   await assertFails(updateDoc(ref, metadata()));
   for (const field of ['name','phone','blood_group','gender','photo_url','village','union','upazila','district','profession']) {
     await assertFails(updateDoc(ref, { [field]: [], ...metadata() }));
@@ -430,6 +437,79 @@ test('donor exact create schema and metadata reject fabrication, missing fields 
   await assertFails(setDoc(ref, donor())); // Replacing creation timestamps is not a profile edit.
   await seed('donors/legacy-invalid', donor({ phone: 42, created_at: stamp, updated_at: stamp }));
   await assertFails(updateDoc(doc(db(), 'donors/legacy-invalid'), { phone: '00000000000', ...metadata() }));
+});
+
+for (const role of ['committee','executive','leader']) {
+  test(`${role} current committee participant can submit a pending donor`, async () => {
+    await seedBusiness();
+    await seed('users/person-own', user({ access_role: role }));
+    await assertSucceeds(setDoc(doc(db(), `donor_submissions/${role}`), donorSubmission()));
+    await assertFails(setDoc(doc(db(), `donors/${role}`), donor()));
+  });
+}
+
+test('ordinary member and non-current committee role cannot submit donors', async () => {
+  await seedBusiness();
+  await assertFails(setDoc(doc(db(), 'donor_submissions/member'), donorSubmission()));
+  await seed('users/person-own', user({ access_role: 'committee' }));
+  await assertFails(setDoc(doc(db(), 'donor_submissions/no-assignment'), donorSubmission({ committee_assignment_id: 'hidden' })));
+});
+
+async function seedPendingSubmission(id = 'review') {
+  await seed(`donor_submissions/${id}`, donorSubmission({ submitted_at: stamp }));
+}
+
+async function approveDonor(client, id = 'review', donorChanges = {}, decisionChanges = {}) {
+  const batch = writeBatch(client);
+  batch.set(doc(client, `donors/${id}`), donor({ ...donorChanges }));
+  batch.update(doc(client, `donor_submissions/${id}`), {
+    status: 'approved', approved_by: 'person-own', approved_at: serverTimestamp(), donor_id: id,
+    ...decisionChanges,
+  });
+  return batch.commit();
+}
+
+for (const role of ['committee','executive','member']) {
+  test(`${role} cannot approve a donor submission`, async () => {
+    await seed('users/person-own', user({ access_role: role }));
+    await seedPendingSubmission();
+    await assertFails(approveDonor(db()));
+    await assertFails(getDoc(doc(db(), 'donors/review')));
+  });
+}
+
+test('one leader approval atomically creates the active donor and durable approval history', async () => {
+  await seed('users/person-own', user({ access_role: 'leader' }));
+  await seedPendingSubmission();
+  await assertSucceeds(approveDonor(db()));
+  const activeDonor = (await getDoc(doc(db(), 'donors/review'))).data();
+  const history = (await getDoc(doc(db(), 'donor_submissions/review'))).data();
+  assert.equal(activeDonor.active, true);
+  assert.equal(history.status, 'approved');
+  assert.equal(history.approved_by, 'person-own');
+  assert.equal(history.donor_id, 'review');
+});
+
+test('leader rejection remains reviewable and never creates an active donor', async () => {
+  await seed('users/person-own', user({ access_role: 'leader' }));
+  await seedPendingSubmission();
+  await assertSucceeds(updateDoc(doc(db(), 'donor_submissions/review'), {
+    status: 'rejected', rejected_by: 'person-own', rejected_at: serverTimestamp(), rejection_reason: 'Duplicate phone',
+  }));
+  assert.equal((await getDoc(doc(db(), 'donor_submissions/review'))).data().status, 'rejected');
+  await assertFails(getDoc(doc(db(), 'donors/review')));
+});
+
+test('client cannot forge donor approval payload, actor, timestamp, or decision fields', async () => {
+  await seed('users/person-own', user({ access_role: 'leader' }));
+  for (const [donorChanges, decisionChanges] of [
+    [{ active: false }, {}], [{ created_by: 'person-other' }, {}], [{ phone: 'changed' }, {}],
+    [{}, { approved_by: 'person-other' }], [{}, { approved_at: stamp }], [{}, { rejected_by: 'person-own' }],
+  ]) {
+    await seedPendingSubmission('forged');
+    await assertFails(approveDonor(db(), 'forged', donorChanges, decisionChanges));
+    await env.withSecurityRulesDisabled(c => deleteDoc(doc(c.firestore(), 'donor_submissions/forged')));
+  }
 });
 test('blood request exact create rejects forged actor/time/state/terminal fields and malformed schema', async () => {
   const ref = doc(db(), 'blood_requests/new');

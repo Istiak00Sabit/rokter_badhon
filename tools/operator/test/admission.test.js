@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { approveRegistration, rejectRegistration } from '../src/admission.js';
+import { approveRegistration, linkRegistrationToExistingUser, rejectRegistration } from '../src/admission.js';
 import { schemaFields } from '../src/policy.js';
 
 const TIME = { toMillis: () => 1 };
@@ -200,6 +200,64 @@ function approveArgs(overrides = {}) {
 async function rejectsCode(promise, code) {
   await assert.rejects(promise, (error) => error.code === code);
 }
+
+function existingCommitteeUser(changes = {}) {
+  return {
+    name: 'Existing Committee Person', phone: '01111111111', email: null,
+    blood_group: 'B+', profession: 'Teacher', address: null, photo_url: null,
+    access_role: 'committee', active: true, login_enabled: false,
+    preferred_language: null, created_at: TIME, created_by: null,
+    updated_at: TIME, updated_by: null, ...changes,
+  };
+}
+
+function linkArgs({ targetChanges = {}, extraEntries = [], operatorRole = 'developer_admin' } = {}) {
+  const target = existingCommitteeUser(targetChanges);
+  const { db, auth } = fixture({
+    operatorRole,
+    entries: [
+      ['users/existing-person', target],
+      ['user_directory/existing-person', {
+        name: target.name, phone: target.phone, blood_group: target.blood_group,
+        profession: target.profession, photo_url: target.photo_url, active: target.active,
+      }],
+      ...extraEntries,
+    ],
+  });
+  return {
+    db, auth, serverTimestamp: () => SERVER_TIME, operatorUid: 'operator-uid',
+    applicantUid: 'applicant-uid', targetUserId: 'existing-person',
+    operationId: 'link-existing-1', reason: 'Reviewed exact phone identity.',
+  };
+}
+
+test('reviewed existing-user registration linking reuses User and enables normal admission', async () => {
+  const args = linkArgs();
+  const beforeUserCount = [...args.db.documents.keys()].filter((path) => path.startsWith('users/')).length;
+  const result = await linkRegistrationToExistingUser(args);
+  assert.equal(result.userId, 'existing-person');
+  assert.equal([...args.db.documents.keys()].filter((path) => path.startsWith('users/')).length, beforeUserCount);
+  assert.equal(args.db.documents.get('users/existing-person').login_enabled, true);
+  assert.equal(args.db.documents.get('users/existing-person').email, 'applicant@example.test');
+  assert.equal(args.db.documents.get('auth_links/applicant-uid').user_id, 'existing-person');
+  assert.equal(args.db.documents.get('registration_requests/applicant-uid').linked_user_id, 'existing-person');
+});
+
+test('ambiguous existing identity never auto-links or creates a duplicate User', async () => {
+  const duplicate = existingCommitteeUser({ name: 'Duplicate' });
+  const args = linkArgs({ extraEntries: [
+    ['users/duplicate-person', duplicate],
+    ['user_directory/duplicate-person', { name: duplicate.name, phone: duplicate.phone, blood_group: duplicate.blood_group, profession: duplicate.profession, photo_url: null, active: true }],
+  ] });
+  await rejectsCode(linkRegistrationToExistingUser(args), 'ambiguous_identity');
+  assert.equal(args.db.documents.has('auth_links/applicant-uid'), false);
+  assert.equal(args.db.documents.get('users/existing-person').login_enabled, false);
+});
+
+test('leader cannot link a preloaded leader while developer_admin remains explicit reviewer', async () => {
+  const args = linkArgs({ operatorRole: 'leader', targetChanges: { access_role: 'leader' } });
+  await rejectsCode(linkRegistrationToExistingUser(args), 'unauthorized_target');
+});
 
 test('valid developer_admin approval creates exact atomic admission records', async () => {
   const args = approveArgs({ targetRole: 'member' });

@@ -6,7 +6,6 @@ import '../services/auth_services.dart';
 import '../services/user_services.dart';
 import '../views/main_navigation_screen.dart';
 import '../views/login_screen.dart';
-import '../config/firebase_runtime_config.dart';
 
 class AuthController extends GetxController {
   final AuthService _authService;
@@ -46,11 +45,7 @@ class AuthController extends GetxController {
       return;
     }
 
-    if (password.length < 6 &&
-        !FirebaseRuntimeConfig.isLocalTestCredential(
-          email: email,
-          password: password,
-        )) {
+    if (password.length < 6) {
       errorMessage.value = 'password_min_length'.tr;
       return;
     }

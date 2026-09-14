@@ -536,3 +536,25 @@ Titles/captions <= 200 characters, descriptions <= 5000, location <= 300, URLs <
 Initial workflow: operator uploads externally → validates → trusted editorial URL write. Direct Flutter upload disabled. Profile photo_url is operational initially; Q switches User/directory atomically. Null/error uses bundled local avatar. Upload replacement first, commit references second, clean up unreferenced old asset last. Cleanup failure cannot break the application. Retained historical references prevent destructive asset removal.
 
 Terminology for this Free V1 profile: references to backend/server authorization or backend-owned audit mean trusted execution, implemented by the reviewed operator-local tool now; they do not require a hosted paid service. Firestore Rules remain the enforcement path for explicitly permitted ordinary client operations only.
+
+## 19. Donor submissions and approval
+
+Collection: `donor_submissions/{submissionId}`. Fields are exactly:
+
+```text
+donor_payload: map (the ten donor profile input fields)
+committee_assignment_id: string | null
+submitted_by: string
+submitted_at: Timestamp
+status: pending | approved | rejected
+approved_by: string | null
+approved_at: Timestamp | null
+rejected_by: string | null
+rejected_at: Timestamp | null
+rejection_reason: string | null
+donor_id: string | null
+```
+
+Committee, executive, and leader submissions require an active assignment whose active term and `user_id` match the admitted caller. A developer administrator may submit without an assignment. Submission creates only pending review state. One admitted leader (or the protected developer administrator) approves through an atomic transaction that both records the derived reviewer/time and creates `donors/{submissionId}` as an active donor from the immutable payload. Rejection records derived reviewer/time/reason and never creates a donor. Client-supplied decision identities, timestamps, donor activity, or mismatched payloads are denied. Terminal submissions are retained as review history.
+
+The official 2025–2027 source is `data/committee_2025_2027.json`: exactly 51 unique-phone rows with role totals leader 2, executive 31, committee 18. Emulator preload uses deterministic User and assignment IDs, exact source text, `login_enabled = false`, and no Auth identities. Official position stays only in `committee_assignments.position`; `users.access_role` remains authorization authority.

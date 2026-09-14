@@ -13,6 +13,8 @@ import '../views/notice_screen.dart';
 import '../views/ranklist_screen.dart';
 import '../views/registration_review_screen.dart';
 import '../views/audit_log_screen.dart';
+import '../views/pending_donor_approvals_screen.dart';
+import '../widgets/auth_language_switch.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -60,6 +62,13 @@ class DashboardScreen extends StatelessWidget {
                 pinned: true,
                 backgroundColor: AppColors.primary,
                 automaticallyImplyLeading: false,
+                title: Text('app_name'.tr),
+                actions: const [
+                  Padding(
+                    padding: EdgeInsets.only(right: 12),
+                    child: Center(child: AuthLanguageSwitch(onPrimary: true)),
+                  ),
+                ],
                 flexibleSpace: FlexibleSpaceBar(
                   background: Container(
                     decoration: const BoxDecoration(color: AppColors.primary),
@@ -303,6 +312,18 @@ class DashboardScreen extends StatelessWidget {
                         ),
                       ],
 
+                      if (_canReviewDonors(
+                        controller.currentUser.value?.accessRole,
+                      )) ...[
+                        const SizedBox(height: 12),
+                        _buildActionButton(
+                          title: 'pending_donor_approvals'.tr,
+                          icon: Icons.fact_check_outlined,
+                          onTap: () =>
+                              Get.to(() => const PendingDonorApprovalsScreen()),
+                        ),
+                      ],
+
                       const SizedBox(height: 24),
 
                       // Notice board
@@ -520,6 +541,9 @@ bool _canViewDonationHistory(String? role) =>
     role == 'developer_admin' || role == 'leader' || role == 'executive';
 
 bool _canReviewRegistrations(String? role) =>
+    role == 'developer_admin' || role == 'leader';
+
+bool _canReviewDonors(String? role) =>
     role == 'developer_admin' || role == 'leader';
 
 bool _canCreateDonor(String? role) => role != null && role != 'member';

@@ -3,7 +3,7 @@ import { applicationDefault, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { FieldValue, getFirestore, Timestamp } from 'firebase-admin/firestore';
 
-import { approveRegistration, rejectRegistration } from './src/admission.js';
+import { approveRegistration, linkRegistrationToExistingUser, rejectRegistration } from './src/admission.js';
 import { bootstrapDeveloperAdmin, recoverDeveloperAdmin } from './src/developer_admin.js';
 import { assignCommitteePosition, endCommitteeAssignment } from './src/committee.js';
 import {
@@ -40,6 +40,7 @@ import {
 } from './src/event.js';
 import { assertSafeTarget } from './src/safety.js';
 import { LOCAL_TEST_ADMIN, seedLocalTestAdmin } from './src/seed_test_admin.js';
+import { seedOfficialCommittee } from './src/official_committee.js';
 
 function parseArguments(values) {
   const [command, ...rest] = values;
@@ -106,6 +107,12 @@ async function main() {
       serverTimestamp: dependencies.serverTimestamp,
     });
     console.log(`LOCAL EMULATOR TEST account: ${LOCAL_TEST_ADMIN.email} / ${LOCAL_TEST_ADMIN.password}`);
+  } else if (command === 'seed-official-committee') {
+    result = await seedOfficialCommittee({
+      projectId,
+      db: dependencies.db,
+      serverTimestamp: dependencies.serverTimestamp,
+    });
   } else if (command === 'approve') {
     result = await approveRegistration({
       ...dependencies,
@@ -113,6 +120,11 @@ async function main() {
     });
   } else if (command === 'reject') {
     result = await rejectRegistration(dependencies);
+  } else if (command === 'link-registration') {
+    result = await linkRegistrationToExistingUser({
+      ...dependencies,
+      targetUserId: options['target-user-id'],
+    });
   } else if (command === 'create-user') {
     result = await createOrganizationUser({
       ...dependencies,

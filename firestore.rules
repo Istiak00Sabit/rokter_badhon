@@ -103,6 +103,48 @@ service cloud.firestore {
         && d.created_at is timestamp && d.created_by is string
         && d.updated_at is timestamp && d.updated_by is string;
     }
+    function validDonorPayload(d) {
+      return d.keys().hasAll(['name','phone','blood_group','gender','photo_url','village','union','upazila','district','profession'])
+        && d.keys().hasOnly(['name','phone','blood_group','gender','photo_url','village','union','upazila','district','profession'])
+        && d.name is string && d.name.size() > 0 && d.phone is string && d.phone.size() > 0
+        && d.blood_group is string && d.blood_group.size() > 0
+        && nullableString(d.gender) && nullableString(d.village) && nullableString(d.union)
+        && d.upazila is string && d.upazila.size() > 0 && d.district is string && d.district.size() > 0
+        && nullableString(d.profession)
+        && (d.photo_url == null || (d.photo_url is string && d.photo_url.size() <= 2048
+          && d.photo_url.matches('https://[^/]+.*')));
+    }
+    function validDonorSubmission(s) {
+      return s.keys().hasAll(['donor_payload','committee_assignment_id','submitted_by','submitted_at','status',
+          'approved_by','approved_at','rejected_by','rejected_at','rejection_reason','donor_id'])
+        && s.keys().hasOnly(['donor_payload','committee_assignment_id','submitted_by','submitted_at','status',
+          'approved_by','approved_at','rejected_by','rejected_at','rejection_reason','donor_id'])
+        && validDonorPayload(s.donor_payload) && nullableString(s.committee_assignment_id)
+        && s.submitted_by is string && s.submitted_at is timestamp && s.status in ['pending','approved','rejected']
+        && nullableString(s.approved_by) && (s.approved_at == null || s.approved_at is timestamp)
+        && nullableString(s.rejected_by) && (s.rejected_at == null || s.rejected_at is timestamp)
+        && nullableString(s.rejection_reason) && nullableString(s.donor_id);
+    }
+    function activeCommitteeParticipant(s) {
+      return validId(s.committee_assignment_id)
+        && get(/databases/$(database)/documents/committee_assignments/$(s.committee_assignment_id)).data.active == true
+        && get(/databases/$(database)/documents/committee_assignments/$(s.committee_assignment_id)).data.user_id == ownId()
+        && validId(get(/databases/$(database)/documents/committee_assignments/$(s.committee_assignment_id)).data.term_id)
+        && get(/databases/$(database)/documents/committee_terms/$(
+          get(/databases/$(database)/documents/committee_assignments/$(s.committee_assignment_id)).data.term_id)).data.active == true;
+    }
+    function donorMatchesSubmission(d, s, id) {
+      return d.name == s.donor_payload.name && d.phone == s.donor_payload.phone
+        && d.blood_group == s.donor_payload.blood_group && d.gender == s.donor_payload.gender
+        && d.photo_url == s.donor_payload.photo_url && d.village == s.donor_payload.village
+        && d.union == s.donor_payload.union && d.upazila == s.donor_payload.upazila
+        && d.district == s.donor_payload.district && d.profession == s.donor_payload.profession
+        && d.linked_user_id == null && d.active == true && d.last_donated_at == null
+        && d.total_donations == 0 && d.created_at == request.time && d.updated_at == request.time
+        && d.created_by == s.submitted_by && d.updated_by == ownId()
+        && s.status == 'approved' && s.approved_by == ownId() && s.approved_at == request.time
+        && s.donor_id == id && s.rejected_by == null && s.rejected_at == null && s.rejection_reason == null;
+    }
     match /committee_terms/{id} {
       allow read: if admitted();
     }
@@ -125,12 +167,9 @@ service cloud.firestore {
     }
     match /donors/{id} {
       allow read: if admitted() && resource.data.active == true;
-      allow create: if admitted() && roleIn(['developer_admin','leader','executive','committee'])
-        && validDonor(request.resource.data)
-        && request.resource.data.active == true && request.resource.data.linked_user_id == null
-        && request.resource.data.total_donations == 0 && request.resource.data.last_donated_at == null
-        && request.resource.data.created_at == request.time && request.resource.data.updated_at == request.time
-        && request.resource.data.created_by == ownId() && request.resource.data.updated_by == ownId();
+      allow create: if admitted() && editorial() && validDonor(request.resource.data)
+        && donorMatchesSubmission(request.resource.data,
+          getAfter(/databases/$(database)/documents/donor_submissions/$(id)).data, id);
       allow update: if admitted() && history() && resource.data.active == true
         && validDonor(resource.data) && validDonor(request.resource.data)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','phone','blood_group',
@@ -138,6 +177,40 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys().hasAny(['name','phone','blood_group',
           'gender','photo_url','village','union','upazila','district','profession'])
         && request.resource.data.updated_at == request.time && request.resource.data.updated_by == ownId();
+    }
+    match /donor_submissions/{id} {
+      allow read: if admitted() && (resource.data.submitted_by == ownId() || editorial());
+      allow create: if admitted() && validDonorSubmission(request.resource.data)
+        && request.resource.data.status == 'pending' && request.resource.data.submitted_by == ownId()
+        && request.resource.data.submitted_at == request.time
+        && request.resource.data.approved_by == null && request.resource.data.approved_at == null
+        && request.resource.data.rejected_by == null && request.resource.data.rejected_at == null
+        && request.resource.data.rejection_reason == null && request.resource.data.donor_id == null
+        && ((roleIn(['leader','executive','committee']) && activeCommitteeParticipant(request.resource.data))
+          || (roleIn(['developer_admin']) && request.resource.data.committee_assignment_id == null));
+      allow update: if admitted() && editorial() && validDonorSubmission(resource.data)
+        && validDonorSubmission(request.resource.data) && resource.data.status == 'pending'
+        && request.resource.data.submitted_by == resource.data.submitted_by
+        && request.resource.data.submitted_at == resource.data.submitted_at
+        && request.resource.data.donor_payload == resource.data.donor_payload
+        && request.resource.data.committee_assignment_id == resource.data.committee_assignment_id
+        && (
+          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','approved_by','approved_at','donor_id'])
+            && request.resource.data.status == 'approved' && request.resource.data.approved_by == ownId()
+            && request.resource.data.approved_at == request.time && request.resource.data.donor_id == id
+            && request.resource.data.rejected_by == null && request.resource.data.rejected_at == null
+            && request.resource.data.rejection_reason == null
+            && getAfter(/databases/$(database)/documents/donors/$(id)).data.active == true
+            && getAfter(/databases/$(database)/documents/donors/$(id)).data.created_at == request.time
+            && getAfter(/databases/$(database)/documents/donors/$(id)).data.created_by == resource.data.submitted_by)
+          ||
+          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','rejected_by','rejected_at','rejection_reason'])
+            && request.resource.data.status == 'rejected' && request.resource.data.rejected_by == ownId()
+            && request.resource.data.rejected_at == request.time && request.resource.data.rejection_reason is string
+            && request.resource.data.rejection_reason.size() > 0 && request.resource.data.approved_by == null
+            && request.resource.data.approved_at == null && request.resource.data.donor_id == null
+            && !existsAfter(/databases/$(database)/documents/donors/$(id)))
+        );
     }
     match /donations/{id} {
       allow read: if admitted() && history();

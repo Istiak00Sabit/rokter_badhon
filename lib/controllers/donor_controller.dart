@@ -105,12 +105,16 @@ class DonorController extends GetxController {
     try {
       isLoading.value = true;
       errorCode.value = '';
-      await _donorService.addDonor(input: _input(), actorUserId: actor.id);
+      await _donorService.submitDonor(
+        input: _input(),
+        actorUserId: actor.id,
+        actorRole: actor.accessRole,
+      );
       clearForm();
       Get.back();
       Get.snackbar(
         'success'.tr,
-        'donor_added'.tr,
+        'donor_submitted'.tr,
         backgroundColor: Colors.green,
         colorText: Colors.white,
       );
@@ -186,14 +190,15 @@ class DonorController extends GetxController {
     Get.snackbar(
       'error'.tr,
       (const {
-            'permission_denied',
-            'invalid_input',
-            'network_unavailable',
-            'query_unavailable',
-            'malformed_data',
-          }.contains(code)
-          ? code
-          : 'operation_failed').tr,
+                'permission_denied',
+                'invalid_input',
+                'network_unavailable',
+                'query_unavailable',
+                'malformed_data',
+              }.contains(code)
+              ? code
+              : 'operation_failed')
+          .tr,
       backgroundColor: Colors.red,
       colorText: Colors.white,
     );

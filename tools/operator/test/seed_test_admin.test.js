@@ -31,7 +31,7 @@ class SeedAuth extends FakeAuth {
 
 test('local seed creates a verified identity satisfying the normal admission gates', async () => {
   assert.equal(LOCAL_TEST_ADMIN.email, 'a@a.com');
-  assert.equal(LOCAL_TEST_ADMIN.password, '1');
+  assert.equal(LOCAL_TEST_ADMIN.password, '123456');
   const db = new FakeFirestore();
   const auth = new SeedAuth();
   const result = await seedLocalTestAdmin({
@@ -48,7 +48,7 @@ test('local seed creates a verified identity satisfying the normal admission gat
   assert.equal(authRecord.email, LOCAL_TEST_ADMIN.email);
   assert.equal(authRecord.emailVerified, true);
   assert.equal(authRecord.disabled, false);
-  assert.equal(authRecord.password, LOCAL_TEST_ADMIN.firebasePassword);
+  assert.equal(authRecord.password, LOCAL_TEST_ADMIN.password);
   assert.deepEqual(new Set(Object.keys(link)), schemaFields.link);
   assert.deepEqual(new Set(Object.keys(user)), schemaFields.user);
   assert.deepEqual(new Set(Object.keys(directory)), schemaFields.directory);

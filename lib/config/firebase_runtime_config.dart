@@ -2,9 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class FirebaseRuntimeConfig {
-  static const String _localTestAdminEmail = 'a@a.com';
-  static const String _localTestPassword = '1';
-  static const String _firebaseCompatibleTestPassword = '111111';
   static const bool useEmulators = bool.fromEnvironment(
     'USE_FIREBASE_EMULATOR',
     defaultValue: false,
@@ -23,28 +20,6 @@ class FirebaseRuntimeConfig {
   );
 
   const FirebaseRuntimeConfig._();
-
-  static bool isLocalTestCredential({
-    required String email,
-    required String password,
-    bool emulatorMode = useEmulators,
-  }) =>
-      emulatorMode &&
-      email.trim().toLowerCase() == _localTestAdminEmail &&
-      password == _localTestPassword;
-
-  static String passwordForAuth({
-    required String email,
-    required String password,
-    bool emulatorMode = useEmulators,
-  }) =>
-      isLocalTestCredential(
-        email: email,
-        password: password,
-        emulatorMode: emulatorMode,
-      )
-      ? _firebaseCompatibleTestPassword
-      : password;
 
   static Future<void> connectEmulators({
     FirebaseAuth? auth,

@@ -9,8 +9,7 @@ import { bootstrapDeveloperAdmin } from './developer_admin.js';
 
 export const LOCAL_TEST_ADMIN = Object.freeze({
   email: 'a@a.com',
-  password: '1',
-  firebasePassword: '111111',
+  password: '123456',
   name: 'Local Test Admin',
   phone: '01000000000',
 });
@@ -22,7 +21,7 @@ function isMissingAuthUser(error) {
 async function createLocalAuthUser(auth) {
   return auth.createUser({
     email: LOCAL_TEST_ADMIN.email,
-    password: LOCAL_TEST_ADMIN.firebasePassword,
+    password: LOCAL_TEST_ADMIN.password,
     emailVerified: true,
     disabled: false,
     displayName: LOCAL_TEST_ADMIN.name,
@@ -56,7 +55,7 @@ export async function seedLocalTestAdmin({
   }
 
   authRecord = await auth.updateUser(authRecord.uid, {
-    password: LOCAL_TEST_ADMIN.firebasePassword,
+    password: LOCAL_TEST_ADMIN.password,
     emailVerified: true,
     disabled: false,
     displayName: LOCAL_TEST_ADMIN.name,

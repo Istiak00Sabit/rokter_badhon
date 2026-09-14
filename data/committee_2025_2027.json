@@ -1,0 +1,461 @@
+[
+  {
+    "serial": 1,
+    "position": "সভাপতি",
+    "name": "মোঃ আনোয়ার হোসাইন",
+    "phone": "01712481890",
+    "profession": "ব্যবসায়ী",
+    "blood_group": "O+",
+    "access_role": "leader"
+  },
+  {
+    "serial": 2,
+    "position": "সিনিয়র সহ সভাপতি",
+    "name": "এস.এম. সাহেদ আহমেদ",
+    "phone": "01730900386",
+    "profession": "ব্যবসায়ী",
+    "blood_group": "AB+",
+    "access_role": "executive"
+  },
+  {
+    "serial": 3,
+    "position": "সহ সভাপতি",
+    "name": "মোঃ তরিকুল ইসলাম",
+    "phone": "01710651447",
+    "profession": "ব্যবসায়ী",
+    "blood_group": "B+",
+    "access_role": "executive"
+  },
+  {
+    "serial": 4,
+    "position": "সহ সভাপতি",
+    "name": "ফাহিম শাহরিয়া সাবির",
+    "phone": "01728787863",
+    "profession": "ব্যবসায়ী",
+    "blood_group": "O+",
+    "access_role": "executive"
+  },
+  {
+    "serial": 5,
+    "position": "সহ সভাপতি",
+    "name": "মোঃ মাহফুজুর রহমান",
+    "phone": "01717425295",
+    "profession": "ব্যবসায়ী",
+    "blood_group": "O-",
+    "access_role": "executive"
+  },
+  {
+    "serial": 6,
+    "position": "সহ সভাপতি",
+    "name": "আবু সাঈদ ইবনে মোর্শেদ",
+    "phone": "01712405334",
+    "profession": "ব্যবসায়ী",
+    "blood_group": "B+",
+    "access_role": "executive"
+  },
+  {
+    "serial": 7,
+    "position": "সহ সভাপতি",
+    "name": "মোঃ শরীফ উদ্দিন",
+    "phone": "01706927701",
+    "profession": "প্রবাসী",
+    "blood_group": "A+",
+    "access_role": "executive"
+  },
+  {
+    "serial": 8,
+    "position": "সহ সভাপতি",
+    "name": "মোঃ সাহেদ হাসান",
+    "phone": "01620975803",
+    "profession": "প্রবাসী",
+    "blood_group": "B-",
+    "access_role": "executive"
+  },
+  {
+    "serial": 9,
+    "position": "সাধারণ সম্পাদক",
+    "name": "মোঃ সৈকত হাসান",
+    "phone": "01717562955",
+    "profession": "চাকুরীজীবী",
+    "blood_group": "B+",
+    "access_role": "leader"
+  },
+  {
+    "serial": 10,
+    "position": "যুগ্ম সম্পাদক",
+    "name": "মোঃ মনিরুর রহমান",
+    "phone": "01817725772",
+    "profession": "চাকুরীজীবী",
+    "blood_group": "B+",
+    "access_role": "executive"
+  },
+  {
+    "serial": 11,
+    "position": "যুগ্ম সম্পাদক",
+    "name": "মোঃ বিলাল হোসেন",
+    "phone": "01768545297",
+    "profession": "চাকুরীজীবী",
+    "blood_group": "A+",
+    "access_role": "executive"
+  },
+  {
+    "serial": 12,
+    "position": "সহ সাধারণ সম্পাদক",
+    "name": "মোঃ শাকিল হোসেন",
+    "phone": "01304948998",
+    "profession": "প্রবাসী",
+    "blood_group": "B+",
+    "access_role": "executive"
+  },
+  {
+    "serial": 13,
+    "position": "সহ সাধারণ সম্পাদক",
+    "name": "মোঃ আমিনুর খান",
+    "phone": "01832211382",
+    "profession": "চাকুরীজীবী",
+    "blood_group": "A+",
+    "access_role": "executive"
+  },
+  {
+    "serial": 14,
+    "position": "সাংগঠনিক সম্পাদক",
+    "name": "মোঃ মেহেদী হাসান",
+    "phone": "01796297288",
+    "profession": "ছাত্র",
+    "blood_group": "O+",
+    "access_role": "executive"
+  },
+  {
+    "serial": 15,
+    "position": "সহ সাংগঠনিক সম্পাদক",
+    "name": "মোঃ রাকিব হোসেন",
+    "phone": "01604120671",
+    "profession": "ছাত্র",
+    "blood_group": "O+",
+    "access_role": "executive"
+  },
+  {
+    "serial": 16,
+    "position": "প্রচার সম্পাদক",
+    "name": "মোঃ রাজু",
+    "phone": "01783271025",
+    "profession": "ব্যবসায়ী",
+    "blood_group": "O+",
+    "access_role": "executive"
+  },
+  {
+    "serial": 17,
+    "position": "সহ প্রচার সম্পাদক",
+    "name": "মোঃ নাইমুর রহমান",
+    "phone": "01607665941",
+    "profession": "ছাত্র",
+    "blood_group": "O+",
+    "access_role": "executive"
+  },
+  {
+    "serial": 18,
+    "position": "অর্থ সম্পাদক",
+    "name": "মোঃ লোকমান হোসেন",
+    "phone": "01615307141",
+    "profession": "চাকুরীজীবী",
+    "blood_group": "A+",
+    "access_role": "executive"
+  },
+  {
+    "serial": 19,
+    "position": "সহ অর্থ সম্পাদক",
+    "name": "মোঃ মেহেদী হাসান (অনিক)",
+    "phone": "01312133482",
+    "profession": "ছাত্র",
+    "blood_group": "B+",
+    "access_role": "executive"
+  },
+  {
+    "serial": 20,
+    "position": "দপ্তর সম্পাদক",
+    "name": "মির্জা আমিন",
+    "phone": "01641988509",
+    "profession": "ছাত্র",
+    "blood_group": "O+",
+    "access_role": "executive"
+  },
+  {
+    "serial": 21,
+    "position": "সহ দপ্তর সম্পাদক",
+    "name": "মোঃ শামীম মিয়া",
+    "phone": "01303907874",
+    "profession": "ছাত্র",
+    "blood_group": "B+",
+    "access_role": "executive"
+  },
+  {
+    "serial": 22,
+    "position": "ক্রীড়া ও সাংস্কৃতিক সম্পাদক",
+    "name": "মোঃ শফিকুল ইসলাম",
+    "phone": "01307958920",
+    "profession": "ছাত্র",
+    "blood_group": "O+",
+    "access_role": "executive"
+  },
+  {
+    "serial": 23,
+    "position": "শিক্ষা সাহিত্য ও প্রকাশনা সম্পাদক",
+    "name": "মোঃ জাহিদুল ইসলাম",
+    "phone": "01737145337",
+    "profession": "ছাত্র",
+    "blood_group": "A+",
+    "access_role": "executive"
+  },
+  {
+    "serial": 24,
+    "position": "সমাজ কল্যাণ সম্পাদক",
+    "name": "মোঃ সৌরভ হোসেন",
+    "phone": "01646426049",
+    "profession": "ছাত্র",
+    "blood_group": "B+",
+    "access_role": "executive"
+  },
+  {
+    "serial": 25,
+    "position": "ধর্ম সম্পাদক",
+    "name": "মোঃ মোফাজ্জল হোসেন",
+    "phone": "01770839554",
+    "profession": "শিক্ষক",
+    "blood_group": "B+",
+    "access_role": "executive"
+  },
+  {
+    "serial": 26,
+    "position": "স্বাস্থ্য সম্পাদক",
+    "name": "মীম খাতুন",
+    "phone": "01735544075",
+    "profession": "ছাত্রী",
+    "blood_group": "B+",
+    "access_role": "executive"
+  },
+  {
+    "serial": 27,
+    "position": "আইন বিষয়ক সম্পাদক",
+    "name": "মোঃ আরিফুল ইসলাম",
+    "phone": "01762032307",
+    "profession": "ছাত্র",
+    "blood_group": "O+",
+    "access_role": "executive"
+  },
+  {
+    "serial": 28,
+    "position": "তথ্য প্রযুক্তি সম্পাদক",
+    "name": "সাজিদ আহমেদ সামী",
+    "phone": "01627029925",
+    "profession": "ছাত্র",
+    "blood_group": "B+",
+    "access_role": "executive"
+  },
+  {
+    "serial": 29,
+    "position": "ত্রাণ ও দুর্যোগ সম্পাদক",
+    "name": "মোঃ বায়েজিদ খান",
+    "phone": "01761037052",
+    "profession": "ছাত্র",
+    "blood_group": "AB+",
+    "access_role": "executive"
+  },
+  {
+    "serial": 30,
+    "position": "আন্তর্জাতিক সম্পাদক",
+    "name": "মোঃ নিয়াজ রহমান",
+    "phone": "01798736705",
+    "profession": "প্রবাসী",
+    "blood_group": "A+",
+    "access_role": "executive"
+  },
+  {
+    "serial": 31,
+    "position": "পরিবেশ বিষয়ক সম্পাদক",
+    "name": "আবুল কাসেম",
+    "phone": "01646431414",
+    "profession": "ছাত্র",
+    "blood_group": "O+",
+    "access_role": "executive"
+  },
+  {
+    "serial": 32,
+    "position": "মহিলা বিষয়ক সম্পাদক",
+    "name": "অন্তরা হাসান",
+    "phone": "01609702796",
+    "profession": "ছাত্রী",
+    "blood_group": "A+",
+    "access_role": "executive"
+  },
+  {
+    "serial": 33,
+    "position": "সহ মহিলা বিষয়ক সম্পাদক",
+    "name": "খাদিজা খাতুন",
+    "phone": "01776064204",
+    "profession": "ছাত্রী",
+    "blood_group": "B+",
+    "access_role": "executive"
+  },
+  {
+    "serial": 34,
+    "position": "সদস্য",
+    "name": "মোঃ মাহমুদুর রহমান",
+    "phone": "01680025497",
+    "profession": "ব্যবসায়ী",
+    "blood_group": "O+",
+    "access_role": "committee"
+  },
+  {
+    "serial": 35,
+    "position": "সদস্য",
+    "name": "মোঃ জিয়াউর রহমান",
+    "phone": "01710516677",
+    "profession": "ব্যবসায়ী",
+    "blood_group": "B+",
+    "access_role": "committee"
+  },
+  {
+    "serial": 36,
+    "position": "সদস্য",
+    "name": "মোঃ শহিদুল ইসলাম",
+    "phone": "01710652084",
+    "profession": "প্রভাষক",
+    "blood_group": "A+",
+    "access_role": "committee"
+  },
+  {
+    "serial": 37,
+    "position": "সদস্য",
+    "name": "মোঃ নাজমুল হাসান",
+    "phone": "01721084453",
+    "profession": "ব্যবসায়ী",
+    "blood_group": "O+",
+    "access_role": "committee"
+  },
+  {
+    "serial": 38,
+    "position": "সদস্য",
+    "name": "মোঃ তারেক রহমান",
+    "phone": "01719101975",
+    "profession": "ব্যবসায়ী",
+    "blood_group": "AB+",
+    "access_role": "committee"
+  },
+  {
+    "serial": 39,
+    "position": "সদস্য",
+    "name": "মোঃ এনামুল হক",
+    "phone": "01620811188",
+    "profession": "ব্যবসায়ী",
+    "blood_group": "O+",
+    "access_role": "committee"
+  },
+  {
+    "serial": 40,
+    "position": "সদস্য",
+    "name": "সাইমেদুল ইসলাম",
+    "phone": "01867667382",
+    "profession": "ছাত্র",
+    "blood_group": "AB+",
+    "access_role": "committee"
+  },
+  {
+    "serial": 41,
+    "position": "সদস্য",
+    "name": "মোঃ জাহিদুল ইসলাম (সাগর)",
+    "phone": "01682792073",
+    "profession": "চাকুরীজীবী",
+    "blood_group": "O+",
+    "access_role": "committee"
+  },
+  {
+    "serial": 42,
+    "position": "সদস্য",
+    "name": "শামছুনাহার",
+    "phone": "01753676825",
+    "profession": "চাকুরীজীবী",
+    "blood_group": "O+",
+    "access_role": "committee"
+  },
+  {
+    "serial": 43,
+    "position": "সদস্য",
+    "name": "প্রীতি আক্তার",
+    "phone": "01645811176",
+    "profession": "ছাত্রী",
+    "blood_group": "AB+",
+    "access_role": "committee"
+  },
+  {
+    "serial": 44,
+    "position": "সদস্য",
+    "name": "মোঃ ওয়াহেদুজ্জামান রাতুল",
+    "phone": "01313250162",
+    "profession": "ছাত্র",
+    "blood_group": "B+",
+    "access_role": "committee"
+  },
+  {
+    "serial": 45,
+    "position": "সদস্য",
+    "name": "রবি খাতুন",
+    "phone": "01608824137",
+    "profession": "ছাত্রী",
+    "blood_group": "B+",
+    "access_role": "committee"
+  },
+  {
+    "serial": 46,
+    "position": "সদস্য",
+    "name": "লিমন",
+    "phone": "01751709793",
+    "profession": "প্রবাসী",
+    "blood_group": "B+",
+    "access_role": "committee"
+  },
+  {
+    "serial": 47,
+    "position": "সদস্য",
+    "name": "মোছাঃ সানজেদা তাবাচ্ছুম শাপলা",
+    "phone": "01317056631",
+    "profession": "ছাত্রী",
+    "blood_group": "O+",
+    "access_role": "committee"
+  },
+  {
+    "serial": 48,
+    "position": "সদস্য",
+    "name": "মোঃ রবিন",
+    "phone": "01325540958",
+    "profession": "প্রবাসী",
+    "blood_group": "B+",
+    "access_role": "committee"
+  },
+  {
+    "serial": 49,
+    "position": "সদস্য",
+    "name": "রিফাত হোসেন",
+    "phone": "01796324890",
+    "profession": "চাকুরীজীবী",
+    "blood_group": "O+",
+    "access_role": "committee"
+  },
+  {
+    "serial": 50,
+    "position": "সদস্য",
+    "name": "মনিরুল ইসলাম",
+    "phone": "01865468891",
+    "profession": "ছাত্র",
+    "blood_group": "AB+",
+    "access_role": "committee"
+  },
+  {
+    "serial": 51,
+    "position": "সদস্য",
+    "name": "মোঃ আবু নাঈম",
+    "phone": "01890037450",
+    "profession": "ছাত্র",
+    "blood_group": "A+",
+    "access_role": "committee"
+  }
+]
