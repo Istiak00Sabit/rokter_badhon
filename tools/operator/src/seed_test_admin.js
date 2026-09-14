@@ -8,14 +8,25 @@ import {
 import { bootstrapDeveloperAdmin } from './developer_admin.js';
 
 export const LOCAL_TEST_ADMIN = Object.freeze({
-  email: 'admin@test.rokterbadhon.local',
-  password: 'LocalTestAdmin!2026',
+  email: 'a@a.com',
+  password: '1',
+  firebasePassword: '111111',
   name: 'Local Test Admin',
   phone: '01000000000',
 });
 
 function isMissingAuthUser(error) {
   return error?.code === 'auth/user-not-found';
+}
+
+async function createLocalAuthUser(auth) {
+  return auth.createUser({
+    email: LOCAL_TEST_ADMIN.email,
+    password: LOCAL_TEST_ADMIN.firebasePassword,
+    emailVerified: true,
+    disabled: false,
+    displayName: LOCAL_TEST_ADMIN.name,
+  });
 }
 
 function sameProjection(user, directory) {
@@ -41,17 +52,11 @@ export async function seedLocalTestAdmin({
     authRecord = await auth.getUserByEmail(LOCAL_TEST_ADMIN.email);
   } catch (error) {
     if (!isMissingAuthUser(error)) throw error;
-    authRecord = await auth.createUser({
-      email: LOCAL_TEST_ADMIN.email,
-      password: LOCAL_TEST_ADMIN.password,
-      emailVerified: true,
-      disabled: false,
-      displayName: LOCAL_TEST_ADMIN.name,
-    });
+    authRecord = await createLocalAuthUser(auth);
   }
 
   authRecord = await auth.updateUser(authRecord.uid, {
-    password: LOCAL_TEST_ADMIN.password,
+    password: LOCAL_TEST_ADMIN.firebasePassword,
     emailVerified: true,
     disabled: false,
     displayName: LOCAL_TEST_ADMIN.name,

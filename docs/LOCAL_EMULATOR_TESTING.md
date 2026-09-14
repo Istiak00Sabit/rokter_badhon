@@ -4,8 +4,8 @@ This workflow is development-only. It uses the Firebase demo project ID and both
 
 The fixed credentials below are intentionally public local-test credentials. Never reuse this password for a real account.
 
-- Email: `admin@test.rokterbadhon.local`
-- Password: `LocalTestAdmin!2026`
+- Email: `a@a.com`
+- Password: `1`
 - Auth state: enabled and email-verified
 - Application state: `developer_admin`, `active = true`, `login_enabled = true`
 
@@ -43,3 +43,5 @@ flutter run --dart-define=USE_FIREBASE_EMULATOR=true --dart-define=FIREBASE_EMUL
 ```
 
 With `USE_FIREBASE_EMULATOR` absent or false, the app keeps its existing normal Firebase configuration. Emulator mode changes only Firebase endpoints; it does not bypass email verification, AuthLink resolution, User state, login enablement, role recognition, or Firestore Rules.
+
+Firebase itself requires stored email/password identities to use at least six password characters. The development-only runtime maps the exact local credential `a@a.com` / `1` to the seeded emulator identity's Firebase-compatible password. This adapter is compiled out of the normal path unless `USE_FIREBASE_EMULATOR=true`; it does not alter any admission or authorization check.

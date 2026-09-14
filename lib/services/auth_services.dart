@@ -5,6 +5,7 @@ import '../models/auth_link_model.dart';
 import '../models/auth_session.dart';
 import '../models/registration_request_model.dart';
 import '../models/user_model.dart';
+import '../config/firebase_runtime_config.dart';
 
 enum RegistrationSubmissionState {
   submitted,
@@ -149,8 +150,12 @@ class AuthService {
     try {
       final credential = await _auth.signInWithEmailAndPassword(
         email: email.trim(),
-        // Passwords are passed to Firebase exactly as entered.
-        password: password,
+        // Production passes passwords through; the explicit emulator build
+        // adapts only the documented one-character local test credential.
+        password: FirebaseRuntimeConfig.passwordForAuth(
+          email: email,
+          password: password,
+        ),
       );
       return resolveSession(firebaseUser: credential.user);
     } on FirebaseAuthException catch (error) {

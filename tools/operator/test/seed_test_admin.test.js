@@ -17,7 +17,7 @@ class SeedAuth extends FakeAuth {
   }
 
   async createUser(input) {
-    const record = { uid: 'local-admin-auth', ...input };
+    const record = { uid: 'local-test-admin-auth', ...input };
     this.users.set(record.uid, record);
     return record;
   }
@@ -30,6 +30,8 @@ class SeedAuth extends FakeAuth {
 }
 
 test('local seed creates a verified identity satisfying the normal admission gates', async () => {
+  assert.equal(LOCAL_TEST_ADMIN.email, 'a@a.com');
+  assert.equal(LOCAL_TEST_ADMIN.password, '1');
   const db = new FakeFirestore();
   const auth = new SeedAuth();
   const result = await seedLocalTestAdmin({
@@ -38,14 +40,15 @@ test('local seed creates a verified identity satisfying the normal admission gat
     auth,
     serverTimestamp: () => SERVER_TIME,
   });
-  const authRecord = await auth.getUser('local-admin-auth');
-  const link = db.documents.get('auth_links/local-admin-auth');
+  const authRecord = await auth.getUser('local-test-admin-auth');
+  const link = db.documents.get('auth_links/local-test-admin-auth');
   const user = db.documents.get(`users/${result.userId}`);
   const directory = db.documents.get(`user_directory/${result.userId}`);
 
   assert.equal(authRecord.email, LOCAL_TEST_ADMIN.email);
   assert.equal(authRecord.emailVerified, true);
   assert.equal(authRecord.disabled, false);
+  assert.equal(authRecord.password, LOCAL_TEST_ADMIN.firebasePassword);
   assert.deepEqual(new Set(Object.keys(link)), schemaFields.link);
   assert.deepEqual(new Set(Object.keys(user)), schemaFields.user);
   assert.deepEqual(new Set(Object.keys(directory)), schemaFields.directory);
