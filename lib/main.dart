@@ -8,11 +8,13 @@ import 'constants/app_themes.dart';
 import 'views/splash_screen.dart';
 import 'controllers/localization_controller.dart';
 import 'localization/app_translations.dart';
+import 'config/firebase_runtime_config.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('bn');
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await FirebaseRuntimeConfig.connectEmulators();
   Get.put(await LocalizationController.create(), permanent: true);
   runApp(const MyApp());
 }

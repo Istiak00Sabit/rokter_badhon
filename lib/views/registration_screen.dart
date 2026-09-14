@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../constants/app_colors.dart';
 import '../models/registration_request_model.dart';
 import '../services/auth_services.dart';
+import '../widgets/auth_language_switch.dart';
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
@@ -144,9 +145,15 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text('registration_request'.tr),
+        title: Text('register'.tr),
         backgroundColor: AppColors.primary,
         foregroundColor: AppColors.white,
+        actions: const [
+          Padding(
+            padding: EdgeInsets.only(right: 8),
+            child: AuthLanguageSwitch(onPrimary: true),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
@@ -165,7 +172,19 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               ),
               ElevatedButton(
                 onPressed: _loading ? null : _register,
-                child: Text('submit_registration'.tr),
+                child: Text('register'.tr),
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                alignment: WrapAlignment.center,
+                children: [
+                  Text('already_registered'.tr),
+                  TextButton(
+                    onPressed: Get.back,
+                    child: Text('login'.tr),
+                  ),
+                ],
               ),
             ],
             if (signedIn) ...[

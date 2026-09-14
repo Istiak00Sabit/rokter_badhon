@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import '../constants/app_colors.dart';
 import '../controllers/auth_controller.dart';
 import 'registration_screen.dart';
+import '../widgets/auth_language_switch.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -33,35 +34,49 @@ class LoginScreen extends StatelessWidget {
                     bottomRight: Radius.circular(40),
                   ),
                 ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                child: Stack(
                   children: [
-                    Container(
-                      width: 90,
-                      height: 90,
-                      decoration: BoxDecoration(
-                        color: AppColors.white.withValues(alpha: 0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.water_drop,
-                        size: 50,
-                        color: AppColors.white,
-                      ),
+                    const Positioned(
+                      top: 12,
+                      right: 12,
+                      child: AuthLanguageSwitch(onPrimary: true),
                     ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'app_name'.tr,
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.white,
+                    Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 90,
+                            height: 90,
+                            decoration: BoxDecoration(
+                              color: AppColors.white.withValues(alpha: 0.2),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.water_drop,
+                              size: 50,
+                              color: AppColors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'app_name'.tr,
+                            style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'org_location'.tr,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: AppColors.white,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'org_location'.tr,
-                      style: TextStyle(fontSize: 14, color: AppColors.white),
                     ),
                   ],
                 ),
@@ -246,10 +261,17 @@ class LoginScreen extends StatelessWidget {
                       const SizedBox(height: 30),
 
                       Center(
-                        child: TextButton(
-                          onPressed: () =>
-                              Get.to(() => const RegistrationScreen()),
-                          child: Text('request_account'.tr),
+                        child: Wrap(
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          alignment: WrapAlignment.center,
+                          children: [
+                            Text('new_user'.tr),
+                            TextButton(
+                              onPressed: () =>
+                                  Get.to(() => const RegistrationScreen()),
+                              child: Text('register'.tr),
+                            ),
+                          ],
                         ),
                       ),
 

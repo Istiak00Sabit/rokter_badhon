@@ -39,6 +39,7 @@ import {
   updateEvent,
 } from './src/event.js';
 import { assertSafeTarget } from './src/safety.js';
+import { LOCAL_TEST_ADMIN, seedLocalTestAdmin } from './src/seed_test_admin.js';
 
 function parseArguments(values) {
   const [command, ...rest] = values;
@@ -97,7 +98,15 @@ async function main() {
   };
 
   let result;
-  if (command === 'approve') {
+  if (command === 'seed-test-admin') {
+    result = await seedLocalTestAdmin({
+      projectId,
+      db: dependencies.db,
+      auth: dependencies.auth,
+      serverTimestamp: dependencies.serverTimestamp,
+    });
+    console.log(`LOCAL EMULATOR TEST account: ${LOCAL_TEST_ADMIN.email} / ${LOCAL_TEST_ADMIN.password}`);
+  } else if (command === 'approve') {
     result = await approveRegistration({
       ...dependencies,
       targetRole: options['target-role'],

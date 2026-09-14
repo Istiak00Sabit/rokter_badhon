@@ -15,7 +15,46 @@ void main() {
     expect(english['event_type.meeting'], 'Meeting');
     expect(bangla['position.general_secretary'], isNotNull);
     expect(english['position.general_secretary'], 'General Secretary');
+    for (final key in [
+      'login',
+      'register',
+      'email',
+      'password',
+      'confirm_password',
+      'forgot_password',
+    ]) {
+      expect(bangla[key], english[key]);
+    }
   });
+
+  test(
+    'auth screens expose the shared visible language switch and common labels',
+    () {
+      final login = File('lib/views/login_screen.dart').readAsStringSync();
+      final registration = File(
+        'lib/views/registration_screen.dart',
+      ).readAsStringSync();
+      expect(login, contains('AuthLanguageSwitch(onPrimary: true)'));
+      expect(registration, contains('AuthLanguageSwitch(onPrimary: true)'));
+      expect(login, contains("'login'.tr"));
+      expect(login, contains("'register'.tr"));
+      expect(registration, contains("'register'.tr"));
+    },
+  );
+
+  test(
+    'Firebase emulator mode is explicit and leaves production as the default',
+    () {
+      final config = File(
+        'lib/config/firebase_runtime_config.dart',
+      ).readAsStringSync();
+      expect(config, contains("'USE_FIREBASE_EMULATOR'"));
+      expect(config, contains('defaultValue: false'));
+      expect(config, contains('if (!useEmulators) return'));
+      expect(config, contains('useAuthEmulator'));
+      expect(config, contains('useFirestoreEmulator'));
+    },
+  );
 
   test('first launch and invalid preference fall back to Bangla', () {
     final controller = File(

@@ -27,8 +27,7 @@ class LocalizationController extends GetxController {
     final normalized = language == AppTranslations.english
         ? AppTranslations.english
         : AppTranslations.bangla;
-    await _preferences.setString(_preferenceKey, normalized);
     locale.value = Locale(normalized);
-    await Get.updateLocale(locale.value);
+    await _preferences.setString(_preferenceKey, normalized);
   }
 }
