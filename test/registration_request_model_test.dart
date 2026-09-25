@@ -7,6 +7,9 @@ Map<String, dynamic> validRequest({Map<String, dynamic> changes = const {}}) => 
   'name': 'Applicant',
   'phone': '00000000000',
   'email': 'applicant@example.test',
+  'blood_group': 'A+',
+  'profession': 'Teacher',
+  'address': 'Address',
   'status': 'pending',
   'requested_at': Timestamp.fromMillisecondsSinceEpoch(1700000000000),
   'approved_by': null,
@@ -60,6 +63,9 @@ void main() {
           'name': 'Applicant',
           'phone': '00000000000',
           'email': 'applicant@example.test',
+          'blood_group': 'A+',
+          'profession': 'Teacher',
+          'address': 'Address',
           field: null,
         }),
         throwsFormatException,
@@ -101,11 +107,14 @@ void main() {
   test('registration creation payload binds UID, email, pending, and null decisions', () {
     final payload = RegistrationRequestPayload.create(
       authUid: 'auth-uid',
-      authenticatedEmail: 'applicant@example.test',
+      internalAuthEmail: 'p01700000000@auth.rokterbadhon.internal',
       applicant: const RegistrationApplicantInput(
         name: 'Applicant',
-        phone: '00000000000',
+        phone: '01700000000',
         email: 'applicant@example.test',
+        bloodGroup: 'A+',
+        profession: 'Teacher',
+        address: 'Address',
       ),
     );
     expect(payload.keys.toSet(), RegistrationRequestModel.fields);
@@ -121,17 +130,15 @@ void main() {
     ]) {
       expect(payload[key], isNull);
     }
-    expect(
-      () => RegistrationRequestPayload.create(
+    final optionalEmailPayload = RegistrationRequestPayload.create(
         authUid: 'auth-uid',
-        authenticatedEmail: 'firebase@example.test',
+        internalAuthEmail: 'p01700000000@auth.rokterbadhon.internal',
         applicant: const RegistrationApplicantInput(
           name: 'Applicant',
-          phone: '0',
-          email: 'different@example.test',
+          phone: '01700000000',
+          email: null,
         ),
-      ),
-      throwsFormatException,
-    );
+      );
+    expect(optionalEmailPayload['email'], isNull);
   });
 }

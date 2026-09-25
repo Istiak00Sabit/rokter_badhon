@@ -16,7 +16,8 @@ const projection = u => Object.fromEntries(['name','phone','blood_group','profes
 const db = (uid = 'auth-own', claims = {}) => env.authenticatedContext(uid,
   { email: `${uid}@example.test`, email_verified: true, ...claims }).firestore();
 const request = (extra = {}) => ({ auth_uid: 'applicant', name: 'Synthetic Applicant', phone: '00000000001',
-  email: 'applicant@example.test', status: 'pending', requested_at: serverTimestamp(),
+  email: 'applicant@example.test', blood_group: 'A+', profession: 'Teacher', address: 'Address',
+  status: 'pending', requested_at: serverTimestamp(),
   approved_by: null, approved_at: null, rejected_by: null, rejected_at: null, linked_user_id: null, ...extra });
 const metadata = () => ({ updated_at: serverTimestamp(), updated_by: 'person-own' });
 async function seed(path, data) {
@@ -66,10 +67,10 @@ test('unverified unlinked requester creates and gets own request, including term
   await assertFails(getDoc(doc(c, 'users/person-own')));
   await assertFails(getDoc(doc(c, 'user_directory/person-own')));
 });
-test('registration wrong path, forged identity/email/state/time/decision and extra fields denied', async () => {
+test('registration wrong path, forged identity/state/time/decision and extra fields denied', async () => {
   const c = db('applicant');
   await assertFails(setDoc(doc(c, 'registration_requests/other'), request()));
-  for (const extra of [{ auth_uid: 'other' }, { email: 'other@example.test' }, { status: 'approved' },
+  for (const extra of [{ auth_uid: 'other' }, { status: 'approved' },
     { requested_at: stamp }, { approved_by: 'person-own' }, { approved_at: stamp }, { rejected_by: 'x' },
     { rejected_at: stamp }, { linked_user_id: 'person-own' }, { access_role: 'leader' }, { active: true },
     { login_enabled: true }, { position: 'president' }, { password: 'synthetic' }, { name: 42 }, { phone: null }]) {
@@ -79,7 +80,7 @@ test('registration wrong path, forged identity/email/state/time/decision and ext
     const data = request(); delete data[field];
     await assertFails(setDoc(doc(c, 'registration_requests/applicant'), data));
   }
-  await assertFails(setDoc(doc(db('applicant', { email: null }), 'registration_requests/applicant'), request()));
+  await assertSucceeds(setDoc(doc(db('applicant', { email: null }), 'registration_requests/applicant'), request({ email: null })));
 });
 test('registration overwrite/update/delete/list/other read denied', async () => {
   const c = db('applicant'); const ref = doc(c, 'registration_requests/applicant');
@@ -123,8 +124,6 @@ test('own auth link get allowed before admission; other get/list/all writes deni
   await assertFails(setDoc(doc(db('missing'), 'auth_links/missing'), { active: true, user_id: 'person-own' }));
 });
 const badGates = [
-  ['unverified', null, null, { email_verified: false }],
-  ['missing verification', null, null, { email_verified: null }],
   ['inactive link', { user_id: 'person-own', active: false }],
   ['missing link active', { user_id: 'person-own' }],
   ['malformed link active', { user_id: 'person-own', active: 'true' }],
@@ -170,9 +169,9 @@ for (const role of ['developer_admin','leader','executive','committee','member']
     await assertSucceeds(batchProfile({ name: 'Changed' }));
   });
 }
-for (const [field, value] of Object.entries({ name: 'Changed', phone: '00000000002', blood_group: 'B+', profession: 'Teacher', address: 'Synthetic Address', preferred_language: 'bn' })) {
+for (const [field, value] of Object.entries({ name: 'Changed', email: 'updated@example.test', blood_group: 'B+', profession: 'Teacher', address: 'Synthetic Address', preferred_language: 'bn' })) {
   test(`allowed own profile ${field} with bound metadata and exact projection`, async () => {
-    if (['address','preferred_language'].includes(field)) {
+    if (['address','preferred_language','email'].includes(field)) {
       await assertSucceeds(updateDoc(doc(db(), 'users/person-own'), { [field]: value, ...metadata() }));
     } else await assertSucceeds(batchProfile({ [field]: value }));
     const u = (await getDoc(doc(db(), 'users/person-own'))).data();
@@ -182,8 +181,8 @@ for (const [field, value] of Object.entries({ name: 'Changed', phone: '000000000
   });
 }
 test('security, identity, photo, creation, extra fields and malformed profile denied', async () => {
-  for (const extra of [{ access_role: 'leader' }, { active: false }, { login_enabled: false }, { email: 'x@example.test' },
-    { photo_url: 'https://example.test/photo' }, { auth_uid: 'x' }, { role: 'admin' }, { position: 'president' },
+  for (const extra of [{ access_role: 'leader' }, { active: false }, { login_enabled: false },
+    { phone: '00000000002' }, { photo_url: 'https://example.test/photo' }, { auth_uid: 'x' }, { role: 'admin' }, { position: 'president' },
     { created_at: serverTimestamp() }, { created_by: 'person-own' }, { name: 12 }, { address: 12 },
     { phone: deleteField() }, { preferred_language: false }]) {
     await assertFails(updateDoc(doc(db(), 'users/person-own'), { address: 'Changed', ...metadata(), ...extra }));
@@ -437,6 +436,11 @@ test('active donor cannot be fabricated directly and existing donor profile edit
   await assertFails(setDoc(ref, donor())); // Replacing creation timestamps is not a profile edit.
   await seed('donors/legacy-invalid', donor({ phone: 42, created_at: stamp, updated_at: stamp }));
   await assertFails(updateDoc(doc(db(), 'donors/legacy-invalid'), { phone: '00000000000', ...metadata() }));
+});
+test('email verification is not required for an already linked active User', async () => {
+  const c = db('auth-own', { email_verified: false });
+  await assertSucceeds(getDoc(doc(c, 'users/person-own')));
+  await assertSucceeds(getDoc(doc(c, 'user_directory/person-own')));
 });
 
 for (const role of ['committee','executive','leader']) {

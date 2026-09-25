@@ -7,6 +7,21 @@ Status: FROZEN FOR IMPLEMENTATION
 
 ## 1. User
 
+## Current authentication/data-model override
+
+`users.phone` is the normalized login phone and `users.email` is an optional
+real profile email. Firebase Auth uses the private deterministic identity
+`p<normalized-phone>@auth.rokterbadhon.internal`; that identity is not stored
+as public profile email and no password or password hash is stored in any
+Firestore collection. Admission does not depend on email verification.
+
+Normal registration requests contain name, phone, optional email,
+blood_group, profession, and address with pending-only decision metadata.
+Trusted committee provisioning from `data/committee_2025_2027.json` creates
+Auth accounts, strict Users, directory projections, auth links, the
+2025-2027 term assignments, and audit logs. No committee registration request
+is created, and `users.access_role`—not assignment position—controls access.
+
 Collection:
 
 users/{userId}
@@ -47,7 +62,7 @@ users.access_role is the ONLY current application authorization authority. Valid
 
 User must not contain committee position, committee_year, or auth_uid. It must not duplicate the authentication mapping.
 
-All admitted Users may read their own User. Own-profile input may change only name, phone, blood_group, profession, address, and preferred_language. photo_url is initially operational/provider-controlled. It may not change email, roles, active/login state, creation metadata, audit actors, or auth links. Rules-bound updated_at/updated_by are effects of the own-profile Q exception; privileged changes use trusted execution. Email/account-identity changes need a separate authenticated identity workflow.
+All admitted Users may read their own User. Own-profile input may change only name, optional email, blood_group, profession, address, and preferred_language. The phone remains the login identifier and is not re-keyed by normal profile editing; phone re-keying is trusted-operator work. photo_url is initially operational/provider-controlled. Roles, active/login state, creation metadata, audit actors, and auth links remain protected. Rules-bound updated_at/updated_by are effects of the own-profile Q exception; privileged changes use trusted execution.
 
 Missing or malformed access_role, active, or login_enabled must fail closed. Migration must not infer privileges from absent values.
 
@@ -172,6 +187,13 @@ users/{userId}
 
 ## 5. Registration Request
 
+Current request fields are `auth_uid`, `name`, `phone`, optional `email`,
+optional `blood_group`, optional `profession`, optional `address`, `status`,
+`requested_at`, and the null/decision fields
+`approved_by`, `approved_at`, `rejected_by`, `rejected_at`, and
+`linked_user_id`. Firebase Auth's reserved internal email is not copied into
+this document. Passwords and password hashes are never request fields.
+
 Collection:
 
 registration_requests/{firebaseAuthUid}
@@ -182,7 +204,10 @@ auth_uid: string
 
 name: string
 phone: string
-email: string
+email: string | null
+blood_group: string | null
+profession: string | null
+address: string | null
 
 status: string
 
@@ -209,7 +234,7 @@ Applicants must not select:
 
 Positions and access roles are assigned only through their respective authorized management workflows. A committee assignment is optional and is not a prerequisite for approving an ordinary member.
 
-The Firebase-authenticated requester must have NO auth_links/{request.auth.uid} document of any state. E is not an application role. The requester may create only registration_requests/{request.auth.uid}, with applicant-editable name, phone and email. Rules require the complete exact stored schema: auth_uid == request.auth.uid; email == authenticated Firebase token email; status == "pending"; requested_at == request.time using serverTimestamp; approved_by, approved_at, rejected_by, rejected_at and linked_user_id all null. No extra fields, overwrite, applicant update/delete/list or other request access is allowed. The client supplies structural fields, but Rules enforce their single permitted values; they are not applicant choices. Email verification is not required for E, but remains required before approval and protected admission. Own status get remains permitted while unlinked; a present inactive/broken link requires recovery. E grants no private User, directory, committee, donor, donation, notice, blood-request, event or media access. Approval/rejection and all linking remain trusted execution.
+The Firebase-authenticated requester must have NO auth_links/{request.auth.uid} document of any state. E is not an application role. The requester may create only registration_requests/{request.auth.uid}, with applicant-editable name, phone, optional email, blood_group, profession, and address. Rules require the complete exact stored schema: auth_uid == request.auth.uid; status == "pending"; requested_at == request.time using serverTimestamp; approved_by, approved_at, rejected_by, rejected_at and linked_user_id all null. No extra fields, overwrite, applicant update/delete/list or other request access is allowed. Email verification is not required. Own status get remains permitted while unlinked; a present inactive/broken link requires recovery. E grants no private User, directory, committee, donor, donation, notice, blood-request, event or media access. Approval/rejection and all linking remain trusted execution.
 
 
 ---
@@ -461,7 +486,7 @@ Inactive/missing directory entries must not trigger a fallback read of someone e
 
 Q preserves exact User/directory equality. Privileged User creation/state/security/photo changes and projection backfill/repair use trusted execution: reread current authoritative User, validate the originating capability, and commit the User, exact six-field directory projection and required audit evidence atomically. No stale asynchronous repair is allowed.
 
-Free-V1 exception: an admitted caller may update an existing own User's name, phone, blood_group, profession, address and preferred_language only. Rules bind updated_at to request.time (serverTimestamp) and updated_by to the resolved own User ID; those metadata effects are not applicant-selected audit authority. photo_url remains operational/provider-controlled. Email, roles, active/login, links, creation metadata and all other security fields remain immutable in this client path.
+Free-V1 exception: an admitted caller may update an existing own User's name, optional email, blood_group, profession, address and preferred_language only. The login phone is immutable in this client path so the deterministic Auth identity cannot be changed without trusted re-keying. Rules bind updated_at to request.time (serverTimestamp) and updated_by to the resolved own User ID; those metadata effects are not applicant-selected audit authority. photo_url remains operational/provider-controlled. Roles, active/login, links, creation metadata and all other security fields remain immutable in this client path.
 
 For a directory-visible change, an atomic batch/transaction must include both users/{ownUserId} and user_directory/{ownUserId}. Rules use getAfter() to prove the directory post-state equals exactly name, phone, blood_group, profession, photo_url, active from the authoritative User post-state, with no extra fields. Both existing pre-state documents must be valid and synchronized; clients cannot create a missing projection or repair corruption. The directory rule independently binds the actor, exact own path, originating allowed User change and post-state metadata. No other-user, standalone, forged or stale directory writes pass. Non-directory-only edits may omit a directory write if exact post-state equality remains true.
 

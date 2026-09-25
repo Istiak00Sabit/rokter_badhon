@@ -78,7 +78,7 @@ class UserService {
     final requested = input.toMap();
     final currentEditable = {
       'name': currentUser.name,
-      'phone': currentUser.phone,
+      'email': currentUser.email,
       'blood_group': currentUser.bloodGroup,
       'profession': currentUser.profession,
       'address': currentUser.address,

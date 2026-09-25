@@ -1,13 +1,16 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 
 import '../models/auth_link_model.dart';
 import '../models/auth_session.dart';
 import '../models/registration_request_model.dart';
 import '../models/user_model.dart';
+import 'auth_identity.dart';
 
 enum RegistrationSubmissionState {
   submitted,
+  @Deprecated('Email verification is not part of admission.')
   submittedVerificationEmailFailed,
   submittedSignOutFailed,
   authCreatedRequestFailed,
@@ -34,9 +37,17 @@ class RegistrationSubmissionResult {
 
 class RegistrationIdentity {
   final String uid;
-  final String email;
+  final String internalEmail;
 
-  const RegistrationIdentity({required this.uid, required this.email});
+  const RegistrationIdentity({
+    required this.uid,
+    String? internalEmail,
+    String? email,
+  }) : internalEmail = internalEmail ?? email ?? '';
+
+  // Compatibility accessor.  This is always the reserved Firebase identity,
+  // never the user's optional public profile email.
+  String get email => internalEmail;
 }
 
 class RegistrationWorkflow {
@@ -45,8 +56,7 @@ class RegistrationWorkflow {
   static Future<RegistrationSubmissionResult> createAndSubmit({
     required RegistrationApplicantInput applicant,
     required Future<RegistrationIdentity> Function() createIdentity,
-    required Future<void> Function(RegistrationIdentity identity)
-    sendVerification,
+    Future<void> Function(RegistrationIdentity identity)? sendVerification,
     required Future<void> Function(
       RegistrationIdentity identity,
       Map<String, dynamic> payload,
@@ -64,25 +74,26 @@ class RegistrationWorkflow {
       );
     }
 
-    var verificationSent = false;
-    try {
-      await sendVerification(identity);
-      verificationSent = true;
-    } catch (_) {
-      // Request submission remains recoverable when email delivery fails.
+    final normalizedPhone = AuthIdentity.normalizePhone(applicant.phone);
+    if (identity.internalEmail != AuthIdentity.internalEmailForPhone(normalizedPhone)) {
+      return RegistrationSubmissionResult(
+        RegistrationSubmissionState.failed,
+        error: StateError('Firebase Auth identity does not match the phone.'),
+      );
     }
 
     return submitExisting(
       identity: identity,
       applicant: RegistrationApplicantInput(
         name: applicant.name,
-        phone: applicant.phone,
-        // Firebase Auth's returned email is authoritative for Rules binding.
-        email: identity.email,
+        phone: normalizedPhone,
+        email: applicant.email,
+        bloodGroup: applicant.bloodGroup,
+        profession: applicant.profession,
+        address: applicant.address,
       ),
       writeRequest: writeRequest,
       signOut: signOut,
-      emailVerificationSent: verificationSent,
     );
   }
 
@@ -95,20 +106,29 @@ class RegistrationWorkflow {
     )
     writeRequest,
     required Future<void> Function() signOut,
-    bool emailVerificationSent = true,
   }) async {
     try {
+      final normalizedPhone = AuthIdentity.normalizePhone(applicant.phone);
+      if (identity.internalEmail != AuthIdentity.internalEmailForPhone(normalizedPhone)) {
+        throw const FormatException('Firebase Auth identity does not match the phone.');
+      }
       final payload = RegistrationRequestPayload.create(
         authUid: identity.uid,
-        authenticatedEmail: identity.email,
-        applicant: applicant,
+        internalAuthEmail: identity.internalEmail,
+        applicant: RegistrationApplicantInput(
+          name: applicant.name,
+          phone: normalizedPhone,
+          email: applicant.email,
+          bloodGroup: applicant.bloodGroup,
+          profession: applicant.profession,
+          address: applicant.address,
+        ),
       );
       await writeRequest(identity, payload);
     } catch (error) {
       return RegistrationSubmissionResult(
         RegistrationSubmissionState.authCreatedRequestFailed,
         error: error,
-        emailVerificationSent: emailVerificationSent,
       );
     }
 
@@ -118,15 +138,11 @@ class RegistrationWorkflow {
       return RegistrationSubmissionResult(
         RegistrationSubmissionState.submittedSignOutFailed,
         error: error,
-        emailVerificationSent: emailVerificationSent,
       );
     }
 
     return RegistrationSubmissionResult(
-      emailVerificationSent
-          ? RegistrationSubmissionState.submitted
-          : RegistrationSubmissionState.submittedVerificationEmailFailed,
-      emailVerificationSent: emailVerificationSent,
+      RegistrationSubmissionState.submitted,
     );
   }
 }
@@ -143,18 +159,21 @@ class AuthService {
   bool get isLoggedIn => currentUser != null;
 
   Future<AuthSessionResult> login({
-    required String email,
+    required String phone,
     required String password,
   }) async {
     try {
+      final internalEmail = AuthIdentity.internalEmailForPhone(phone);
       final credential = await _auth.signInWithEmailAndPassword(
-        email: email.trim(),
+        email: internalEmail,
         password: password,
       );
       return resolveSession(firebaseUser: credential.user);
     } on FirebaseAuthException catch (error) {
+      _logAuthFailure('sign-in', error);
       return AuthSessionResult(AuthSessionState.error, error: error);
     } catch (error) {
+      _logAuthFailure('sign-in', error);
       return AuthSessionResult(AuthSessionState.error, error: error);
     }
   }
@@ -171,10 +190,6 @@ class AuthService {
       if (refreshedUser == null) {
         return const AuthSessionResult(AuthSessionState.unauthenticated);
       }
-      if (!refreshedUser.emailVerified) {
-        return const AuthSessionResult(AuthSessionState.emailUnverified);
-      }
-
       final linkDocument = await _firestore
           .collection('auth_links')
           .doc(refreshedUser.uid)
@@ -201,7 +216,6 @@ class AuthService {
       final user = UserModel.fromMap(userData, userDocument.id);
       final state = AuthSessionPolicy.evaluate(
         authenticated: true,
-        emailVerified: true,
         linkDocumentExists: true,
         link: link,
         userDocumentExists: true,
@@ -214,10 +228,13 @@ class AuthService {
     } on FirebaseException catch (error) {
       // Permission and network failures are operational errors, never a
       // fabricated missing-User result.
+      _logAuthFailure('session-check', error);
       return AuthSessionResult(AuthSessionState.error, error: error);
     } on FormatException catch (error) {
+      _logAuthFailure('session-parse', error);
       return AuthSessionResult(AuthSessionState.error, error: error);
     } catch (error) {
+      _logAuthFailure('session-check', error);
       return AuthSessionResult(AuthSessionState.error, error: error);
     }
   }
@@ -227,39 +244,41 @@ class AuthService {
     return result.isAdmitted ? result.user : null;
   }
 
-  Future<void> sendPasswordResetEmail(String email) {
-    return _auth.sendPasswordResetEmail(email: email.trim());
-  }
-
   Future<RegistrationSubmissionResult> register({
     required String name,
     required String phone,
-    required String email,
+    String? email,
     required String password,
+    String? bloodGroup,
+    String? profession,
+    String? address,
   }) async {
     User? createdUser;
+    final normalizedPhone = AuthIdentity.normalizePhone(phone);
+    final internalEmail = AuthIdentity.internalEmailForPhone(normalizedPhone);
     return RegistrationWorkflow.createAndSubmit(
       applicant: RegistrationApplicantInput(
         name: name.trim(),
-        phone: phone.trim(),
-        email: email.trim(),
+        phone: normalizedPhone,
+        email: _nullableTrim(email),
+        bloodGroup: _nullableTrim(bloodGroup),
+        profession: _nullableTrim(profession),
+        address: _nullableTrim(address),
       ),
       createIdentity: () async {
         final credential = await _auth.createUserWithEmailAndPassword(
-          email: email.trim(),
+          email: internalEmail,
           password: password,
         );
         createdUser = credential.user;
-        final authenticatedEmail = createdUser?.email;
-        if (createdUser == null || authenticatedEmail == null) {
+        if (createdUser == null || createdUser!.email != internalEmail) {
           throw StateError('Firebase Auth did not return an account identity.');
         }
         return RegistrationIdentity(
           uid: createdUser!.uid,
-          email: authenticatedEmail,
+          internalEmail: internalEmail,
         );
       },
-      sendVerification: (_) => createdUser!.sendEmailVerification(),
       writeRequest: (identity, payload) => _firestore
           .collection('registration_requests')
           .doc(identity.uid)
@@ -283,18 +302,29 @@ class AuthService {
   Future<RegistrationSubmissionResult> submitOwnRegistrationRequest({
     required String name,
     required String phone,
+    String? email,
+    String? bloodGroup,
+    String? profession,
+    String? address,
   }) async {
     final user = _auth.currentUser;
-    final email = user?.email;
-    if (user == null || email == null) {
-      throw StateError('An authenticated account with email is required.');
+    if (user == null || user.email == null) {
+      throw StateError('An authenticated Firebase account is required.');
+    }
+    final normalizedPhone = AuthIdentity.normalizePhone(phone);
+    final internalEmail = AuthIdentity.internalEmailForPhone(normalizedPhone);
+    if (user.email != internalEmail) {
+      throw StateError('Phone does not match the Firebase Auth identity.');
     }
     return RegistrationWorkflow.submitExisting(
-      identity: RegistrationIdentity(uid: user.uid, email: email),
+      identity: RegistrationIdentity(uid: user.uid, internalEmail: internalEmail),
       applicant: RegistrationApplicantInput(
         name: name.trim(),
-        phone: phone.trim(),
-        email: email,
+        phone: normalizedPhone,
+        email: _nullableTrim(email),
+        bloodGroup: _nullableTrim(bloodGroup),
+        profession: _nullableTrim(profession),
+        address: _nullableTrim(address),
       ),
       writeRequest: (identity, payload) => _firestore
           .collection('registration_requests')
@@ -304,30 +334,26 @@ class AuthService {
     );
   }
 
-  Future<bool> refreshEmailVerification() async {
-    final user = _auth.currentUser;
-    if (user == null) throw StateError('Authentication is required.');
-    await user.reload();
-    return _auth.currentUser?.emailVerified ?? false;
-  }
-
-  Future<void> resendEmailVerification() async {
-    final user = _auth.currentUser;
-    if (user == null) throw StateError('Authentication is required.');
-    await user.sendEmailVerification();
-  }
-
   Future<void> logout() => _auth.signOut();
 
   String authErrorCode(Object? error) {
-    if (error is! FirebaseAuthException) {
-      return 'auth_check_failed';
-    }
-    switch (error.code) {
+    return mapAuthErrorCode(error);
+  }
+
+  static String mapAuthErrorCode(Object? error) {
+    final code = switch (error) {
+      FirebaseAuthException authError => authError.code,
+      FirebaseException firebaseError => firebaseError.code,
+      _ => null,
+    };
+    if (code == null) return 'auth_check_failed';
+    switch (code) {
       case 'user-not-found':
-        return 'auth_user_not_found';
+      case 'invalid-password':
       case 'wrong-password':
       case 'invalid-credential':
+        // Avoid revealing whether an email exists while still reporting a
+        // credential/login failure rather than a connectivity problem.
         return 'auth_invalid_credential';
       case 'invalid-email':
         return 'auth_invalid_email';
@@ -336,9 +362,29 @@ class AuthService {
       case 'too-many-requests':
         return 'auth_too_many_requests';
       case 'network-request-failed':
+      case 'unavailable':
         return 'network_unavailable';
       default:
-        return 'login_failed';
+        return error is FirebaseAuthException
+            ? 'login_failed'
+            : 'auth_check_failed';
     }
+  }
+
+  static String? _nullableTrim(String? value) {
+    final trimmed = value?.trim();
+    return trimmed == null || trimmed.isEmpty ? null : trimmed;
+  }
+
+  void _logAuthFailure(String stage, Object error) {
+    if (!kDebugMode) return;
+    final code = switch (error) {
+      FirebaseAuthException authError => authError.code,
+      FirebaseException firebaseError => firebaseError.code,
+      _ => null,
+    };
+    // Codes are useful for local diagnosis; passwords, emails, tokens and
+    // backend exception messages are intentionally excluded.
+    debugPrint('Auth $stage failed${code == null ? '' : ' code=$code'}');
   }
 }

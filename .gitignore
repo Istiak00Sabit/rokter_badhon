@@ -43,6 +43,7 @@ node_modules/
 **/*service-account-key*.json
 tools/operator/.env*
 tools/operator/credentials/
+tools/operator/.local/
 
 # Symbolication related
 app.*.symbols

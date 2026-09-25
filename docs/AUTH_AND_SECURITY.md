@@ -7,30 +7,55 @@ Status: FROZEN FOR IMPLEMENTATION
 
 ## 1. Security Principle
 
+## Current implemented model (authoritative)
+
+The user-facing credential is Phone Number + Password. Firebase Auth's
+email/password provider is used only with the deterministic private identity
+`p<normalized-phone>@auth.rokterbadhon.internal`. The identity is collision-safe
+for normalized Bangladesh phone numbers and is derived by trusted shared code
+in Flutter and the operator. It is never displayed as the user's profile email
+and is never copied to Firestore profile fields.
+
+The real profile `email` is optional information. It is not a login
+identifier, authorization input, or verification requirement. No
+`email_verified` Firestore field is used, and Firebase `emailVerified` is not
+an admission prerequisite. The optional public email may be edited through
+the allowed own-profile path; the phone login identity is not re-keyed by
+normal profile editing. Admission remains fail-closed on the active
+`auth_links/{firebaseAuthUid}` mapping, active User, `login_enabled`, and
+recognized `users.access_role`.
+
+Known committee users are provisioned only by the trusted
+`provision-committee-accounts` command from
+`data/committee_2025_2027.json`; they do not create registration requests.
+Normal registration collects name, phone, password, blood group, profession,
+address, and optional email, then creates only a pending request. Approval is
+trusted execution and always assigns `member`; applicants cannot choose a
+privileged role.
+
 Authentication and authorization are separate. Firebase Authentication establishes identity; users.access_role is the ONLY current application authorization authority.
 
-Protected access additionally requires verified email, an active authoritative auth link, an existing active User, and login_enabled = true. Missing, malformed, or inconsistent security-sensitive values fail closed. Committee position and history never establish permissions.
+Protected access additionally requires an active authoritative auth link, an existing active User, login_enabled = true, and a recognized access_role. Missing, malformed, or inconsistent security-sensitive values fail closed. Committee position and history never establish permissions.
 
 ## 2. Registration Flow
 
-The future registration flow collects full name, phone, email, password, and password confirmation.
+The current registration flow collects full name, phone, password, password confirmation, blood group, profession, address, and optional email.
 
 Applicants must never choose a committee position or access_role. They cannot approve themselves, select a linked User, or enable login.
 
 Flow:
 
-1. Create a Firebase Authentication account.
-2. Send the verification email.
-3. Create the exact own registration request through Firestore Security Rules, using name/phone/email and the constrained structural values below.
-4. Sign out and await organization approval.
+1. Create a Firebase Authentication account using the deterministic internal identity derived from the phone.
+2. Create the exact own pending registration request through Firestore Security Rules.
+3. Sign out and await organization approval.
 
-Pre-admission exception E: a Firebase-authenticated requester with no auth_links/{request.auth.uid} document may create their own request and read only that exact request/status. This is identity-based, not a member role or a missing-role privilege default; verified email is not required for E, but remains required for approval and protected admission.
+Pre-admission exception E: a Firebase-authenticated requester with no auth_links/{request.auth.uid} document may create their own request and read only that exact request/status. This is identity-based, not a member role or a missing-role privilege default; email verification is not required for E, approval, or protected admission.
 
-The Firebase-authenticated requester must have NO auth_links/{request.auth.uid} document of any state. E is not an application role. The requester may create only registration_requests/{request.auth.uid}, with applicant-editable name, phone and email. Rules require the complete exact stored schema: auth_uid == request.auth.uid; email == authenticated Firebase token email; status == "pending"; requested_at == request.time using serverTimestamp; approved_by, approved_at, rejected_by, rejected_at and linked_user_id all null. No extra fields, overwrite, applicant update/delete/list or other request access is allowed. The client supplies structural fields, but Rules enforce their single permitted values; they are not applicant choices. Email verification is not required for E, but remains required before approval and protected admission. Own status get remains permitted while unlinked; a present inactive/broken link requires recovery. E grants no private User, directory, committee, donor, donation, notice, blood-request, event or media access. Approval/rejection and all linking remain trusted execution.
+The Firebase-authenticated requester must have NO auth_links/{request.auth.uid} document of any state. E is not an application role. The requester may create only registration_requests/{request.auth.uid}, with applicant-editable name, phone, optional email, blood_group, profession, and address. Rules require the complete exact stored schema: auth_uid == request.auth.uid; status == "pending"; requested_at == request.time using serverTimestamp; approved_by, approved_at, rejected_by, rejected_at and linked_user_id all null. No extra fields, overwrite, applicant update/delete/list or other request access is allowed. Email verification is not required. Own status get remains permitted while unlinked; a present inactive/broken link requires recovery. E grants no private User, directory, committee, donor, donation, notice, blood-request, event or media access. Approval/rejection and all linking remain trusted execution.
 
 E permits no reads of users, user_directory, donors, committee terms/assignments, donations, notices, or blood_requests. A present inactive/broken link does not qualify; use recovery. The read-own exception ends when an auth link exists. Authenticated callers cannot claim an arbitrary userId or role to obtain it.
 
-Auth creation, email delivery, and Firestore persistence are not one transaction. Define retry/recovery for partial failures without creating duplicate requests or granting access. Resending verification must be abuse-controlled.
+Auth creation and Firestore persistence are not one transaction. Define retry/recovery for partial failures without creating duplicate identities or granting access. Passwords remain owned by Firebase Authentication.
 
 Passwords must never be stored in Firestore, audit logs, or application logs, or shown to organization leaders. This specification does not mean registration is implemented.
 
@@ -40,8 +65,8 @@ Approval/rejection uses a narrowly scoped trusted execution operation; Free V1 u
 
 The backend must:
 
-1. Validate the caller's Firebase identity, email verification, current active link/User state, and specific approval capability.
-2. Read authoritative request and Firebase identity information; confirm the applicant's verified email and eligible pending state.
+1. Validate the caller's Firebase identity, current active link/User state, and specific approval capability.
+2. Read authoritative request and Firebase identity information; confirm the deterministic phone identity and eligible pending state.
 3. Search for an existing organization User and verify identity matching before linking. Submitted name, phone, or email alone is not sufficient proof.
 4. Record minimal identity-verification evidence through the audit reason and an approved review procedure; avoid unnecessary identity-document storage.
 5. Reuse the verified existing User or create a new User if no match exists. Do not automatically replace an existing link, reactivate a disabled User, or elevate an existing role.
@@ -54,7 +79,13 @@ Link replacement requires its own authorized, identity-verified recovery workflo
 
 ## 4. Login Flow
 
-Authenticate using email and the password exactly as entered; do not trim or otherwise transform the password.
+Flutter derives the internal Auth identity from the entered normalized phone,
+then calls Firebase `signInWithEmailAndPassword`. It resolves the returned UID
+through `auth_links` and `users`; the client never queries Firestore by an
+arbitrary phone to authenticate.
+
+Authenticate using the normalized phone-derived internal identity and the
+password exactly as entered; do not trim or otherwise transform the password.
 
 Then resolve:
 
@@ -62,7 +93,6 @@ Firebase UID → auth_links/{firebaseAuthUid} → user_id → users/{userId}
 
 Require:
 
-- Verified Firebase email.
 - Existing link with active = true.
 - Existing User with active = true and login_enabled = true.
 - A recognized users.access_role.
@@ -75,9 +105,11 @@ Session restoration uses the same gate as login. Do not open protected screens o
 
 ## 5. Email Verification
 
-Verified email is required for protected production functionality in Flutter, Firestore rules, and trusted execution checks.
+Email verification is not required for registration, approval, login, session
+restoration, or protected application access. Internal Auth identities are not
+real mailboxes. The optional real profile email is saved as profile data only.
 
-Verification refresh must use authoritative Firebase state/token handling. A Firestore email string is not proof of email ownership. An unverified authenticated requester receives only the narrowly defined onboarding access.
+There is no email-verification refresh or admission dependency. A Firestore email string is optional profile information, not proof of identity or authorization.
 
 ## 6. Authorization and Trusted Execution Boundary
 
@@ -95,7 +127,7 @@ Backend authorization resolves the caller through auth_links and users.access_ro
 
 TRUSTED EXECUTION means a reviewed operator-invoked local trusted tool in Free V1, or a hosted trusted backend in a separately approved future Blaze architecture. The local tool is not Flutter, is not distributed to application users and never embeds credentials in the APK. It runs only on an authorized operator machine using approved operational Google/Firebase credentials. It independently enforces capability, caller/target, state, field and provenance rules; implements required atomic/idempotent Firestore transactions and audit evidence; and fails closed. Operational credentials bypass client Security Rules and therefore require independent enforcement and protected custody. Ordinary application roles confer no operational IAM privilege. Sequential Console edits are not an atomic substitute.
 
-H — minimal identity self-read: any Firebase-authenticated identity may get exactly auth_links/{request.auth.uid} to resolve admission, even before G can pass. No list/query, other-link get or client create/update/delete. The identity-based read is not an application role grant, and the link alone never grants admission. Protected operations still require verified email, active link, existing active User, login_enabled true and recognized users.access_role.
+H — minimal identity self-read: any Firebase-authenticated identity may get exactly auth_links/{request.auth.uid} to resolve admission, even before G can pass. No list/query, other-link get or client create/update/delete. The identity-based read is not an application role grant, and the link alone never grants admission. Protected operations still require an active link, existing active User, login_enabled true and recognized users.access_role; email verification is not required.
 
 ## 7. Sensitive Fields and Identity Linking
 
@@ -134,9 +166,9 @@ Missing or inconsistent values do not imply an active account or any access role
 
 ## 10. Password Reset
 
-Forgot Password uses Firebase Authentication password reset email.
+Password reset is not part of the current phone + password UI. Any future reset flow must remain a Firebase Authentication operation and must not create a Firestore password or password hash.
 
-The app and organization leaders must never reveal or manually assign a user's password. Use localized, non-sensitive responses and control reset abuse. Password reset does not change application roles, approval status, or auth-link ownership.
+The app and organization leaders must never store or reveal a user's password in Firestore, audit logs, or application logs. Temporary committee passwords are generated only by the trusted operator and written to an ignored local file for secure one-time distribution.
 
 ## 11. Account Disable and Session Lifecycle
 
@@ -155,7 +187,7 @@ Complete and review the concrete capability matrix before production authorizati
 Rules must:
 
 - Deny unauthenticated protected access and unknown operations/roles.
-- Enforce verified email and explicit active link/User/login state.
+- Enforce explicit active link/User/login state; do not require email verification.
 - Permit E's exact create-own and status get with rule-fixed state/identity/time; permit H's exact own-link get. Neither grants protected data access.
 - Prevent arbitrary User creation, applicant-selected privileges, and direct account-management transitions.
 - Protect auth links, security fields, audit logs, and private registration requests.
@@ -213,7 +245,21 @@ Terminal blood-request reads are developer_admin/leader/executive only and never
 
 ## 17. Free-V1 Enforcement and External Media
 
-Spark/no-cost only. No Firebase Storage, hosted Functions, Cloud Run, managed paid export/import or scheduler is required for current V1. H — minimal identity self-read: any Firebase-authenticated identity may get exactly auth_links/{request.auth.uid} to resolve admission, even before G can pass. No list/query, other-link get or client create/update/delete. The identity-based read is not an application role grant, and the link alone never grants admission. Protected operations still require verified email, active link, existing active User, login_enabled true and recognized users.access_role.
+## Current implementation override
+
+For the current code, any older paragraph in this historical specification
+that says verified email is required is superseded by the implemented model at
+the start of this document. Rules and operator admission intentionally use no
+email-verification gate. Phone + Password uses only the reserved internal Auth
+identity; the public profile email is optional and may be blank.
+
+This supersession also covers older prose in this historical specification
+that mentions verification-email delivery, binding a request to a Firebase
+token email, immutable public profile email, or email-based login. The current
+own-profile path permits optional public-email edits; it does not re-key the
+phone login identity. Phone re-keying remains trusted-operator work.
+
+Spark/no-cost only. No Firebase Storage, hosted Functions, Cloud Run, managed paid export/import or scheduler is required for current V1. H — minimal identity self-read: any Firebase-authenticated identity may get exactly auth_links/{request.auth.uid} to resolve admission, even before G can pass. No list/query, other-link get or client create/update/delete. The identity-based read is not an application role grant, and the link alone never grants admission. Protected operations still require an active link, existing active User, login_enabled true and recognized users.access_role; email verification is not required.
 
 External provider remains unselected. Initial operator upload/content validation/trusted editorial HTTPS publication contains no reusable secret in Flutter. No direct app upload; provider URLs never authorize. Event/media reads and trusted editorial actions use explicit matrix rows, no position-derived authority. Direct audit_logs writes remain denied. Rules-constrained ordinary writes may carry validated actor/time metadata; that is not privileged tamper-resistant audit evidence. Trusted operational writes require independent authorization, atomic/idempotent transactions and trustworthy audit/custody. President remains organization-only/login-disabled unless independently approved later.
 

@@ -11,6 +11,9 @@ const REQUEST_FIELDS = new Set([
   'name',
   'phone',
   'email',
+  'blood_group',
+  'profession',
+  'address',
   'status',
   'requested_at',
   'approved_by',
@@ -147,7 +150,10 @@ export function parsePendingRequest(data, documentId) {
   string(data.auth_uid, 'auth_uid');
   string(data.name, 'name');
   string(data.phone, 'phone');
-  string(data.email, 'email');
+  string(data.email, 'email', { nullable: true });
+  string(data.blood_group, 'blood_group', { nullable: true });
+  string(data.profession, 'profession', { nullable: true });
+  string(data.address, 'address', { nullable: true });
   string(data.status, 'status');
   timestamp(data.requested_at, 'requested_at');
   string(data.approved_by, 'approved_by', { nullable: true });
@@ -176,8 +182,8 @@ export function authorizeOperator({ authRecord, link, user }) {
 }
 
 export function authorizeOperatorForRoles({ authRecord, link, user, allowedRoles }) {
-  if (!authRecord || authRecord.disabled === true || authRecord.emailVerified !== true) {
-    fail('operator_not_admitted', 'Operator Firebase identity must exist, be enabled, and have verified email.');
+  if (!authRecord || authRecord.disabled === true) {
+    fail('operator_not_admitted', 'Operator Firebase identity must exist and be enabled.');
   }
   if (!link || link.active !== true) fail('operator_not_admitted', 'Operator auth link is missing or inactive.');
   if (!user || user.active !== true || user.login_enabled !== true || !RECOGNIZED_ROLES.has(user.access_role)) {

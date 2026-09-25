@@ -33,7 +33,7 @@ test('emulator preload creates 51 Users and exact assignments without Auth ident
   assert.equal([...db.documents.keys()].filter((key) => key.startsWith('users/')).length, 51);
   assert.equal([...db.documents.keys()].filter((key) => key.startsWith('user_directory/')).length, 51);
   assert.equal([...db.documents.keys()].filter((key) => key.startsWith('committee_assignments/')).length, 51);
-  assert.equal(db.documents.get(`committee_terms/${OFFICIAL_COMMITTEE_TERM_ID}`).name, '2025–2027');
+  assert.equal(db.documents.get(`committee_terms/${OFFICIAL_COMMITTEE_TERM_ID}`).name, '2025-2027');
   for (const row of source) {
     const suffix = String(row.serial).padStart(3, '0');
     const user = db.documents.get(`users/committee-2025-2027-${suffix}`);

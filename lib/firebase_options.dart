@@ -16,12 +16,7 @@ import 'package:flutter/foundation.dart'
 /// ```
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
-    if (kIsWeb) {
-      throw UnsupportedError(
-        'DefaultFirebaseOptions have not been configured for web - '
-        'you can reconfigure this by running the FlutterFire CLI again.',
-      );
-    }
+    if (kIsWeb) return web;
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
         return android;
@@ -57,6 +52,20 @@ class DefaultFirebaseOptions {
     appId: '1:941165503580:android:836f342d5b03c84cba7299',
     messagingSenderId: '941165503580',
     projectId: 'rokterbadhon-b247b',
+    storageBucket: 'rokterbadhon-b247b.firebasestorage.app',
+  );
+
+  // The existing Firebase project exposes the standard Firebase Auth Web
+  // domain, and its public client configuration is the same project as the
+  // Android app above. No service-account credential or Storage dependency is
+  // included here. Keep this as a separate platform entry so Android remains
+  // driven by google-services.json.
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'AIzaSyDMo0jx9nvfb45CAvr79fNeOZCkXwMDKA8',
+    appId: '1:941165503580:android:836f342d5b03c84cba7299',
+    messagingSenderId: '941165503580',
+    projectId: 'rokterbadhon-b247b',
+    authDomain: 'rokterbadhon-b247b.firebaseapp.com',
     storageBucket: 'rokterbadhon-b247b.firebasestorage.app',
   );
 }

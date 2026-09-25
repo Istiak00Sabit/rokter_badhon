@@ -1,31 +1,49 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../services/auth_identity.dart';
+
 enum RegistrationRequestStatus { pending, approved, rejected }
 
 class RegistrationApplicantInput {
-  static const fields = {'name', 'phone', 'email'};
+  static const fields = {
+    'name',
+    'phone',
+    'email',
+    'blood_group',
+    'profession',
+    'address',
+  };
 
   final String name;
   final String phone;
-  final String email;
+  final String? email;
+  final String? bloodGroup;
+  final String? profession;
+  final String? address;
 
   const RegistrationApplicantInput({
     required this.name,
     required this.phone,
     required this.email,
+    this.bloodGroup,
+    this.profession,
+    this.address,
   });
 
   factory RegistrationApplicantInput.fromMap(Map<String, dynamic> map) {
     if (map.keys.toSet().length != fields.length ||
         !map.keys.toSet().containsAll(fields)) {
       throw const FormatException(
-        'Applicant input may contain only name, phone, and email.',
+        'Applicant input contains missing or forbidden fields.',
       );
     }
     return RegistrationApplicantInput(
       name: _requiredString(map, 'name'),
       phone: _requiredString(map, 'phone'),
-      email: _requiredString(map, 'email'),
+      email: _nullableString(map, 'email'),
+      bloodGroup: _nullableString(map, 'blood_group'),
+      profession: _nullableString(map, 'profession'),
+      address: _nullableString(map, 'address'),
     );
   }
 }
@@ -36,6 +54,9 @@ class RegistrationRequestModel {
     'name',
     'phone',
     'email',
+    'blood_group',
+    'profession',
+    'address',
     'status',
     'requested_at',
     'approved_by',
@@ -48,7 +69,10 @@ class RegistrationRequestModel {
   final String authUid;
   final String name;
   final String phone;
-  final String email;
+  final String? email;
+  final String? bloodGroup;
+  final String? profession;
+  final String? address;
   final RegistrationRequestStatus status;
   final DateTime requestedAt;
   final String? approvedBy;
@@ -62,6 +86,9 @@ class RegistrationRequestModel {
     required this.name,
     required this.phone,
     required this.email,
+    required this.bloodGroup,
+    required this.profession,
+    required this.address,
     required this.status,
     required this.requestedAt,
     required this.approvedBy,
@@ -103,7 +130,10 @@ class RegistrationRequestModel {
       authUid: authUid,
       name: _requiredString(map, 'name'),
       phone: _requiredString(map, 'phone'),
-      email: _requiredString(map, 'email'),
+      email: _nullableString(map, 'email'),
+      bloodGroup: _nullableString(map, 'blood_group'),
+      profession: _nullableString(map, 'profession'),
+      address: _nullableString(map, 'address'),
       status: status,
       requestedAt: _requiredTimestamp(map, 'requested_at').toDate(),
       approvedBy: approvedBy,
@@ -166,22 +196,31 @@ class RegistrationRequestPayload {
 
   static Map<String, dynamic> create({
     required String authUid,
-    required String authenticatedEmail,
     required RegistrationApplicantInput applicant,
+    String? internalAuthEmail,
+    // Retained as a source-compatible, ignored parameter for old callers.
+    // The Firebase internal email is never written to this public request.
+    String? authenticatedEmail,
   }) {
-    if (authUid.isEmpty || authenticatedEmail.isEmpty) {
-      throw const FormatException('Authenticated UID and email are required.');
+    if (authUid.isEmpty) {
+      throw const FormatException('Authenticated UID is required.');
     }
-    if (applicant.email != authenticatedEmail) {
+    final expectedInternalEmail = AuthIdentity.internalEmailForPhone(
+      applicant.phone,
+    );
+    if (internalAuthEmail != null && internalAuthEmail != expectedInternalEmail) {
       throw const FormatException(
-        'Applicant email must match the authenticated email.',
+        'Phone does not match the Firebase Auth identity.',
       );
     }
     return {
       'auth_uid': authUid,
       'name': applicant.name,
       'phone': applicant.phone,
-      'email': authenticatedEmail,
+      'email': applicant.email,
+      'blood_group': applicant.bloodGroup,
+      'profession': applicant.profession,
+      'address': applicant.address,
       'status': 'pending',
       'requested_at': FieldValue.serverTimestamp(),
       'approved_by': null,

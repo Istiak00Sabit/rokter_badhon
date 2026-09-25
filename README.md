@@ -27,6 +27,8 @@ npm run test:rules
 
 The Rules suite starts an isolated Firebase emulator against the explicit demo project. The trusted operator CLI is implemented under [`tools/operator/`](tools/operator/); keep both emulator hosts configured and never weaken its production guard.
 
+For the supported physical-phone workflows, see [`docs/PHONE_TESTING.md`](docs/PHONE_TESTING.md). The normal `flutter run` path uses real Firebase; the local-phone helper builds an emulator-configured debug APK, installs it, then applies `adb reverse` after installation.
+
 ## Production boundary
 
 The repository is a code release candidate, not a deployed production release. Before distribution, the project owner must complete every unchecked item in the production checklist, including real Firebase project provisioning/deployment, App Check, production application identity and signing, privacy/retention approval, backup/recovery rehearsal, migration reconciliation, monitoring, external image-provider policy, and controlled APK/AAB device acceptance.

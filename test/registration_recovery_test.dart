@@ -5,7 +5,7 @@ import 'package:rokter_badhon/services/auth_services.dart';
 void main() {
   const identity = RegistrationIdentity(
     uid: 'auth-id',
-    email: 'firebase@example.test',
+    internalEmail: 'p01900000000@auth.rokterbadhon.internal',
   );
   const applicant = RegistrationApplicantInput(
     name: 'Applicant',
@@ -15,7 +15,7 @@ void main() {
   const boundApplicant = RegistrationApplicantInput(
     name: 'Applicant',
     phone: '01900000000',
-    email: 'firebase@example.test',
+    email: 'typed@example.test',
   );
 
   test(
@@ -39,7 +39,7 @@ void main() {
   );
 
   test(
-    'verification delivery failure still submits a recoverable request',
+    'email delivery is not attempted and registration remains admitted only after approval',
     () async {
       Map<String, dynamic>? written;
       final result = await RegistrationWorkflow.createAndSubmit(
@@ -53,12 +53,12 @@ void main() {
 
       expect(
         result.state,
-        RegistrationSubmissionState.submittedVerificationEmailFailed,
+        RegistrationSubmissionState.submitted,
       );
       expect(result.requestSubmitted, isTrue);
       expect(result.emailVerificationSent, isFalse);
       expect(written?['auth_uid'], identity.uid);
-      expect(written?['email'], identity.email);
+      expect(written?['email'], applicant.email);
     },
   );
 
@@ -104,7 +104,7 @@ void main() {
       expect(signOuts, 1);
       expect(written?.keys.toSet(), RegistrationRequestModel.fields);
       expect(written?['auth_uid'], identity.uid);
-      expect(written?['email'], identity.email);
+      expect(written?['email'], boundApplicant.email);
       expect(written?['status'], 'pending');
     },
   );
@@ -127,7 +127,7 @@ void main() {
   );
 
   test(
-    'new-account payload binds returned Auth email, not typed casing',
+    'new-account payload stores only the optional public profile email',
     () async {
       Map<String, dynamic>? written;
       final result = await RegistrationWorkflow.createAndSubmit(
@@ -139,8 +139,7 @@ void main() {
       );
 
       expect(result.state, RegistrationSubmissionState.submitted);
-      expect(written?['email'], identity.email);
-      expect(written?['email'], isNot(applicant.email));
+      expect(written?['email'], applicant.email);
     },
   );
 }

@@ -8,6 +8,7 @@ import {
   projectDirectory,
   validateId,
 } from './policy.js';
+import { internalAuthEmailForPhone } from './auth_identity.js';
 
 const ROLES = new Set(['developer_admin', 'leader', 'executive', 'committee', 'member']);
 const ORDINARY_ROLES = new Set(['executive', 'committee', 'member']);
@@ -122,7 +123,7 @@ async function changeUserFlag(dependencies, { field, desired, actionBase, requir
       const links = await transaction.get(db.collection('auth_links').where('user_id', '==', userId).where('active', '==', true));
       if (links.docs.length !== 1) fail('link_state_invalid', 'Target must have exactly one active Auth link.');
       const linkedAuth = await authRecord(auth, links.docs[0].id, 'Target');
-      if (linkedAuth.disabled || linkedAuth.emailVerified !== true || (target.email !== null && linkedAuth.email !== target.email)) fail('target_identity_invalid', 'Target Auth identity is disabled, unverified, or mismatched.');
+      if (linkedAuth.disabled || linkedAuth.email !== internalAuthEmailForPhone(target.phone)) fail('target_identity_invalid', 'Target Auth identity is disabled or mismatched with the phone.');
     }
     const action = `${actionBase}${leaderTarget ? '_leader' : ''}`; const auditSnapshot = await transaction.get(auditRef);
     if (target[field] === desired && auditSnapshot.exists && exactRetry(auditSnapshot.data(), { action, actor, targetPath: userRef.path, reason, after: desired })) return { action: `${action}-already-applied`, userId, operationId };
@@ -143,7 +144,13 @@ export function setLoginEnabled(dependencies) {
 }
 
 function verifyTargetAuth(record, target) {
-  if (record.disabled || record.emailVerified !== true || typeof record.email !== 'string' || target.email === null || record.email !== target.email) fail('target_identity_invalid', 'Target Auth identity must be enabled, verified, and match the User email.');
+  let internalEmail;
+  try {
+    internalEmail = internalAuthEmailForPhone(target.phone);
+  } catch (_) {
+    fail('target_identity_invalid', 'Target User phone is not a valid organization phone number.');
+  }
+  if (record.disabled || typeof record.email !== 'string' || record.email !== internalEmail) fail('target_identity_invalid', 'Target Auth identity must be enabled and match the User phone.');
 }
 export async function createAuthLink(dependencies) {
   const { db, auth, serverTimestamp, operatorUid, userId, targetAuthUid, operationId, leaderTarget = false } = dependencies;

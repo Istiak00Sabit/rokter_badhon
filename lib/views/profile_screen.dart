@@ -305,6 +305,7 @@ class ProfileScreen extends StatelessWidget {
   ) async {
     final name = TextEditingController(text: user.name);
     final phone = TextEditingController(text: user.phone);
+    final email = TextEditingController(text: user.email ?? '');
     final bloodGroup = TextEditingController(text: user.bloodGroup ?? '');
     final profession = TextEditingController(text: user.profession ?? '');
     final address = TextEditingController(text: user.address ?? '');
@@ -319,7 +320,8 @@ class ProfileScreen extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               _editField(name, 'name'.tr),
-              _editField(phone, 'phone'.tr),
+              _buildInfoRow(Icons.phone_outlined, 'phone'.tr, phone.text),
+              _editField(email, 'email'.tr),
               _editField(bloodGroup, 'blood_group'.tr),
               _editField(profession, 'profession'.tr),
               _editField(address, 'address'.tr),
@@ -338,6 +340,7 @@ class ProfileScreen extends StatelessWidget {
                 ProfileUpdateInput(
                   name: name.text.trim(),
                   phone: phone.text.trim(),
+                  email: _nullableText(email.text),
                   bloodGroup: _nullableText(bloodGroup.text),
                   profession: _nullableText(profession.text),
                   address: _nullableText(address.text),

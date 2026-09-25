@@ -6,6 +6,7 @@ import {
   projectDirectory,
 } from './policy.js';
 import { bootstrapDeveloperAdmin } from './developer_admin.js';
+import { internalAuthEmailForPhone } from './auth_identity.js';
 
 export const LOCAL_TEST_ADMIN = Object.freeze({
   email: 'a@a.com',
@@ -14,15 +15,17 @@ export const LOCAL_TEST_ADMIN = Object.freeze({
   phone: '01000000000',
 });
 
+const LOCAL_INTERNAL_EMAIL = internalAuthEmailForPhone(LOCAL_TEST_ADMIN.phone);
+
 function isMissingAuthUser(error) {
   return error?.code === 'auth/user-not-found';
 }
 
 async function createLocalAuthUser(auth) {
   return auth.createUser({
-    email: LOCAL_TEST_ADMIN.email,
+    email: LOCAL_INTERNAL_EMAIL,
     password: LOCAL_TEST_ADMIN.password,
-    emailVerified: true,
+    emailVerified: false,
     disabled: false,
     displayName: LOCAL_TEST_ADMIN.name,
   });
@@ -48,7 +51,7 @@ export async function seedLocalTestAdmin({
 
   let authRecord;
   try {
-    authRecord = await auth.getUserByEmail(LOCAL_TEST_ADMIN.email);
+    authRecord = await auth.getUserByEmail(LOCAL_INTERNAL_EMAIL);
   } catch (error) {
     if (!isMissingAuthUser(error)) throw error;
     authRecord = await createLocalAuthUser(auth);
@@ -56,7 +59,7 @@ export async function seedLocalTestAdmin({
 
   authRecord = await auth.updateUser(authRecord.uid, {
     password: LOCAL_TEST_ADMIN.password,
-    emailVerified: true,
+    emailVerified: false,
     disabled: false,
     displayName: LOCAL_TEST_ADMIN.name,
   });
@@ -75,7 +78,7 @@ export async function seedLocalTestAdmin({
       throw new AdmissionError('ambiguous_state', 'Seeded User has no directory projection.');
     }
     const directory = parseDirectory(directorySnapshot.data(), directorySnapshot.id);
-    if (!link.active || user.email !== LOCAL_TEST_ADMIN.email ||
+    if (!link.active || user.phone !== LOCAL_TEST_ADMIN.phone ||
         user.access_role !== 'developer_admin' || !user.active || !user.login_enabled ||
         !directory.active || !sameProjection(user, directory)) {
       throw new AdmissionError('ambiguous_state', 'Existing local test admin is not exactly admissible.');

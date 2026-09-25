@@ -10,6 +10,7 @@ import {
   updateOwnPhoto,
 } from '../src/account.js';
 import { adminUser, directoryFor, FakeAuth, FakeFirestore, SERVER_TIME, TIME } from './fakes.js';
+import { internalAuthEmailForPhone } from '../src/auth_identity.js';
 
 const UID = 'operator-uid'; const ACTOR = 'operator-user'; const TARGET = 'target-user';
 const link = (userId, changes = {}) => ({ user_id: userId, active: true, created_at: TIME, created_by: 'seed', ...changes });
@@ -17,7 +18,11 @@ const user = (changes = {}) => adminUser({ name: 'Target', phone: '01234567890',
 function fixture({ actorRole = 'developer_admin', target = user(), targetLinkUid, entries = [], authUsers = [] } = {}) {
   const actor = adminUser({ access_role: actorRole }); const docs = [['auth_links/operator-uid', link(ACTOR)], [`users/${ACTOR}`, actor], [`user_directory/${ACTOR}`, directoryFor(actor)], [`users/${TARGET}`, target], [`user_directory/${TARGET}`, directoryFor(target)], ...entries];
   if (targetLinkUid) docs.push([`auth_links/${targetLinkUid}`, link(TARGET)]);
-  return { db: new FakeFirestore(docs), auth: new FakeAuth([[UID, { uid: UID, email: 'operator@example.test', emailVerified: true, disabled: false }], ...authUsers]) };
+  const mappedAuthUsers = authUsers.map(([uid, record]) => [uid, {
+    ...record,
+    email: record.email === 'target@example.test' ? internalAuthEmailForPhone(target.phone) : record.email,
+  }]);
+  return { db: new FakeFirestore(docs), auth: new FakeAuth([[UID, { uid: UID, email: 'operator@example.test', emailVerified: false, disabled: false }], ...mappedAuthUsers]) };
 }
 const common = (base, operationId) => ({ ...base, serverTimestamp: () => SERVER_TIME, operatorUid: UID, operationId, reason: 'Identity verified and reviewed.' });
 async function denied(promise, expected) { await assert.rejects(promise, (error) => error.code === expected); }
@@ -107,7 +112,7 @@ test('organization user to admitted account flow is exact and audited end to end
   });
   base.auth.users.set('flow-auth', {
     uid: 'flow-auth',
-    email: 'flow@example.test',
+    email: internalAuthEmailForPhone('01999999999'),
     emailVerified: true,
     disabled: false,
   });

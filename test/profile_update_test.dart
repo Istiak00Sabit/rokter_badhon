@@ -30,7 +30,7 @@ void main() {
   test('profile update input accepts only the six approved fields', () {
     final valid = {
       'name': 'Updated',
-      'phone': '11111111111',
+      'email': 'updated@example.test',
       'blood_group': 'A+',
       'profession': 'Teacher',
       'address': 'Address',

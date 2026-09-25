@@ -20,3 +20,14 @@ test('refuses production-like projects and missing emulator hosts', () => {
     assert.throws(() => assertSafeTarget(input), (error) => error.code === 'unsafe_target');
   }
 });
+
+test('production provisioning requires the known project and explicit confirmation', () => {
+  assert.doesNotThrow(() => assertSafeTarget({
+    projectId: 'rokterbadhon-b247b', mode: 'provision', allowProduction: true,
+    confirmedProjectId: 'rokterbadhon-b247b', firestoreEmulatorHost: '', authEmulatorHost: '',
+  }));
+  assert.throws(() => assertSafeTarget({
+    projectId: 'other-project', mode: 'provision', allowProduction: true,
+    confirmedProjectId: 'other-project', firestoreEmulatorHost: '', authEmulatorHost: '',
+  }), (error) => error.code === 'unsafe_target');
+});

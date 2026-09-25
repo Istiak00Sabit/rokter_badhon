@@ -2,9 +2,14 @@
 import { applicationDefault, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { FieldValue, getFirestore, Timestamp } from 'firebase-admin/firestore';
+import path from 'node:path';
 
 import { approveRegistration, linkRegistrationToExistingUser, rejectRegistration } from './src/admission.js';
-import { bootstrapDeveloperAdmin, recoverDeveloperAdmin } from './src/developer_admin.js';
+import {
+  bootstrapDeveloperAdmin,
+  recoverDeveloperAdmin,
+  repairDocumentedLegacyDeveloperAdmin,
+} from './src/developer_admin.js';
 import { assignCommitteePosition, endCommitteeAssignment } from './src/committee.js';
 import {
   addCommitteeMedia,
@@ -41,6 +46,7 @@ import {
 import { assertSafeTarget } from './src/safety.js';
 import { LOCAL_TEST_ADMIN, seedLocalTestAdmin } from './src/seed_test_admin.js';
 import { seedOfficialCommittee } from './src/official_committee.js';
+import { provisionCommitteeAccounts } from './src/committee_provisioning.js';
 
 function parseArguments(values) {
   const [command, ...rest] = values;
@@ -66,6 +72,15 @@ function parseNullableTimestamp(value, label) {
   return Timestamp.fromDate(parsed);
 }
 
+function parseRequiredTimestamp(value, label) {
+  if (value === undefined) {
+    throw new AdmissionError('invalid_argument', `${label} is required.`);
+  }
+  const parsed = parseNullableTimestamp(value, label);
+  if (parsed === null) throw new AdmissionError('invalid_argument', `${label} is required.`);
+  return parsed;
+}
+
 function parseBoolean(value, label, { optional = false } = {}) {
   if (value === undefined && optional) return undefined;
   if (value === 'true') return true;
@@ -77,10 +92,15 @@ async function main() {
   const { command, options } = parseArguments(process.argv.slice(2));
   const projectId = options['project-id'];
   console.log(`Target Firebase project: ${projectId ?? '(missing)'}`);
+  const isProductionMutation = command === 'provision-committee-accounts' ||
+    command === 'repair-legacy-developer-admin';
   assertSafeTarget({
     projectId,
     firestoreEmulatorHost: process.env.FIRESTORE_EMULATOR_HOST,
     authEmulatorHost: process.env.FIREBASE_AUTH_EMULATOR_HOST,
+    mode: isProductionMutation ? 'provision' : 'emulator',
+    allowProduction: options['allow-production'] === 'true',
+    confirmedProjectId: options['confirm-project-id'],
   });
 
   const appOptions = { projectId };
@@ -106,12 +126,39 @@ async function main() {
       auth: dependencies.auth,
       serverTimestamp: dependencies.serverTimestamp,
     });
-    console.log(`LOCAL EMULATOR TEST account: ${LOCAL_TEST_ADMIN.email} / ${LOCAL_TEST_ADMIN.password}`);
+    console.log(`LOCAL EMULATOR TEST account: phone ${LOCAL_TEST_ADMIN.phone} / password ${LOCAL_TEST_ADMIN.password}`);
   } else if (command === 'seed-official-committee') {
     result = await seedOfficialCommittee({
       projectId,
       db: dependencies.db,
       serverTimestamp: dependencies.serverTimestamp,
+    });
+  } else if (command === 'provision-committee-accounts') {
+    const sourceFile = options.file === undefined
+      ? undefined
+      : path.resolve(process.cwd(), options.file);
+    const localCredentialsDirectory = path.resolve(process.cwd(), '.local');
+    const credentialsFile = options['credentials-file'] === undefined
+      ? undefined
+      : path.resolve(process.cwd(), options['credentials-file']);
+    if (credentialsFile !== undefined) {
+      const relativeCredentialsPath = path.relative(localCredentialsDirectory, credentialsFile);
+      if (relativeCredentialsPath.startsWith('..') || path.isAbsolute(relativeCredentialsPath)) {
+        throw new AdmissionError(
+          'invalid_argument',
+          'Generated credentials must remain under the ignored tools/operator/.local directory.',
+        );
+      }
+    }
+    result = await provisionCommitteeAccounts({
+      projectId,
+      file: sourceFile,
+      credentialsFile,
+      db: dependencies.db,
+      auth: dependencies.auth,
+      serverTimestamp: dependencies.serverTimestamp,
+      operationId: options['operation-id'] ?? `committee-provision-2025-2027-${Date.now()}`,
+      resetExistingPasswords: options['reset-existing-passwords'] === 'true',
     });
   } else if (command === 'approve') {
     result = await approveRegistration({
@@ -170,7 +217,8 @@ async function main() {
     });
   } else if (command === 'update-own-photo') {
     result = await updateOwnPhoto({ ...dependencies, photoUrl: options['photo-url'] === 'null' ? null : options['photo-url'] });
-  } else if (command === 'bootstrap-developer-admin' || command === 'recover-developer-admin') {
+  } else if (command === 'bootstrap-developer-admin' || command === 'recover-developer-admin' ||
+      command === 'repair-legacy-developer-admin') {
     const protectedDependencies = {
       db: dependencies.db,
       auth: dependencies.auth,
@@ -188,12 +236,20 @@ async function main() {
         preferred_language: options['preferred-language'],
       },
     };
-    result = command === 'bootstrap-developer-admin'
-      ? await bootstrapDeveloperAdmin(protectedDependencies)
-      : await recoverDeveloperAdmin({
+    if (command === 'bootstrap-developer-admin') {
+      result = await bootstrapDeveloperAdmin(protectedDependencies);
+    } else if (command === 'recover-developer-admin') {
+      result = await recoverDeveloperAdmin({
+          ...protectedDependencies,
+          oldUserId: options['old-user-id'],
+        });
+    } else {
+      result = await repairDocumentedLegacyDeveloperAdmin({
         ...protectedDependencies,
-        oldUserId: options['old-user-id'],
+        legacyUserId: options['legacy-user-id'],
+        createdAt: parseRequiredTimestamp(options['created-at'], 'created-at'),
       });
+    }
   } else if (command === 'assign-committee-position') {
     result = await assignCommitteePosition({
       ...dependencies,
@@ -357,7 +413,20 @@ async function main() {
       'Unknown command. Use an explicitly reviewed registration, organization, donor, or event operation.',
     );
   }
-  console.log(`${result.action}; operation_id=${result.operationId}${result.userId ? `; user_id=${result.userId}` : ''}${result.assignmentId ? `; assignment_id=${result.assignmentId}` : ''}${result.mediaId ? `; media_id=${result.mediaId}` : ''}${result.termId ? `; term_id=${result.termId}` : ''}${result.donorId ? `; donor_id=${result.donorId}` : ''}${result.eventId ? `; event_id=${result.eventId}` : ''}${result.donationId ? `; donation_id=${result.donationId}` : ''}${result.requestId ? `; request_id=${result.requestId}` : ''}${result.noticeId ? `; notice_id=${result.noticeId}` : ''}`);
+  if (command === 'provision-committee-accounts') {
+    console.log(JSON.stringify({
+      detected: result.detected,
+      created: result.created.length,
+      'already-existing/reused': result.alreadyExistingReused.length,
+      skipped: result.skipped.length,
+      conflict: result.conflict.length,
+      failed: result.failed.length,
+      credentials_file: result.credentialsFile,
+      details: result,
+    }, null, 2));
+  } else {
+    console.log(`${result.action}; operation_id=${result.operationId}${result.userId ? `; user_id=${result.userId}` : ''}${result.assignmentId ? `; assignment_id=${result.assignmentId}` : ''}${result.mediaId ? `; media_id=${result.mediaId}` : ''}${result.termId ? `; term_id=${result.termId}` : ''}${result.donorId ? `; donor_id=${result.donorId}` : ''}${result.eventId ? `; event_id=${result.eventId}` : ''}${result.donationId ? `; donation_id=${result.donationId}` : ''}${result.requestId ? `; request_id=${result.requestId}` : ''}${result.noticeId ? `; notice_id=${result.noticeId}` : ''}`);
+  }
 }
 
 main().catch((error) => {

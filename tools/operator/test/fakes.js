@@ -75,15 +75,21 @@ class FakeTransaction {
     this.writes.push({ type: 'update', reference, value });
   }
 
+  set(reference, value) {
+    this.writes.push({ type: 'set', reference, value });
+  }
+
   commit() {
     for (const write of this.writes) {
       if (write.type === 'create') {
         this.store.documents.set(write.reference.path, write.value);
-      } else {
+      } else if (write.type === 'update') {
         this.store.documents.set(write.reference.path, {
           ...this.store.documents.get(write.reference.path),
           ...write.value,
         });
+      } else {
+        this.store.documents.set(write.reference.path, write.value);
       }
     }
   }
@@ -119,6 +125,39 @@ export class FakeAuth {
       throw error;
     }
     return this.users.get(uid);
+  }
+
+  async getUserByEmail(email) {
+    const record = [...this.users.values()].find((user) => user.email === email);
+    if (!record) {
+      const error = new Error('not found');
+      error.code = 'auth/user-not-found';
+      throw error;
+    }
+    return record;
+  }
+
+  async createUser(input) {
+    const uid = input.uid ?? `auth-${this.users.size + 1}`;
+    if ([...this.users.values()].some((user) => user.email === input.email)) {
+      const error = new Error('already exists');
+      error.code = 'auth/email-already-exists';
+      throw error;
+    }
+    const record = { uid, emailVerified: false, disabled: false, ...input };
+    this.users.set(uid, record);
+    return record;
+  }
+
+  async updateUser(uid, changes) {
+    const record = await this.getUser(uid);
+    const updated = { ...record, ...changes };
+    this.users.set(uid, updated);
+    return updated;
+  }
+
+  async deleteUser(uid) {
+    this.users.delete(uid);
   }
 }
 

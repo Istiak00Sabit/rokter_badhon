@@ -3,6 +3,7 @@ import '../models/auth_session.dart';
 import '../models/profile_update.dart';
 import '../models/user_model.dart';
 import '../services/auth_services.dart';
+import '../services/auth_identity.dart';
 import '../services/user_services.dart';
 import '../views/main_navigation_screen.dart';
 import '../views/login_screen.dart';
@@ -29,19 +30,26 @@ class AuthController extends GetxController {
   Future<AuthSessionResult> restoreSession() async {
     final result = await _authService.resolveSession();
     _applySession(result);
+    errorMessage.value =
+        result.state == AuthSessionState.unauthenticated ||
+            result.state == AuthSessionState.admitted
+        ? ''
+        : _messageFor(result);
     return result;
   }
 
   // Login function
-  Future<void> login({required String email, required String password}) async {
+  Future<void> login({required String phone, required String password}) async {
     // Validation
-    if (email.isEmpty || password.isEmpty) {
-      errorMessage.value = 'email_password_required'.tr;
+    if (phone.isEmpty || password.isEmpty) {
+      errorMessage.value = 'phone_password_required'.tr;
       return;
     }
 
-    if (!email.contains('@')) {
-      errorMessage.value = 'valid_email_required'.tr;
+    try {
+      AuthIdentity.normalizePhone(phone);
+    } on FormatException {
+      errorMessage.value = 'valid_phone_required'.tr;
       return;
     }
 
@@ -54,7 +62,7 @@ class AuthController extends GetxController {
       isLoading.value = true;
       errorMessage.value = '';
 
-      final result = await _authService.login(email: email, password: password);
+      final result = await _authService.login(phone: phone, password: password);
 
       _applySession(result);
       if (result.isAdmitted) {
@@ -81,24 +89,6 @@ class AuthController extends GetxController {
     }
   }
 
-  Future<bool> sendPasswordReset(String email) async {
-    if (!email.contains('@')) {
-      errorMessage.value = 'enter_email'.tr;
-      return false;
-    }
-    try {
-      isLoading.value = true;
-      errorMessage.value = '';
-      await _authService.sendPasswordResetEmail(email);
-      return true;
-    } catch (_) {
-      errorMessage.value = 'reset_failed'.tr;
-      return false;
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
   Future<bool> updateOwnProfile(ProfileUpdateInput input) async {
     final user = currentUser.value;
     if (user == null || sessionState.value != AuthSessionState.admitted) {
@@ -108,6 +98,10 @@ class AuthController extends GetxController {
     try {
       isLoading.value = true;
       errorMessage.value = '';
+      if (input.phone.trim() != user.phone) {
+        errorMessage.value = 'phone_change_requires_operator'.tr;
+        return false;
+      }
       await _userService.updateOwnProfile(userId: user.id, input: input);
       final refreshed = await _authService.resolveSession();
       _applySession(refreshed);
@@ -132,7 +126,7 @@ class AuthController extends GetxController {
   String _messageFor(AuthSessionResult result) {
     switch (result.state) {
       case AuthSessionState.emailUnverified:
-        return 'email_unverified'.tr;
+        return 'login_failed'.tr;
       case AuthSessionState.unlinked:
         return 'account_unlinked'.tr;
       case AuthSessionState.linkInactive:

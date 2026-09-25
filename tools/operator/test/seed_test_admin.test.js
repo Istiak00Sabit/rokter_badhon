@@ -4,6 +4,7 @@ import test from 'node:test';
 import { LOCAL_TEST_ADMIN, seedLocalTestAdmin } from '../src/seed_test_admin.js';
 import { schemaFields } from '../src/policy.js';
 import { FakeAuth, FakeFirestore, SERVER_TIME } from './fakes.js';
+import { internalAuthEmailForPhone } from '../src/auth_identity.js';
 
 class SeedAuth extends FakeAuth {
   constructor() {
@@ -45,8 +46,8 @@ test('local seed creates a verified identity satisfying the normal admission gat
   const user = db.documents.get(`users/${result.userId}`);
   const directory = db.documents.get(`user_directory/${result.userId}`);
 
-  assert.equal(authRecord.email, LOCAL_TEST_ADMIN.email);
-  assert.equal(authRecord.emailVerified, true);
+  assert.equal(authRecord.email, internalAuthEmailForPhone(LOCAL_TEST_ADMIN.phone));
+  assert.equal(authRecord.emailVerified, false);
   assert.equal(authRecord.disabled, false);
   assert.equal(authRecord.password, LOCAL_TEST_ADMIN.password);
   assert.deepEqual(new Set(Object.keys(link)), schemaFields.link);

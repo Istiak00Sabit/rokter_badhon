@@ -13,7 +13,7 @@ class LoginScreen extends StatelessWidget {
     final AuthController authController = Get.isRegistered<AuthController>()
         ? Get.find<AuthController>()
         : Get.put(AuthController());
-    final TextEditingController emailController = TextEditingController();
+    final TextEditingController phoneController = TextEditingController();
     final TextEditingController passwordController = TextEditingController();
     final RxBool obscurePassword = true.obs;
 
@@ -109,15 +109,15 @@ class LoginScreen extends StatelessWidget {
 
                       const SizedBox(height: 30),
 
-                      // Email field
+                      // Phone field
                       TextField(
-                        controller: emailController,
-                        keyboardType: TextInputType.emailAddress,
-                        autofillHints: const [AutofillHints.email],
+                        controller: phoneController,
+                        keyboardType: TextInputType.phone,
+                        autofillHints: const [AutofillHints.telephoneNumber],
                         decoration: InputDecoration(
-                          labelText: 'email'.tr,
+                          labelText: 'phone'.tr,
                           prefixIcon: const Icon(
-                            Icons.email_outlined,
+                            Icons.phone_outlined,
                             color: AppColors.primary,
                           ),
                           border: OutlineInputBorder(
@@ -174,29 +174,6 @@ class LoginScreen extends StatelessWidget {
 
                       const SizedBox(height: 12),
 
-                      // Forgot password
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton(
-                          onPressed: () async {
-                            final sent = await authController.sendPasswordReset(
-                              emailController.text.trim(),
-                            );
-                            if (sent) {
-                              Get.snackbar(
-                                'login'.tr,
-                                'reset_sent'.tr,
-                                snackPosition: SnackPosition.BOTTOM,
-                              );
-                            }
-                          },
-                          child: Text(
-                            'forgot_password'.tr,
-                            style: const TextStyle(color: AppColors.primary),
-                          ),
-                        ),
-                      ),
-
                       const SizedBox(height: 12),
 
                       // Error message
@@ -232,7 +209,7 @@ class LoginScreen extends StatelessWidget {
                                 ? null
                                 : () {
                                     authController.login(
-                                      email: emailController.text,
+                                      phone: phoneController.text,
                                       password: passwordController.text,
                                     );
                                   },

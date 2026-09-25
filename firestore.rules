@@ -10,7 +10,7 @@ service cloud.firestore {
       return role in ['developer_admin', 'leader', 'executive', 'committee', 'member'];
     }
     function admitted() {
-      return signedIn() && request.auth.token.email_verified == true
+      return signedIn()
         && exists(linkPath()) && get(linkPath()).data.active == true
         && ownId() is string && ownId().size() > 0 && !ownId().matches('.*[/].*')
         && exists(userPath(ownId()))
@@ -43,9 +43,9 @@ service cloud.firestore {
     // accesses per write: link, User before/after, directory before/after.
     function ownProfileChange(id, before, after) {
       return admitted() && id == ownId() && validUser(before) && validUser(after)
-        && after.diff(before).affectedKeys().hasOnly(['name','phone','blood_group','profession',
+        && after.diff(before).affectedKeys().hasOnly(['name','email','blood_group','profession',
           'address','preferred_language','updated_at','updated_by'])
-        && after.diff(before).affectedKeys().hasAny(['name','phone','blood_group','profession','address','preferred_language'])
+        && after.diff(before).affectedKeys().hasAny(['name','email','blood_group','profession','address','preferred_language'])
         && after.updated_at == request.time && after.updated_by == id
         && get(directoryPath(id)).data == projection(before)
         && getAfter(directoryPath(id)).data == projection(after);
@@ -55,13 +55,16 @@ service cloud.firestore {
         || (admitted() && editorial() && resource.data.status == 'pending');
       allow list: if admitted() && editorial() && resource.data.status == 'pending';
       allow create: if unlinkedOwn(uid)
-        && request.resource.data.keys().hasAll(['auth_uid','name','phone','email','status','requested_at',
-          'approved_by','approved_at','rejected_by','rejected_at','linked_user_id'])
-        && request.resource.data.keys().hasOnly(['auth_uid','name','phone','email','status','requested_at',
-          'approved_by','approved_at','rejected_by','rejected_at','linked_user_id'])
+        && request.resource.data.keys().hasAll(['auth_uid','name','phone','email','blood_group','profession','address',
+          'status','requested_at','approved_by','approved_at','rejected_by','rejected_at','linked_user_id'])
+        && request.resource.data.keys().hasOnly(['auth_uid','name','phone','email','blood_group','profession','address',
+          'status','requested_at','approved_by','approved_at','rejected_by','rejected_at','linked_user_id'])
         && request.resource.data.auth_uid == request.auth.uid
         && request.resource.data.name is string && request.resource.data.phone is string
-        && request.resource.data.email is string && request.resource.data.email == request.auth.token.email
+        && nullableString(request.resource.data.email)
+        && nullableString(request.resource.data.blood_group)
+        && nullableString(request.resource.data.profession)
+        && nullableString(request.resource.data.address)
         && request.resource.data.status == 'pending' && request.resource.data.requested_at == request.time
         && request.resource.data.approved_by == null && request.resource.data.approved_at == null
         && request.resource.data.rejected_by == null && request.resource.data.rejected_at == null
@@ -77,8 +80,8 @@ service cloud.firestore {
     match /user_directory/{id} {
       allow read: if admitted() && resource.data.active == true;
       allow update: if ownProfileChange(id, get(userPath(id)).data, getAfter(userPath(id)).data)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','phone','blood_group','profession'])
-        && request.resource.data.diff(resource.data).affectedKeys().hasAny(['name','phone','blood_group','profession']);
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','blood_group','profession'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasAny(['name','blood_group','profession']);
     }
     function roleIn(roles) { return get(userPath(ownId())).data.access_role in roles; }
     function editorial() { return roleIn(['developer_admin', 'leader']); }

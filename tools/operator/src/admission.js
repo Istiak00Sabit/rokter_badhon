@@ -9,6 +9,7 @@ import {
   projectDirectory,
   validateId,
 } from './policy.js';
+import { internalAuthEmailForPhone, normalizePhone } from './auth_identity.js';
 
 function requireText(value, label) {
   if (typeof value !== 'string' || value.trim().length === 0) {
@@ -47,12 +48,20 @@ function validateApplicantAuth(applicantAuth, request) {
   if (applicantAuth.disabled === true) {
     throw new AdmissionError('applicant_disabled', 'Applicant Firebase Auth account is disabled.');
   }
-  if (applicantAuth.emailVerified !== true) {
-    throw new AdmissionError('email_unverified', 'Applicant email is not verified.');
+  let normalizedPhone;
+  try {
+    normalizedPhone = normalizePhone(request.phone);
+  } catch (_) {
+    throw new AdmissionError('identity_mismatch', 'Registration phone is not a valid organization phone number.');
   }
-  if (typeof applicantAuth.email !== 'string' || applicantAuth.email !== request.email) {
-    throw new AdmissionError('email_mismatch', 'Applicant Auth email does not match the registration request.');
+  if (typeof applicantAuth.email !== 'string' ||
+      applicantAuth.email !== internalAuthEmailForPhone(normalizedPhone)) {
+    throw new AdmissionError('identity_mismatch', 'Applicant Auth identity does not match the registration phone.');
   }
+  if (request.phone !== normalizedPhone) {
+    throw new AdmissionError('identity_mismatch', 'Registration phone must use the normalized organization format.');
+  }
+  return normalizedPhone;
 }
 
 function validateCommonInput({ operatorUid, applicantUid, operationId, reason }) {
@@ -101,7 +110,9 @@ export async function approveRegistration({
       applicantUid,
     );
     validateApplicantAuth(applicantAuth, request);
-    const existingEmailQuery = db.collection('users').where('email', '==', request.email);
+    const existingEmailUsersPromise = request.email === null
+      ? Promise.resolve({ empty: true, docs: [] })
+      : transaction.get(db.collection('users').where('email', '==', request.email));
     const existingPhoneUsersQuery = db.collection('users').where('phone', '==', request.phone);
     const existingPhoneDirectoryQuery = db
       .collection('user_directory')
@@ -114,7 +125,7 @@ export async function approveRegistration({
         transaction.get(directoryReference),
         transaction.get(auditReference),
         transaction.get(existingUserLinkQuery),
-        transaction.get(existingEmailQuery),
+      existingEmailUsersPromise,
         transaction.get(existingPhoneUsersQuery),
         transaction.get(existingPhoneDirectoryQuery),
       ]);
@@ -142,9 +153,9 @@ export async function approveRegistration({
       name: request.name,
       phone: request.phone,
       email: request.email,
-      blood_group: null,
-      profession: null,
-      address: null,
+      blood_group: request.blood_group,
+      profession: request.profession,
+      address: request.address,
       photo_url: null,
       access_role: targetRole,
       active: true,

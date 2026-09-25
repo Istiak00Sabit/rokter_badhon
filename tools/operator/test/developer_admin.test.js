@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { bootstrapDeveloperAdmin, recoverDeveloperAdmin } from '../src/developer_admin.js';
+import {
+  bootstrapDeveloperAdmin,
+  recoverDeveloperAdmin,
+  repairDocumentedLegacyDeveloperAdmin,
+} from '../src/developer_admin.js';
 import { schemaFields } from '../src/policy.js';
 import {
   FakeAuth,
@@ -79,6 +83,51 @@ function recoveryArgs({ oldUserChanges = {}, oldAuthChanges = {}, entries = [], 
   };
 }
 
+const legacyIdentity = {
+  name: 'Legacy Admin',
+  phone: '01222222222',
+  email: 'legacy-admin@example.test',
+  blood_group: 'O+',
+  profession: null,
+  address: 'Ghatail',
+  preferred_language: null,
+};
+
+function legacyArgs({ entries = [], authChanges = {}, overrides = {} } = {}) {
+  return {
+    db: new FakeFirestore([
+      ['users/nb3LLlkwB9QlF8ePYqRKPtkhct32', {
+        name: legacyIdentity.name,
+        phone: legacyIdentity.phone,
+        email: legacyIdentity.email,
+        blood_group: legacyIdentity.blood_group,
+        address: legacyIdentity.address,
+        photo: '',
+        role: 'admin',
+        active: true,
+        uid: 'nb3LLlkwB9QlF8ePYqRKPtkhct32',
+        joined_date: TIME,
+      }],
+      ...entries,
+    ]),
+    auth: new FakeAuth([['nb3LLlkwB9QlF8ePYqRKPtkhct32', {
+      uid: 'nb3LLlkwB9QlF8ePYqRKPtkhct32',
+      email: legacyIdentity.email,
+      emailVerified: true,
+      disabled: false,
+      ...authChanges,
+    }]]),
+    serverTimestamp: () => SERVER_TIME,
+    authUid: 'nb3LLlkwB9QlF8ePYqRKPtkhct32',
+    legacyUserId: 'nb3LLlkwB9QlF8ePYqRKPtkhct32',
+    identity: legacyIdentity,
+    createdAt: TIME,
+    operationId: 'legacy-repair-1',
+    reason: 'Reviewed repair of the documented pre-v1.2.1 legacy administrator.',
+    ...overrides,
+  };
+}
+
 async function rejectsCode(promise, code) {
   await assert.rejects(promise, (error) => error.code === code);
 }
@@ -103,11 +152,8 @@ test('valid first bootstrap creates exact User, directory, link, and audit only'
   assert.equal([...args.db.documents.keys()].some((path) => path.startsWith('registration_requests/')), false);
 });
 
-test('bootstrap denies unverified or disabled Auth', async () => {
-  await rejectsCode(
-    bootstrapDeveloperAdmin(bootstrapArgs({ authChanges: { emailVerified: false } })),
-    'email_unverified',
-  );
+test('bootstrap ignores email verification but denies disabled Auth', async () => {
+  await bootstrapDeveloperAdmin(bootstrapArgs({ authChanges: { emailVerified: false } }));
   await rejectsCode(
     bootstrapDeveloperAdmin(bootstrapArgs({ authChanges: { disabled: true } })),
     'auth_disabled',
@@ -144,8 +190,8 @@ test('bootstrap denies existing auth link and existing developer_admin', async (
 });
 
 test('failed bootstrap has zero partial writes and operation-ID reuse is denied', async () => {
-  const failed = bootstrapArgs({ authChanges: { emailVerified: false } });
-  await rejectsCode(bootstrapDeveloperAdmin(failed), 'email_unverified');
+  const failed = bootstrapArgs({ authChanges: { disabled: true } });
+  await rejectsCode(bootstrapDeveloperAdmin(failed), 'auth_disabled');
   assert.equal(failed.db.documents.size, 0);
 
   const reused = bootstrapArgs({ entries: [['audit_logs/bootstrap-1', { action: 'old' }]] });
@@ -174,7 +220,10 @@ test('valid broken-admin recovery preserves and deactivates old records with aud
 
 test('healthy existing developer_admin prevents recovery', async () => {
   await rejectsCode(
-    recoverDeveloperAdmin(recoveryArgs({ oldAuthChanges: { disabled: false } })),
+    recoverDeveloperAdmin(recoveryArgs({ oldAuthChanges: {
+      disabled: false,
+      email: 'p01000000000@auth.rokterbadhon.internal',
+    } })),
     'healthy_admin_exists',
   );
 });
@@ -210,4 +259,84 @@ test('failed recovery leaves no partial replacement state and retry is denied', 
   await rejectsCode(recoverDeveloperAdmin(retry), 'ambiguous_admin_state');
   assert.deepEqual(new Set(retry.db.documents.keys()), committed);
   assert.equal([...retry.db.documents.keys()].filter((path) => path.startsWith('audit_logs/')).length, 1);
+});
+
+test('documented legacy admin repair creates the strict state without promotion-by-input', async () => {
+  const args = legacyArgs();
+  const result = await repairDocumentedLegacyDeveloperAdmin(args);
+  const user = args.db.documents.get(`users/${result.userId}`);
+  const directory = args.db.documents.get(`user_directory/${result.userId}`);
+  const link = args.db.documents.get('auth_links/nb3LLlkwB9QlF8ePYqRKPtkhct32');
+  const audit = args.db.documents.get('audit_logs/legacy-repair-1');
+
+  assert.deepEqual(new Set(Object.keys(user)), schemaFields.user);
+  assert.deepEqual(new Set(Object.keys(directory)), schemaFields.directory);
+  assert.deepEqual(new Set(Object.keys(link)), schemaFields.link);
+  assert.equal(user.access_role, 'developer_admin');
+  assert.equal(user.active, true);
+  assert.equal(user.login_enabled, true);
+  assert.equal(user.created_at, TIME);
+  assert.equal(directory.active, true);
+  assert.equal(link.user_id, result.userId);
+  assert.equal(audit.action, 'admin.repair_legacy');
+  assert.equal(audit.actor_user_id, null);
+  assert.equal(user.role, undefined);
+  assert.equal(user.uid, undefined);
+});
+
+test('legacy repair requires exact Auth identity, fixed target, and provenance', async () => {
+  await rejectsCode(
+    repairDocumentedLegacyDeveloperAdmin(legacyArgs({ authChanges: { disabled: true } })),
+    'auth_disabled',
+  );
+  await rejectsCode(
+    repairDocumentedLegacyDeveloperAdmin(legacyArgs({ overrides: { identity: { ...legacyIdentity, email: 'other@example.test' } } })),
+    'email_mismatch',
+  );
+  await rejectsCode(
+    repairDocumentedLegacyDeveloperAdmin(legacyArgs({ overrides: { authUid: 'different-auth' } })),
+    'identity_conflict',
+  );
+  await rejectsCode(
+    repairDocumentedLegacyDeveloperAdmin(legacyArgs({ overrides: { createdAt: null } })),
+    'invalid_argument',
+  );
+  await rejectsCode(
+    repairDocumentedLegacyDeveloperAdmin(legacyArgs({ entries: [['auth_links/nb3LLlkwB9QlF8ePYqRKPtkhct32', {
+      user_id: 'nb3LLlkwB9QlF8ePYqRKPtkhct32', active: false, created_at: TIME, created_by: 'legacy',
+    }]] })),
+    'identity_conflict',
+  );
+});
+
+test('legacy repair is idempotent only for the exact completed operation and rejects healthy state', async () => {
+  const args = legacyArgs();
+  const first = await repairDocumentedLegacyDeveloperAdmin(args);
+  const before = new Map(args.db.documents);
+  const retry = await repairDocumentedLegacyDeveloperAdmin(args);
+  assert.equal(retry.idempotent, true);
+  assert.deepEqual(args.db.documents, before);
+  assert.equal(first.userId, retry.userId);
+
+  args.identity = { ...legacyIdentity, blood_group: 'B+' };
+  await rejectsCode(repairDocumentedLegacyDeveloperAdmin(args), 'already_healthy_admin');
+
+  const healthy = legacyArgs();
+  await repairDocumentedLegacyDeveloperAdmin(healthy);
+  healthy.db.documents.delete('audit_logs/legacy-repair-1');
+  await rejectsCode(repairDocumentedLegacyDeveloperAdmin(healthy), 'already_healthy_admin');
+});
+
+test('legacy repair rejects conflicting directory and ordinary legacy roles without writes', async () => {
+  const directoryConflict = legacyArgs({ entries: [['user_directory/nb3LLlkwB9QlF8ePYqRKPtkhct32', {
+    name: 'Other', phone: legacyIdentity.phone, blood_group: 'O+', profession: null, photo_url: null, active: true,
+  }]] });
+  const beforeDirectory = new Set(directoryConflict.db.documents.keys());
+  await rejectsCode(repairDocumentedLegacyDeveloperAdmin(directoryConflict), 'identity_conflict');
+  assert.deepEqual(new Set(directoryConflict.db.documents.keys()), beforeDirectory);
+
+  const ordinary = legacyArgs();
+  ordinary.db.documents.get('users/nb3LLlkwB9QlF8ePYqRKPtkhct32').role = 'president';
+  await rejectsCode(repairDocumentedLegacyDeveloperAdmin(ordinary), 'legacy_identity_mismatch');
+  assert.equal(ordinary.db.documents.has('auth_links/nb3LLlkwB9QlF8ePYqRKPtkhct32'), false);
 });

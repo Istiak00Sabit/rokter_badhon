@@ -56,7 +56,7 @@ void main() {
 
   test('session policy maps every explicit admission state', () {
     expect(evaluate(authenticated: false), AuthSessionState.unauthenticated);
-    expect(evaluate(emailVerified: false), AuthSessionState.emailUnverified);
+    expect(evaluate(emailVerified: false), AuthSessionState.admitted);
     expect(evaluate(linkExists: false), AuthSessionState.unlinked);
     expect(
       evaluate(authLink: link(active: false)),
@@ -77,6 +77,10 @@ void main() {
     );
     expect(evaluate(), AuthSessionState.admitted);
     expect(evaluate(hadError: true), AuthSessionState.error);
+  });
+
+  test('email verification is not an admission prerequisite', () {
+    expect(evaluate(emailVerified: false), AuthSessionState.admitted);
   });
 
   test('malformed loaded models map to error rather than missing records', () {

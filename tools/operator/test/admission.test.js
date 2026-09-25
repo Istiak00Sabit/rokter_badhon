@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import { approveRegistration, linkRegistrationToExistingUser, rejectRegistration } from '../src/admission.js';
 import { schemaFields } from '../src/policy.js';
+import { internalAuthEmailForPhone } from '../src/auth_identity.js';
 
 const TIME = { toMillis: () => 1 };
 const SERVER_TIME = { __serverTimestamp: true, toMillis: () => 2 };
@@ -155,6 +156,9 @@ function pendingRequest(changes = {}) {
     name: 'Applicant',
     phone: '01111111111',
     email: 'applicant@example.test',
+    blood_group: 'A+',
+    profession: 'Teacher',
+    address: 'Address',
     status: 'pending',
     requested_at: TIME,
     approved_by: null,
@@ -175,7 +179,7 @@ function fixture({ operatorRole = 'developer_admin', operatorChanges, requestCha
   ]);
   const auth = new FakeAuth([
     ['operator-uid', { uid: 'operator-uid', email: 'operator@example.test', emailVerified: true, disabled: false }],
-    ['applicant-uid', { uid: 'applicant-uid', email: 'applicant@example.test', emailVerified: true, disabled: false, ...authChanges }],
+    ['applicant-uid', { uid: 'applicant-uid', email: internalAuthEmailForPhone('01111111111'), emailVerified: false, disabled: false, ...authChanges }],
   ]);
   return { db, auth };
 }
@@ -289,6 +293,13 @@ test('valid developer_admin approval creates exact atomic admission records', as
   assert.equal(audit.action, 'registration.approve');
 });
 
+test('approval accepts an email-less registration and keeps it as null profile data', async () => {
+  const args = approveArgs({ fixture: { requestChanges: { email: null } }, operationId: 'email-less-approval' });
+  const result = await approveRegistration(args);
+  assert.equal(args.db.documents.get(`users/${result.userId}`).email, null);
+  assert.equal(args.db.documents.get(`users/${result.userId}`).access_role, 'member');
+});
+
 test('leader may approve a new member', async () => {
   const args = approveArgs({
     fixture: { operatorRole: 'leader' },
@@ -312,14 +323,11 @@ test('approval-time elevation and developer_admin creation are denied', async ()
   );
 });
 
-test('unverified applicant and mismatched request email are denied', async () => {
+test('unverified applicant is accepted, but mismatched phone identity is denied', async () => {
+  await approveRegistration(approveArgs({ fixture: { authChanges: { emailVerified: false } } }));
   await rejectsCode(
-    approveRegistration(approveArgs({ fixture: { authChanges: { emailVerified: false } } })),
-    'email_unverified',
-  );
-  await rejectsCode(
-    approveRegistration(approveArgs({ fixture: { requestChanges: { email: 'other@example.test' } } })),
-    'email_mismatch',
+    approveRegistration(approveArgs({ fixture: { requestChanges: { phone: '01111111112' } } })),
+    'identity_mismatch',
   );
 });
 
@@ -385,9 +393,9 @@ test('existing organization identity blocks duplicate User admission atomically'
 });
 
 test('failed approval leaves no partial writes', async () => {
-  const args = approveArgs({ fixture: { authChanges: { emailVerified: false } } });
+  const args = approveArgs({ fixture: { requestChanges: { phone: '01111111112' } } });
   const before = new Set(args.db.documents.keys());
-  await rejectsCode(approveRegistration(args), 'email_unverified');
+  await rejectsCode(approveRegistration(args), 'identity_mismatch');
   assert.deepEqual(new Set(args.db.documents.keys()), before);
   assert.equal(args.db.documents.get('registration_requests/applicant-uid').status, 'pending');
 });

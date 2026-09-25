@@ -18,10 +18,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final _name = TextEditingController();
   final _phone = TextEditingController();
   final _email = TextEditingController();
+  final _bloodGroup = TextEditingController();
+  final _profession = TextEditingController();
+  final _address = TextEditingController();
   final _password = TextEditingController();
   final _passwordConfirmation = TextEditingController();
   bool _loading = false;
-  bool _emailVerified = false;
   RegistrationRequestModel? _request;
   String? _message;
 
@@ -34,7 +36,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   Future<void> _register() async {
     if (_name.text.trim().isEmpty ||
         _phone.text.trim().isEmpty ||
-        !_email.text.contains('@') ||
         _password.text.length < 6 ||
         _password.text != _passwordConfirmation.text) {
       setState(() => _message = 'registration_invalid');
@@ -49,6 +50,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       phone: _phone.text,
       email: _email.text,
       password: _password.text,
+      bloodGroup: _bloodGroup.text,
+      profession: _profession.text,
+      address: _address.text,
     );
     if (!mounted) return;
     setState(() {
@@ -56,7 +60,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       _message = switch (result.state) {
         RegistrationSubmissionState.submitted => 'registration_submitted',
         RegistrationSubmissionState.submittedVerificationEmailFailed =>
-          'registration_submitted_email_failed',
+          'registration_submitted',
         RegistrationSubmissionState.submittedSignOutFailed =>
           'registration_submitted_signout_failed',
         RegistrationSubmissionState.authCreatedRequestFailed =>
@@ -72,11 +76,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   Future<void> _refreshStatus() async {
     setState(() => _loading = true);
     try {
-      final verified = await _authService.refreshEmailVerification();
       final request = await _authService.getOwnRegistrationRequest();
       if (!mounted) return;
       setState(() {
-        _emailVerified = verified;
         _request = request;
         _message ??= request == null ? 'status_unavailable' : null;
       });
@@ -97,6 +99,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       final result = await _authService.submitOwnRegistrationRequest(
         name: _name.text,
         phone: _phone.text,
+        email: _email.text,
+        bloodGroup: _bloodGroup.text,
+        profession: _profession.text,
+        address: _address.text,
       );
       _message = switch (result.state) {
         RegistrationSubmissionState.submitted => 'registration_submitted',
@@ -120,20 +126,14 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     }
   }
 
-  Future<void> _resendVerification() async {
-    try {
-      await _authService.resendEmailVerification();
-      if (mounted) setState(() => _message = 'verification_sent');
-    } catch (_) {
-      if (mounted) setState(() => _message = 'verification_failed');
-    }
-  }
-
   @override
   void dispose() {
     _name.dispose();
     _phone.dispose();
     _email.dispose();
+    _bloodGroup.dispose();
+    _profession.dispose();
+    _address.dispose();
     _password.dispose();
     _passwordConfirmation.dispose();
     super.dispose();
@@ -164,6 +164,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               _field(_name, 'name'.tr),
               _field(_phone, 'phone'.tr, type: TextInputType.phone),
               _field(_email, 'email'.tr, type: TextInputType.emailAddress),
+              _field(_bloodGroup, 'blood_group'.tr),
+              _field(_profession, 'profession'.tr),
+              _field(_address, 'address'.tr),
               _field(_password, 'password'.tr, obscure: true),
               _field(
                 _passwordConfirmation,
@@ -196,9 +199,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 ),
               ),
               const SizedBox(height: 8),
-              Text(
-                '${'email_verified'.tr}: ${_emailVerified ? 'yes'.tr : 'no'.tr}',
-              ),
               if (_request == null) ...[
                 const SizedBox(height: 16),
                 _field(_name, 'name'.tr),
@@ -213,11 +213,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 onPressed: _loading ? null : _refreshStatus,
                 child: Text('refresh_status'.tr),
               ),
-              if (!_emailVerified)
-                OutlinedButton(
-                  onPressed: _loading ? null : _resendVerification,
-                  child: Text('resend_verification'.tr),
-                ),
             ],
             if (_loading)
               const Padding(

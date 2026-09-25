@@ -3,6 +3,8 @@ import 'user_model.dart';
 
 enum AuthSessionState {
   unauthenticated,
+  // Kept for persisted/UI compatibility.  New admission never returns this
+  // state because Firebase email verification is not an application gate.
   emailUnverified,
   unlinked,
   linkInactive,
@@ -29,7 +31,7 @@ class AuthSessionPolicy {
 
   static AuthSessionState evaluate({
     required bool authenticated,
-    required bool emailVerified,
+    bool emailVerified = true,
     required bool linkDocumentExists,
     required AuthLinkModel? link,
     required bool userDocumentExists,
@@ -38,7 +40,6 @@ class AuthSessionPolicy {
   }) {
     if (hadError) return AuthSessionState.error;
     if (!authenticated) return AuthSessionState.unauthenticated;
-    if (!emailVerified) return AuthSessionState.emailUnverified;
     if (!linkDocumentExists) return AuthSessionState.unlinked;
     if (link == null) return AuthSessionState.error;
     if (!link.active) return AuthSessionState.linkInactive;

@@ -1,7 +1,7 @@
 class ProfileUpdateInput {
   static const editableFields = {
     'name',
-    'phone',
+    'email',
     'blood_group',
     'profession',
     'address',
@@ -9,13 +9,13 @@ class ProfileUpdateInput {
   };
   static const projectedFields = {
     'name',
-    'phone',
     'blood_group',
     'profession',
   };
 
   final String name;
   final String phone;
+  final String? email;
   final String? bloodGroup;
   final String? profession;
   final String? address;
@@ -24,6 +24,7 @@ class ProfileUpdateInput {
   const ProfileUpdateInput({
     required this.name,
     required this.phone,
+    this.email,
     required this.bloodGroup,
     required this.profession,
     required this.address,
@@ -40,7 +41,8 @@ class ProfileUpdateInput {
     }
     return ProfileUpdateInput(
       name: _string(map, 'name'),
-      phone: _string(map, 'phone'),
+      phone: '',
+      email: _nullable(map, 'email'),
       bloodGroup: _nullable(map, 'blood_group'),
       profession: _nullable(map, 'profession'),
       address: _nullable(map, 'address'),
@@ -50,7 +52,7 @@ class ProfileUpdateInput {
 
   Map<String, dynamic> toMap() => {
     'name': name,
-    'phone': phone,
+    'email': email,
     'blood_group': bloodGroup,
     'profession': profession,
     'address': address,

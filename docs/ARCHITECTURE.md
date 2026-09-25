@@ -114,7 +114,7 @@ Firebase Auth UID → auth_links/{firebaseAuthUid} → users/{userId}
 
 One Firebase Auth identity maps to one application User. One application User may have at most one active auth link.
 
-Protected access requires verified email, an active link, an existing active User, login_enabled = true, and a valid users.access_role. Missing, malformed, or inconsistent security-sensitive values deny access.
+Protected access requires an active link, an existing active User, login_enabled = true, and a valid users.access_role. Email verification is not required. Missing, malformed, or inconsistent security-sensitive values deny access.
 
 ---
 
@@ -185,7 +185,7 @@ Eligible initiator → verified operational instruction → local trusted execut
 
 The trusted execution validates identity, current account/link state, capability, target scope, input, and workflow invariants. It does not trust a role or actor ID submitted by the client. Server credentials bypass client Security Rules, so backend authorization is mandatory.
 
-Own-profile client updates use the narrow atomic Q exception in DATA_MODEL §14; privileged User changes and directory repair use trusted execution. H — minimal identity self-read: any Firebase-authenticated identity may get exactly auth_links/{request.auth.uid} to resolve admission, even before G can pass. No list/query, other-link get or client create/update/delete. The identity-based read is not an application role grant, and the link alone never grants admission. Protected operations still require verified email, active link, existing active User, login_enabled true and recognized users.access_role.
+Own-profile client updates use the narrow atomic Q exception in DATA_MODEL §14; privileged User changes and directory repair use trusted execution. H — minimal identity self-read: any Firebase-authenticated identity may get exactly auth_links/{request.auth.uid} to resolve admission, even before G can pass. No list/query, other-link get or client create/update/delete. The identity-based read is not an application role grant, and the link alone never grants admission. Protected operations still require an active link, existing active User, login_enabled true and recognized users.access_role; email verification is not required.
 
 Responses return through Service → Controller → reactive state → View. Privileged security/business actions produce audit_logs.
 
@@ -242,7 +242,7 @@ Local language preference is sufficient for V1; see [LOCALIZATION.md](LOCALIZATI
 
 Production release requires:
 
-- Verified-email authentication for admitted application access, the narrow pre-admission exception, and secure session/account lifecycle.
+- Phone + password authentication through a deterministic internal Firebase Auth identity, the narrow pre-admission exception, and secure session/account lifecycle.
 - Verified identity matching, trusted approval/linking, and administrative recovery.
 - A completed capability matrix and consistent client/backend authorization.
 - Firestore Security Rules, rules tests, and required query indexes.
@@ -279,6 +279,26 @@ Implementation must preserve working functionality within the frozen security co
 ---
 
 ## 15. Free-V1 Media and Operational Profile
+
+## 16. Current Phone + Password Authentication Model
+
+The current implementation uses Phone Number + Password in Flutter. The phone
+is normalized and mapped to the deterministic Firebase Auth identity
+`p<normalized-phone>@auth.rokterbadhon.internal`. This is a private provider
+identifier only: it is never shown as a profile email, never editable as a
+profile email, and never stored in `users.email`. A user's real email is an
+optional informational profile field and is not verified or used for login or
+authorization. Normal profile editing may update the optional public email but
+does not re-key the login phone; phone changes remain trusted-operator work.
+
+Admission still requires only the authoritative `auth_links/{firebaseAuthUid}`
+mapping, active User, `login_enabled = true`, and a recognized
+`users.access_role`. Email verification is intentionally not checked by
+Flutter, Rules, or trusted admission. Registration creates a pending request;
+approval can create `member` only. Committee members are pre-provisioned by
+the trusted operator from `data/committee_2025_2027.json`, which creates Auth,
+strict User, directory, link, term assignment, and audit records without a
+registration request.
 
 External URLs never authorize. Initial workflow: authorized operator uploads externally, validates content/consent and records HTTPS URL through the explicit trusted editorial capability. No reusable provider secret in Flutter; no direct Flutter upload until provider-specific review. Null/error profile images use a bundled local avatar. Replacement switches User/directory atomically before old-asset cleanup; cleanup failure must not break the app. Committee covers belong to individual terms; rollover never overwrites historical photos. Events/galleries use explicit matrix audiences and operations. No image bytes/base64 or biometric identification.
 

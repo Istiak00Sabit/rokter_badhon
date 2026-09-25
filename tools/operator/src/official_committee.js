@@ -29,12 +29,6 @@ function requiredText(value, label) {
   return value;
 }
 
-function expectedRole(position) {
-  if (position === 'সভাপতি' || position === 'সাধারণ সম্পাদক') return 'leader';
-  if (position === 'সদস্য') return 'committee';
-  return 'executive';
-}
-
 export function validateOfficialCommitteeSource(rows) {
   if (!Array.isArray(rows) || rows.length !== 51) {
     fail('invalid_source', 'Official committee source must contain exactly 51 records.');
@@ -51,8 +45,8 @@ export function validateOfficialCommitteeSource(rows) {
     const bloodGroup = requiredText(row.blood_group, `Committee row ${row.serial} blood_group`);
     if (phones.has(phone)) fail('duplicate_identity', `Duplicate committee phone: ${phone}.`);
     phones.add(phone);
-    if (!USER_ROLES.has(row.access_role) || row.access_role !== expectedRole(position)) {
-      fail('invalid_role_mapping', `Committee row ${row.serial} has an invalid access_role mapping.`);
+    if (!USER_ROLES.has(row.access_role)) {
+      fail('invalid_role_mapping', `Committee row ${row.serial} has an invalid access_role.`);
     }
     totals[row.access_role] += 1;
     return Object.freeze({
@@ -150,7 +144,7 @@ export async function seedOfficialCommittee({
       const foreignPhoneMatch = phoneMatches.docs.find((doc) => doc.id !== userId);
       if (foreignPhoneMatch) fail('duplicate_identity', `Phone ${row.phone} already belongs to another User.`);
       const foreignAssignment = assignmentMatches.docs.find((doc) => doc.id !== assignmentId);
-      if (foreignAssignment) fail('duplicate_assignment', `User ${userId} already has another assignment for 2025–2027.`);
+      if (foreignAssignment) fail('duplicate_assignment', `User ${userId} already has another assignment for 2025-2027.`);
       if (!userSnapshot.exists && directorySnapshot.exists) fail('existing_conflict', `Orphan directory ${userId} conflicts with the preload.`);
       if (!userSnapshot.exists && assignmentSnapshot.exists) fail('existing_conflict', `Orphan assignment ${assignmentId} conflicts with the preload.`);
       states.push({ row, userId, assignmentId, userReference, directoryReference, assignmentReference, userSnapshot, directorySnapshot, assignmentSnapshot });
@@ -161,7 +155,7 @@ export async function seedOfficialCommittee({
     let createdAssignments = 0;
     if (!termSnapshot.exists) {
       transaction.create(termReference, {
-        name: '2025–2027',
+        name: '2025-2027',
         start_year: 2025,
         end_year: 2027,
         start_date: null,
@@ -174,10 +168,10 @@ export async function seedOfficialCommittee({
     } else {
       const term = termSnapshot.data();
       if (!fixedValuesMatch(term, {
-        name: '2025–2027', start_year: 2025, end_year: 2027, start_date: null,
+        name: '2025-2027', start_year: 2025, end_year: 2027, start_date: null,
         end_date: null, active: true, group_photo_url: null,
         created_by: OFFICIAL_COMMITTEE_SEED_ACTOR,
-      })) fail('existing_conflict', 'Existing 2025–2027 committee term does not match the reviewed preload.');
+      })) fail('existing_conflict', 'Existing 2025-2027 committee term does not match the reviewed preload.');
     }
 
     for (const state of states) {
