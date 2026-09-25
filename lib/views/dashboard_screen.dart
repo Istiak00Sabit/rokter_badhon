@@ -26,30 +26,6 @@ class DashboardScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Obx(() {
-        if (controller.isLoading.value) {
-          return const Center(
-            child: CircularProgressIndicator(color: AppColors.primary),
-          );
-        }
-        if (controller.errorCode.value.isNotEmpty) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text('dashboard_error'.tr, textAlign: TextAlign.center),
-                  const SizedBox(height: 12),
-                  OutlinedButton(
-                    onPressed: controller.loadDashboard,
-                    child: Text('retry'.tr),
-                  ),
-                ],
-              ),
-            ),
-          );
-        }
-
         return RefreshIndicator(
           onRefresh: controller.refresh,
           color: AppColors.primary,
@@ -144,7 +120,12 @@ class DashboardScreen extends StatelessWidget {
                             child: Obx(
                               () => _buildStatCard(
                                 title: 'total_donors'.tr,
-                                value: '${controller.totalDonors.value}',
+                                value: _statValue(
+                                  controller.totalDonors.value,
+                                  controller.isTotalDonorsLoading.value,
+                                  controller.totalDonorsError.value,
+                                ),
+                                error: controller.totalDonorsError.value,
                                 icon: Icons.water_drop,
                                 color: AppColors.primary,
                               ),
@@ -156,7 +137,12 @@ class DashboardScreen extends StatelessWidget {
                             child: Obx(
                               () => _buildStatCard(
                                 title: 'total_members'.tr,
-                                value: '${controller.totalMembers.value}',
+                                value: _statValue(
+                                  controller.totalMembers.value,
+                                  controller.isTotalMembersLoading.value,
+                                  controller.totalMembersError.value,
+                                ),
+                                error: controller.totalMembersError.value,
                                 icon: Icons.people,
                                 color: const Color(0xFF1976D2),
                               ),
@@ -177,7 +163,12 @@ class DashboardScreen extends StatelessWidget {
                             child: Obx(
                               () => _buildStatCard(
                                 title: 'month_donations'.tr,
-                                value: '${controller.thisMonthDonations.value}',
+                                value: _statValue(
+                                  controller.thisMonthDonations.value,
+                                  controller.isThisMonthDonationsLoading.value,
+                                  controller.thisMonthDonationsError.value,
+                                ),
+                                error: controller.thisMonthDonationsError.value,
                                 icon: Icons.favorite,
                                 color: const Color(0xFF43A047),
                               ),
@@ -190,7 +181,12 @@ class DashboardScreen extends StatelessWidget {
                             child: Obx(
                               () => _buildStatCard(
                                 title: 'emergency_requests'.tr,
-                                value: '${controller.activeRequests.value}',
+                                value: _statValue(
+                                  controller.activeRequests.value,
+                                  controller.isActiveRequestsLoading.value,
+                                  controller.activeRequestsError.value,
+                                ),
+                                error: controller.activeRequestsError.value,
                                 icon: Icons.emergency,
                                 color: const Color(0xFFFB8C00),
                               ),
@@ -351,7 +347,18 @@ class DashboardScreen extends StatelessWidget {
 
                       // Notices list
                       Obx(
-                        () => controller.notices.isEmpty
+                        () => controller.isNoticesLoading.value
+                            ? const Padding(
+                                padding: EdgeInsets.all(20),
+                                child: Center(
+                                  child: CircularProgressIndicator(
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                              )
+                            : controller.noticesError.value != null
+                            ? _buildSectionError(controller.noticesError.value!)
+                            : controller.notices.isEmpty
                             ? Container(
                                 width: double.infinity,
                                 padding: const EdgeInsets.all(20),
@@ -397,6 +404,7 @@ class DashboardScreen extends StatelessWidget {
   Widget _buildStatCard({
     required String title,
     required String value,
+    required DashboardSectionError? error,
     required IconData icon,
     required Color color,
   }) {
@@ -433,9 +441,56 @@ class DashboardScreen extends StatelessWidget {
                 title,
                 style: const TextStyle(fontSize: 12, color: AppColors.textGrey),
               ),
+              if (error != null)
+                Tooltip(
+                  message: error.message ?? error.code,
+                  child: Text(
+                    error.code,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  String _statValue(int value, bool loading, DashboardSectionError? error) {
+    if (loading) return '...';
+    return error == null ? value.toString() : '--';
+  }
+
+  Widget _buildSectionError(DashboardSectionError error) {
+    return Tooltip(
+      message: error.message ?? error.code,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.primaryLight),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.error_outline, color: AppColors.primary),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                error.code,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: AppColors.textDark),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

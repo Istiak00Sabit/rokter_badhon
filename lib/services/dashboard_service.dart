@@ -1,11 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 
 import '../constants/app_constants.dart';
 import '../models/notice_model.dart';
 
 class DashboardServiceException implements Exception {
   final String code;
-  const DashboardServiceException(this.code);
+  final String? message;
+  const DashboardServiceException(this.code, {this.message});
 }
 
 class DashboardService {
@@ -29,7 +31,8 @@ class DashboardService {
 
       return snapshot.docs.length;
     } on FirebaseException catch (error) {
-      throw DashboardServiceException(_code(error));
+      _logFirebaseFailure('getTotalDonors', error);
+      throw DashboardServiceException(error.code, message: error.message);
     }
   }
 
@@ -46,7 +49,8 @@ class DashboardService {
 
       return snapshot.docs.length;
     } on FirebaseException catch (error) {
-      throw DashboardServiceException(_code(error));
+      _logFirebaseFailure('getTotalMembers', error);
+      throw DashboardServiceException(error.code, message: error.message);
     }
   }
 
@@ -77,7 +81,8 @@ class DashboardService {
 
       return snapshot.docs.length;
     } on FirebaseException catch (error) {
-      throw DashboardServiceException(_code(error));
+      _logFirebaseFailure('getThisMonthDonations', error);
+      throw DashboardServiceException(error.code, message: error.message);
     }
   }
 
@@ -94,7 +99,8 @@ class DashboardService {
 
       return snapshot.docs.length;
     } on FirebaseException catch (error) {
-      throw DashboardServiceException(_code(error));
+      _logFirebaseFailure('getActiveRequests', error);
+      throw DashboardServiceException(error.code, message: error.message);
     }
   }
 
@@ -114,17 +120,22 @@ class DashboardService {
       return snapshot.docs
           .map((doc) => NoticeModel.fromMap(doc.data(), doc.id))
           .toList(growable: false);
-    } on FormatException {
-      throw const DashboardServiceException('malformed_data');
+    } on NoticeDataException catch (error) {
+      debugPrint(
+        '[DashboardService] getLatestNotices failed: '
+        'NoticeDataException(message: ${error.message})',
+      );
+      throw DashboardServiceException('malformed_data', message: error.message);
     } on FirebaseException catch (error) {
-      throw DashboardServiceException(_code(error));
+      _logFirebaseFailure('getLatestNotices', error);
+      throw DashboardServiceException(error.code, message: error.message);
     }
   }
 }
 
-String _code(FirebaseException error) => switch (error.code) {
-  'permission-denied' => 'permission_denied',
-  'failed-precondition' => 'query_unavailable',
-  'unavailable' || 'network-request-failed' => 'network_unavailable',
-  _ => 'firestore_error',
-};
+void _logFirebaseFailure(String query, FirebaseException error) {
+  debugPrint(
+    '[DashboardService] $query failed: '
+    'FirebaseException(code: ${error.code}, message: ${error.message})',
+  );
+}

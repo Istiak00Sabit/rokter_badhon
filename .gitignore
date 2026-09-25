@@ -41,6 +41,7 @@ node_modules/
 # Local trusted-operator credentials (runtime only; never commit)
 **/service-account*.json
 **/*service-account-key*.json
+admin_script/serviceAccountKey.json
 tools/operator/.env*
 tools/operator/credentials/
 tools/operator/.local/
