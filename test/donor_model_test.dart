@@ -14,7 +14,6 @@ Map<String, dynamic> validDonor({Map<String, dynamic> changes = const {}}) => {
   'photo_url': 'https://example.test/donor.jpg',
   'village': null,
   'union': null,
-  'ward': null,
   'upazila': 'Ghatail',
   'district': 'Tangail',
   'profession': null,
@@ -70,7 +69,7 @@ void main() {
       upazila: 'Ghatail',
       district: 'Tangail',
     ).profileFields();
-    expect(fields.keys, containsAll(['name','phone','blood_group','gender','photo_url','village','union','ward','upazila','district']));
+    expect(fields.keys, containsAll(['name','phone','blood_group','gender','photo_url','village','union','upazila','district']));
     expect(fields['name'], 'Name');
     expect(fields, isNot(contains('last_donated_at')));
     expect(fields, isNot(contains('total_donations')));
