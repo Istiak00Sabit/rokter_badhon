@@ -253,8 +253,6 @@ class AppTranslations extends Translations {
       'auth_too_many_requests': 'অনেকবার চেষ্টা হয়েছে। কিছুক্ষণ পরে আবার চেষ্টা করুন।',
       'auth_invalid_email': 'ইমেইল ঠিকানা সঠিক নয়।',
       'auth_user_disabled': 'এই অ্যাকাউন্ট বন্ধ করা হয়েছে।',
-      'auth_too_many_requests':
-          'অনেকবার চেষ্টা করা হয়েছে। কিছুক্ষণ পর আবার চেষ্টা করুন।',
       'position.president': 'সভাপতি',
       'position.senior_vice_president': 'সিনিয়র সহ-সভাপতি',
       'position.vice_president': 'সহ-সভাপতি',
@@ -528,7 +526,6 @@ class AppTranslations extends Translations {
       'auth_too_many_requests': 'Too many attempts. Please try again later.',
       'auth_invalid_email': 'The email address is invalid.',
       'auth_user_disabled': 'This account has been disabled.',
-      'auth_too_many_requests': 'Too many attempts. Try again later.',
       'position.president': 'President',
       'position.senior_vice_president': 'Senior Vice President',
       'position.vice_president': 'Vice President',
