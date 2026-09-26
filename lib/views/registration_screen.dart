@@ -238,35 +238,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     }
     final email = _email.text.trim();
     if (email.isNotEmpty &&
-        !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+    TextEditingController controller,
-    String label, {
-    TextInputType? type,
-    bool obscure = false,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
-      child: TextField(
-        controller: controller,
-        keyboardType: type,
-        obscureText: obscure,
-        decoration: InputDecoration(
-          labelText: label,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      ),
-    );
-  }
-
-  String _statusLabel(RegistrationRequestModel? request) {
-    if (request == null) return 'status_unavailable'.tr;
-    return switch (request.status) {
-      RegistrationRequestStatus.pending => 'status.pending'.tr,
-      RegistrationRequestStatus.approved => 'status.approved'.tr,
-      RegistrationRequestStatus.rejected => 'status.rejected'.tr,
-    };
-  }
-}
-).hasMatch(email)) {
+        !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
       return false;
     }
     if (includePassword &&
