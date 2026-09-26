@@ -49,6 +49,8 @@ class DonorController extends GetxController {
     _loadLocations();
   }
 
+  Future<void> retryLocations() => _loadLocations();
+
   Future<void> _loadLocations() async {
     try {
       await GhatailVillageData.load();
