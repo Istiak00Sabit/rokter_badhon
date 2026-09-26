@@ -219,9 +219,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     : AppConstants.localitiesForArea(
                         _selectedArea!,
                       ),
-                enabled: _selectedArea != null &&
-                    (!AppConstants.isMunicipality(_selectedArea!) ||
-                        _selectedWard != null),
+                enabled: _selectedArea != null,
                 onChanged: (value) {
                   setState(() => _selectedLocality = value);
                 },
@@ -294,9 +292,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       : AppConstants.localitiesForArea(
                           _selectedArea!,
                         ),
-                  enabled: _selectedArea != null &&
-                      (!AppConstants.isMunicipality(_selectedArea!) ||
-                          _selectedWard != null),
+                  enabled: _selectedArea != null,
                   onChanged: (value) {
                     setState(() => _selectedLocality = value);
                   },
@@ -334,7 +330,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         _phone.text.trim().isEmpty ||
         _email.text.trim().isEmpty ||
         _selectedArea == null ||
-        _selectedLocality == null ||) {
+        _selectedLocality == null) {
       return false;
     }
     try {
