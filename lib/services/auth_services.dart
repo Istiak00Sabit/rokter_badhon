@@ -272,7 +272,12 @@ class AuthService {
     final normalizedPhone = AuthIdentity.normalizePhone(phone);
     final authEmail = _nullableTrim(email)?.toLowerCase();
     if (authEmail == null ||
-        !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+
+        !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(authEmail)) {
+      return const RegistrationSubmissionResult(
+        RegistrationSubmissionState.failed,
+        error: FormatException('A valid email address is required.'),
+      );
+    }
     return RegistrationWorkflow.createAndSubmit(
       applicant: RegistrationApplicantInput(
         name: name.trim(),
