@@ -47,7 +47,18 @@ class AuthController extends GetxController {
     }
 
     if (identifier.contains('@')) {
-      if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+
+      if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(identifier)) {
+        errorMessage.value = 'valid_email_required'.tr;
+        return;
+      }
+    } else {
+      try {
+        AuthIdentity.normalizePhone(identifier);
+      } on FormatException {
+        errorMessage.value = 'valid_phone_required'.tr;
+        return;
+      }
+    }
 
     if (password.length < 6) {
       errorMessage.value = 'password_min_length'.tr;
