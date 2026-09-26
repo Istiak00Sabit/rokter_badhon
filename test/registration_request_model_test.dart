@@ -10,6 +10,8 @@ Map<String, dynamic> validRequest({Map<String, dynamic> changes = const {}}) => 
   'blood_group': 'A+',
   'profession': 'Teacher',
   'address': 'Address',
+  'union': 'ঘাটাইল',
+  'village': 'নরজনা',
   'status': 'pending',
   'requested_at': Timestamp.fromMillisecondsSinceEpoch(1700000000000),
   'approved_by': null,
@@ -66,6 +68,8 @@ void main() {
           'blood_group': 'A+',
           'profession': 'Teacher',
           'address': 'Address',
+          'union': 'ঘাটাইল',
+          'village': 'নরজনা',
           field: null,
         }),
         throwsFormatException,
@@ -107,7 +111,6 @@ void main() {
   test('registration creation payload binds UID, email, pending, and null decisions', () {
     final payload = RegistrationRequestPayload.create(
       authUid: 'auth-uid',
-      internalAuthEmail: 'p01700000000@auth.rokterbadhon.internal',
       applicant: const RegistrationApplicantInput(
         name: 'Applicant',
         phone: '01700000000',
@@ -132,7 +135,6 @@ void main() {
     }
     final optionalEmailPayload = RegistrationRequestPayload.create(
         authUid: 'auth-uid',
-        internalAuthEmail: 'p01700000000@auth.rokterbadhon.internal',
         applicant: const RegistrationApplicantInput(
           name: 'Applicant',
           phone: '01700000000',
