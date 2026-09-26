@@ -58,7 +58,7 @@ class RegistrationReviewScreen extends StatelessWidget {
                   ),
                   title: Text(item.name),
                   subtitle: Text(
-                    '${item.phone}\n${item.email}\n${'auth_uid'.tr}: ${item.authUid}',
+                    '${item.phone}\n${item.email ?? ''}\n${item.union ?? ''}, ${item.village ?? ''}\n${'auth_uid'.tr}: ${item.authUid}',
                   ),
                   isThreeLine: true,
                   trailing: Text(AppDateFormatter.short(item.requestedAt)),
