@@ -146,7 +146,8 @@ class AddDonorScreen extends StatelessWidget {
               final isMunicipality =
                   area.isNotEmpty && AppConstants.isMunicipality(area);
               final localities = area.isEmpty
-                  ? const <String>[]: AppConstants.localitiesForArea(area);
+                  ? const <String>[]
+                  : AppConstants.localitiesForArea(area);
 
               return Column(
                 children: [
