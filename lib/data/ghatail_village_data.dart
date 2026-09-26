@@ -5,7 +5,7 @@ import 'package:flutter/services.dart' show rootBundle;
 /// Complete Ghatail Upazila locality data.
 ///
 /// Source: ghatail_complete_localities_411_villages_plus_municipality.xlsx
-/// 14 unions / 411 villages + Ghatail Municipality / 9 wards / 16 mahallas.
+/// 14 unions / 411 villages + Ghatail Municipality / 16 mahallas.
 class GhatailVillageData {
   const GhatailVillageData._();
 
@@ -13,8 +13,7 @@ class GhatailVillageData {
 
   static Map<String, List<String>> _villagesByUnion =
       const <String, List<String>>{};
-  static Map<int, List<String>> _municipalityMahallasByWard =
-      const <int, List<String>>{};
+  static List<String> _municipalityMahallas = const <String>[];
 
   static bool _loaded = false;
 
@@ -62,64 +61,37 @@ class GhatailVillageData {
     }
 
     final municipalityNameFromJson = rawMunicipality['name'];
-    final rawWards = rawMunicipality['wards'];
-    if (municipalityNameFromJson != municipalityName || rawWards is! List) {
+    final rawMahallas = rawMunicipality['mahallas'];
+    if (municipalityNameFromJson != municipalityName || rawMahallas is! List) {
       throw const FormatException('Invalid municipality data.');
     }
 
-    final parsedWards = <int, List<String>>{};
-    for (final item in rawWards) {
-      if (item is! Map) {
-        throw const FormatException('Invalid municipality ward entry.');
-      }
-      final ward = item['ward'];
-      final mahallas = item['mahallas'];
-      if (ward is! int || mahallas is! List) {
-        throw const FormatException('Invalid municipality ward data.');
-      }
-      parsedWards[ward] = List<String>.unmodifiable(
-        mahallas.whereType<String>().where((v) => v.trim().isNotEmpty),
-      );
-    }
+    final parsedMahallas = List<String>.unmodifiable(
+      rawMahallas.whereType<String>().where((v) => v.trim().isNotEmpty),
+    );
 
     final villageCount =
         parsedUnions.values.fold<int>(0, (sum, list) => sum + list.length);
-    final mahallaCount =
-        parsedWards.values.fold<int>(0, (sum, list) => sum + list.length);
 
     if (parsedUnions.length != 14 ||
         villageCount != 411 ||
-        parsedWards.length != 9 ||
-        mahallaCount != 16) {
+        parsedMahallas.length != 16) {
       throw const FormatException(
         'Ghatail JSON must contain 14 unions/411 villages and '
-        '9 municipality wards/16 mahallas.',
+        '16 municipality mahallas.',
       );
     }
 
     _villagesByUnion = Map<String, List<String>>.unmodifiable(parsedUnions);
-    _municipalityMahallasByWard =
-        Map<int, List<String>>.unmodifiable(parsedWards);
+    _municipalityMahallas = parsedMahallas;
     _loaded = true;
   }
 
   static bool isMunicipality(String area) => area == municipalityName;
 
-  static List<int> wardsForArea(String area) =>
-      isMunicipality(area)
-          ? List<int>.unmodifiable(
-              _municipalityMahallasByWard.keys.toList()..sort(),
-            )
-          : const <int>[];
-
-  static List<String> localitiesForArea(
-    String area, {
-    int? ward,
-  }) {
+  static List<String> localitiesForArea(String area) {
     if (isMunicipality(area)) {
-      return ward == null
-          ? const <String>[]
-          : _municipalityMahallasByWard[ward] ?? const <String>[];
+      return _municipalityMahallas;
     }
     return _villagesByUnion[area] ?? const <String>[];
   }
