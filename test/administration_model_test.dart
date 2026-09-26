@@ -8,7 +8,7 @@ import 'package:rokter_badhon/models/registration_request_model.dart';
 void main() {
   test('pending registration schema parses exact Timestamp state', () {
     final value = RegistrationRequestModel.fromMap({
-      'auth_uid': 'auth-1', 'name': 'Applicant', 'phone': '019', 'email': 'a@example.test', 'blood_group': null, 'profession': null, 'address': null, 'union': 'ঘাটাইল', 'ward': null, 'village': 'নরজনা', 'status': 'pending',
+      'auth_uid': 'auth-1', 'name': 'Applicant', 'phone': '019', 'email': 'a@example.test', 'blood_group': null, 'profession': null, 'address': null, 'union': 'ঘাটাইল', 'village': 'নরজনা', 'status': 'pending',
       'requested_at': Timestamp.fromMillisecondsSinceEpoch(1), 'approved_by': null, 'approved_at': null,
       'rejected_by': null, 'rejected_at': null, 'linked_user_id': null,
     }, 'auth-1');
