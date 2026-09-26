@@ -66,7 +66,9 @@ service cloud.firestore {
         && nullableString(request.resource.data.profession)
         && nullableString(request.resource.data.address)
         && request.resource.data.union is string && request.resource.data.union.size() > 0
-        && (request.resource.data.ward == null || request.resource.data.ward is int)
+        && ((request.resource.data.union == 'ঘাটাইল পৌরসভা' && request.resource.data.ward is int
+              && request.resource.data.ward >= 1 && request.resource.data.ward <= 9)
+            || (request.resource.data.union != 'ঘাটাইল পৌরসভা' && request.resource.data.ward == null))
         && request.resource.data.village is string && request.resource.data.village.size() > 0
         && request.resource.data.status == 'pending' && request.resource.data.requested_at == request.time
         && request.resource.data.approved_by == null && request.resource.data.approved_at == null
