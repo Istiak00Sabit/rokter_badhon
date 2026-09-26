@@ -63,6 +63,8 @@ class RegistrationRequestModel {
     'blood_group',
     'profession',
     'address',
+    'union',
+    'village',
     'status',
     'requested_at',
     'approved_by',
