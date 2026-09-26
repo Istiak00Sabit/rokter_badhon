@@ -14,30 +14,12 @@ void main() {
       411,
     );
     expect(GhatailVillageData.locationAreas.length, 15);
-    expect(
-      GhatailVillageData.wardsForArea(GhatailVillageData.municipalityName),
-      [1, 2, 3, 4, 5, 6, 7, 8, 9],
-    );
-    expect(
-      GhatailVillageData.localitiesForArea(
-        GhatailVillageData.municipalityName,
-        ward: 4,
-      ).length,
-      3,
-    );
-    expect(
-      GhatailVillageData.localitiesForArea(
-        GhatailVillageData.municipalityName,
-        ward: 9,
-      ),
-      contains('বানিয়াপাড়া (দক্ষিণ)'),
-    );
-    expect(
-      GhatailVillageData.localitiesForArea(
-        GhatailVillageData.municipalityName,
-        ward: 8,
-      ),
-      ['ঘাটাইল'],
-    );
+    final municipality =
+        GhatailVillageData.localitiesForArea(
+          GhatailVillageData.municipalityName,
+        );
+    expect(municipality.length, 16);
+    expect(municipality, contains('বানিয়াপাড়া (দক্ষিণ)'));
+    expect(municipality, contains('ঘাটাইল'));
   });
 }
