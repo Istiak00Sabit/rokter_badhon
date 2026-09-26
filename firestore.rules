@@ -55,9 +55,9 @@ service cloud.firestore {
         || (admitted() && editorial() && resource.data.status == 'pending');
       allow list: if admitted() && editorial() && resource.data.status == 'pending';
       allow create: if unlinkedOwn(uid)
-        && request.resource.data.keys().hasAll(['auth_uid','name','phone','email','blood_group','profession','address','union','village',
+        && request.resource.data.keys().hasAll(['auth_uid','name','phone','email','blood_group','profession','address','union','ward','village',
           'status','requested_at','approved_by','approved_at','rejected_by','rejected_at','linked_user_id'])
-        && request.resource.data.keys().hasOnly(['auth_uid','name','phone','email','blood_group','profession','address','union','village',
+        && request.resource.data.keys().hasOnly(['auth_uid','name','phone','email','blood_group','profession','address','union','ward','village',
           'status','requested_at','approved_by','approved_at','rejected_by','rejected_at','linked_user_id'])
         && request.resource.data.auth_uid == request.auth.uid
         && request.resource.data.name is string && request.resource.data.phone is string
@@ -66,6 +66,7 @@ service cloud.firestore {
         && nullableString(request.resource.data.profession)
         && nullableString(request.resource.data.address)
         && request.resource.data.union is string && request.resource.data.union.size() > 0
+        && (request.resource.data.ward == null || request.resource.data.ward is int)
         && request.resource.data.village is string && request.resource.data.village.size() > 0
         && request.resource.data.status == 'pending' && request.resource.data.requested_at == request.time
         && request.resource.data.approved_by == null && request.resource.data.approved_at == null
