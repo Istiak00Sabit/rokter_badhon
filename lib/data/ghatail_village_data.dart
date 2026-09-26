@@ -75,10 +75,10 @@ class GhatailVillageData {
 
     if (parsedUnions.length != 14 ||
         villageCount != 411 ||
-        parsedMahallas.length != 16) {
+        parsedMahallas.length != 14) {
       throw const FormatException(
         'Ghatail JSON must contain 14 unions/411 villages and '
-        '16 municipality mahallas.',
+        '14 unique municipality localities.',
       );
     }
 
