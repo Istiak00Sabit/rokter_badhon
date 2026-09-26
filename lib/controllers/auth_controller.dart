@@ -16,13 +16,8 @@ class AuthController extends GetxController {
     : _authService = authService ?? AuthService(),
       _userService = userService ?? UserService();
 
-  // Loading state
   final RxBool isLoading = false.obs;
-
-  // Error message
   final RxString errorMessage = ''.obs;
-
-  // Current user data
   final Rx<UserModel?> currentUser = Rx<UserModel?>(null);
   final Rx<AuthSessionState> sessionState =
       AuthSessionState.unauthenticated.obs;
@@ -38,7 +33,6 @@ class AuthController extends GetxController {
     return result;
   }
 
-  // Login function
   Future<void> login({required String phone, required String password}) async {
     final identifier = phone.trim();
     if (identifier.isEmpty || password.isEmpty) {
@@ -69,11 +63,13 @@ class AuthController extends GetxController {
       isLoading.value = true;
       errorMessage.value = '';
 
-      final result = await _authService.login(phone: phone, password: password);
+      final result = await _authService.login(
+        phone: identifier,
+        password: password,
+      );
 
       _applySession(result);
       if (result.isAdmitted) {
-        // সফল হলে MainNavigation এ যাও
         Get.offAll(() => const MainNavigationScreen());
       } else {
         errorMessage.value = _messageFor(result);
@@ -83,120 +79,10 @@ class AuthController extends GetxController {
     }
   }
 
-  // Logout function
   Future<void> logout() async {
     try {
       await _authService.logout();
     } finally {
-      // Local protected state must be cleared even when remote sign-out fails.
-      currentUser.value = null;
-      sessionState.value = AuthSessionState.unauthenticated;
-      errorMessage.value = '';
-      Get.offAll(() => const LoginScreen());
-    }
-  }
-
-  Future<bool> updateOwnProfile(ProfileUpdateInput input) async {
-    final user = currentUser.value;
-    if (user == null || sessionState.value != AuthSessionState.admitted) {
-      errorMessage.value = 'session_unavailable'.tr;
-      return false;
-    }
-    try {
-      isLoading.value = true;
-      errorMessage.value = '';
-      if (input.phone.trim() != user.phone) {
-        errorMessage.value = 'phone_change_requires_operator'.tr;
-        return false;
-      }
-      await _userService.updateOwnProfile(userId: user.id, input: input);
-      final refreshed = await _authService.resolveSession();
-      _applySession(refreshed);
-      if (!refreshed.isAdmitted) {
-        errorMessage.value = _messageFor(refreshed);
-        return false;
-      }
-      return true;
-    } catch (_) {
-      errorMessage.value = 'profile_update_error'.tr;
-      return false;
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
-  void _applySession(AuthSessionResult result) {
-    sessionState.value = result.state;
-    currentUser.value = result.isAdmitted ? result.user : null;
-  }
-
-  String _messageFor(AuthSessionResult result) {
-    switch (result.state) {
-      case AuthSessionState.emailUnverified:
-        return 'login_failed'.tr;
-      case AuthSessionState.unlinked:
-        return 'account_unlinked'.tr;
-      case AuthSessionState.linkInactive:
-        return 'link_inactive'.tr;
-      case AuthSessionState.userMissing:
-        return 'user_missing'.tr;
-      case AuthSessionState.userInactive:
-        return 'user_inactive'.tr;
-      case AuthSessionState.loginDisabled:
-        return 'login_disabled'.tr;
-      case AuthSessionState.invalidRole:
-        return 'invalid_role'.tr;
-      case AuthSessionState.error:
-        return _authService.authErrorCode(result.error).tr;
-      case AuthSessionState.unauthenticated:
-        return 'login_failed'.tr;
-      case AuthSessionState.admitted:
-        return '';
-    }
-  }
-}
-).hasMatch(identifier)) {
-        errorMessage.value = 'valid_email_required'.tr;
-        return;
-      }
-    } else {
-      try {
-        AuthIdentity.normalizePhone(identifier);
-      } on FormatException {
-        errorMessage.value = 'valid_phone_required'.tr;
-        return;
-      }
-    }
-
-    if (password.length < 6) {
-      errorMessage.value = 'password_min_length'.tr;
-      return;
-    }
-
-    try {
-      isLoading.value = true;
-      errorMessage.value = '';
-
-      final result = await _authService.login(phone: phone, password: password);
-
-      _applySession(result);
-      if (result.isAdmitted) {
-        // সফল হলে MainNavigation এ যাও
-        Get.offAll(() => const MainNavigationScreen());
-      } else {
-        errorMessage.value = _messageFor(result);
-      }
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
-  // Logout function
-  Future<void> logout() async {
-    try {
-      await _authService.logout();
-    } finally {
-      // Local protected state must be cleared even when remote sign-out fails.
       currentUser.value = null;
       sessionState.value = AuthSessionState.unauthenticated;
       errorMessage.value = '';
