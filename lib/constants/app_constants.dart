@@ -71,11 +71,8 @@ class AppConstants {
 
   static bool isMunicipality(String area) =>
       GhatailVillageData.isMunicipality(area);
-  static List<String> localitiesForArea(
-    String area, {
-    int? ward,
-  }) =>
-      GhatailVillageData.localitiesForArea(area, ward: ward);
+  static List<String> localitiesForArea(String area) =>
+      GhatailVillageData.localitiesForArea(area);
 
   static List<String> villagesForUnion(String union) =>
       GhatailVillageData.villagesForUnion(union);
