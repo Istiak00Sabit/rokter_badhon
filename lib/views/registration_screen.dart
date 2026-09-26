@@ -293,7 +293,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       return false;
     }
     final email = _email.text.trim();
-    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+
+    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
       return false;
     }
     if (includePassword &&
