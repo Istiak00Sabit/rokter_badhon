@@ -25,6 +25,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final _address = TextEditingController();
   final _password = TextEditingController();
   final _passwordConfirmation = TextEditingController();
+  String? _selectedUnion;
+  String? _selectedVillage;
   bool _loading = false;
   RegistrationRequestModel? _request;
   String? _message;
@@ -52,6 +54,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       bloodGroup: _bloodGroup.text,
       profession: _profession.text,
       address: _address.text,
+      union: _selectedUnion,
+      village: _selectedVillage,
     );
     if (!mounted) return;
     setState(() {
@@ -93,6 +97,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         bloodGroup: _bloodGroup.text,
         profession: _profession.text,
         address: _address.text,
+        union: _selectedUnion,
+        village: _selectedVillage,
       );
       _message = _registrationMessage(result);
       if (result.requestSubmitted && _authService.currentUser != null) {
@@ -154,6 +160,28 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 },
               ),
               _field(_profession, 'profession'.tr),
+              _buildDropdownField(
+                label: 'union'.tr,
+                value: _selectedUnion,
+                items: AppConstants.unions,
+                onChanged: (value) {
+                  setState(() {
+                    _selectedUnion = value;
+                    _selectedVillage = null;
+                  });
+                },
+              ),
+              _buildDropdownField(
+                label: 'village'.tr,
+                value: _selectedVillage,
+                items: _selectedUnion == null
+                    ? const <String>[]
+                    : AppConstants.villagesForUnion(_selectedUnion!),
+                enabled: _selectedUnion != null,
+                onChanged: (value) {
+                  setState(() => _selectedVillage = value);
+                },
+              ),
               _field(_address, 'address'.tr),
               _field(_password, 'password'.tr, obscure: true),
               _field(
@@ -201,6 +229,28 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   },
                 ),
                 _field(_profession, 'profession'.tr),
+                _buildDropdownField(
+                  label: 'union'.tr,
+                  value: _selectedUnion,
+                  items: AppConstants.unions,
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedUnion = value;
+                      _selectedVillage = null;
+                    });
+                  },
+                ),
+                _buildDropdownField(
+                  label: 'village'.tr,
+                  value: _selectedVillage,
+                  items: _selectedUnion == null
+                      ? const <String>[]
+                      : AppConstants.villagesForUnion(_selectedUnion!),
+                  enabled: _selectedUnion != null,
+                  onChanged: (value) {
+                    setState(() => _selectedVillage = value);
+                  },
+                ),
                 _field(_address, 'address'.tr),
                 ElevatedButton(
                   onPressed: _loading ? null : _submitForExistingAccount,
@@ -230,15 +280,95 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   }
 
   bool _validateApplicantFields({bool includePassword = false}) {
-    if (_name.text.trim().isEmpty || _phone.text.trim().isEmpty) return false;
+    if (_name.text.trim().isEmpty ||
+        _phone.text.trim().isEmpty ||
+        _email.text.trim().isEmpty ||
+        _selectedUnion == null ||
+        _selectedVillage == null) {
+      return false;
+    }
     try {
       AuthIdentity.normalizePhone(_phone.text);
     } on FormatException {
       return false;
     }
     final email = _email.text.trim();
-    if (email.isNotEmpty &&
-        !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
+    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+
+      return false;
+    }
+    if (includePassword &&
+        (_password.text.length < 6 ||
+            _password.text != _passwordConfirmation.text)) {
+      return false;
+    }
+    return true;
+  }
+
+  String _registrationMessage(RegistrationSubmissionResult result) {
+    if (result.state == RegistrationSubmissionState.submitted) return 'registration_submitted';
+    if (result.state == RegistrationSubmissionState.submittedVerificationEmailFailed) return 'registration_submitted_email_failed';
+    if (result.state == RegistrationSubmissionState.submittedSignOutFailed) return 'registration_submitted_signout_failed';
+    if (result.state == RegistrationSubmissionState.authCreatedRequestFailed ||
+        result.state == RegistrationSubmissionState.failed) {
+      return AuthService.mapRegistrationSubmissionError(result.error);
+    }
+    return 'registration_failed';
+  }
+
+  Widget _buildDropdownField({
+    required String label,
+    required String? value,
+    required List<String> items,
+    required ValueChanged<String?> onChanged,
+    bool enabled = true,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: DropdownButtonFormField<String>(
+        initialValue: value,
+        decoration: InputDecoration(
+          labelText: label,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+        items: items.map((item) => DropdownMenuItem<String>(
+          value: item,
+          child: Text(item),
+        )).toList(),
+        onChanged: enabled ? onChanged : null,
+      ),
+    );
+  }
+
+  Widget _field(
+    TextEditingController controller,
+    String label, {
+    TextInputType? type,
+    bool obscure = false,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: TextField(
+        controller: controller,
+        keyboardType: type,
+        obscureText: obscure,
+        decoration: InputDecoration(
+          labelText: label,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      ),
+    );
+  }
+
+  String _statusLabel(RegistrationRequestModel? request) {
+    if (request == null) return 'status_unavailable'.tr;
+    return switch (request.status) {
+      RegistrationRequestStatus.pending => 'status.pending'.tr,
+      RegistrationRequestStatus.approved => 'status.approved'.tr,
+      RegistrationRequestStatus.rejected => 'status.rejected'.tr,
+    };
+  }
+}
+).hasMatch(email)) {
       return false;
     }
     if (includePassword &&
