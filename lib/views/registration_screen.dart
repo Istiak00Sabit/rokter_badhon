@@ -26,8 +26,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final _address = TextEditingController();
   final _password = TextEditingController();
   final _passwordConfirmation = TextEditingController();
-  String? _selectedUnion;
-  String? _selectedVillage;
+  String? _selectedArea;
+  int? _selectedWard;
+  String? _selectedLocality;
   bool _loading = false;
   bool _locationsReady = false;
   bool _locationLoadFailed = false;
@@ -72,8 +73,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       bloodGroup: _bloodGroup.text,
       profession: _profession.text,
       address: _address.text,
-      union: _selectedUnion,
-      village: _selectedVillage,
+      union: _selectedArea,
+      ward: _selectedWard,
+      village: _selectedLocality,
     );
     if (!mounted) return;
     setState(() {
@@ -198,15 +200,47 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 },
               ),
               _field(_profession, 'profession'.tr),
-              _buildDropdownField(
-                label: 'union'.tr,
-                value: _selectedUnion,
-                items: AppConstants.unions,
+              _buildDropdownField<String>(
+                label: 'union_or_municipality'.tr,
+                value: _selectedArea,
+                items: AppConstants.locationAreas,
                 onChanged: (value) {
                   setState(() {
-                    _selectedUnion = value;
-                    _selectedVillage = null;
+                    _selectedArea = value;
+                    _selectedWard = null;
+                    _selectedLocality = null;
                   });
+                },
+              ),
+              if (_selectedArea != null && AppConstants.isMunicipality(_selectedArea!))
+                _buildDropdownField<int>(
+                  label: 'ward'.tr,
+                  value: _selectedWard,
+                  items: AppConstants.wardsForArea(_selectedArea!),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedWard = value;
+                      _selectedLocality = null;
+                    });
+                  },
+                  itemLabel: (value) => value.toString(),
+                ),
+              _buildDropdownField<String>(
+                label: AppConstants.isMunicipality(_selectedArea ?? '')
+                    ? 'mahalla'.tr
+                    : 'village'.tr,
+                value: _selectedLocality,
+                items: _selectedArea == null
+                    ? const <String>[]
+                    : AppConstants.localitiesForArea(
+                        _selectedArea!,
+                        ward: _selectedWard,
+                      ),
+                enabled: _selectedArea != null &&
+                    (!AppConstants.isMunicipality(_selectedArea!) ||
+                        _selectedWard != null),
+                onChanged: (value) {
+                  setState(() => _selectedLocality = value);
                 },
               ),
               _buildDropdownField(
@@ -267,15 +301,47 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   },
                 ),
                 _field(_profession, 'profession'.tr),
-                _buildDropdownField(
-                  label: 'union'.tr,
-                  value: _selectedUnion,
-                  items: AppConstants.unions,
+                _buildDropdownField<String>(
+                  label: 'union_or_municipality'.tr,
+                  value: _selectedArea,
+                  items: AppConstants.locationAreas,
                   onChanged: (value) {
                     setState(() {
-                      _selectedUnion = value;
-                      _selectedVillage = null;
+                      _selectedArea = value;
+                      _selectedWard = null;
+                      _selectedLocality = null;
                     });
+                  },
+                ),
+                if (_selectedArea != null && AppConstants.isMunicipality(_selectedArea!))
+                  _buildDropdownField<int>(
+                    label: 'ward'.tr,
+                    value: _selectedWard,
+                    items: AppConstants.wardsForArea(_selectedArea!),
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedWard = value;
+                        _selectedLocality = null;
+                      });
+                    },
+                    itemLabel: (value) => value.toString(),
+                  ),
+                _buildDropdownField<String>(
+                  label: AppConstants.isMunicipality(_selectedArea ?? '')
+                      ? 'mahalla'.tr
+                      : 'village'.tr,
+                  value: _selectedLocality,
+                  items: _selectedArea == null
+                      ? const <String>[]
+                      : AppConstants.localitiesForArea(
+                          _selectedArea!,
+                          ward: _selectedWard,
+                        ),
+                  enabled: _selectedArea != null &&
+                      (!AppConstants.isMunicipality(_selectedArea!) ||
+                          _selectedWard != null),
+                  onChanged: (value) {
+                    setState(() => _selectedLocality = value);
                   },
                 ),
                 _buildDropdownField(
@@ -321,8 +387,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     if (_name.text.trim().isEmpty ||
         _phone.text.trim().isEmpty ||
         _email.text.trim().isEmpty ||
-        _selectedUnion == null ||
-        _selectedVillage == null) {
+        _selectedArea == null ||
+        _selectedLocality == null ||
+        (AppConstants.isMunicipality(_selectedArea!) && _selectedWard == null)) {
       return false;
     }
     try {
@@ -353,25 +420,30 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     return 'registration_failed';
   }
 
-  Widget _buildDropdownField({
+  Widget _buildDropdownField<T>({
     required String label,
-    required String? value,
-    required List<String> items,
-    required ValueChanged<String?> onChanged,
+    required T? value,
+    required List<T> items,
+    required ValueChanged<T?> onChanged,
     bool enabled = true,
+    String Function(T value)? itemLabel,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
-      child: DropdownButtonFormField<String>(
+      child: DropdownButtonFormField<T>(
         initialValue: value,
         decoration: InputDecoration(
           labelText: label,
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         ),
-        items: items.map((item) => DropdownMenuItem<String>(
-          value: item,
-          child: Text(item),
-        )).toList(),
+        items: items
+            .map(
+              (item) => DropdownMenuItem<T>(
+                value: item,
+                child: Text(itemLabel?.call(item) ?? item.toString()),
+              ),
+            )
+            .toList(),
         onChanged: enabled ? onChanged : null,
       ),
     );
