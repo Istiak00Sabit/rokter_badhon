@@ -5,7 +5,7 @@ import 'package:rokter_badhon/services/auth_services.dart';
 void main() {
   const identity = RegistrationIdentity(
     uid: 'auth-id',
-    internalEmail: 'p01900000000@auth.rokterbadhon.internal',
+    authEmail: 'typed@example.test',
   );
   const applicant = RegistrationApplicantInput(
     name: 'Applicant',
