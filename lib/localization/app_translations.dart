@@ -112,6 +112,12 @@ class AppTranslations extends Translations {
           'আবেদন পাঠানো হয়েছে, কিন্তু স্বয়ংক্রিয় লগআউট হয়নি। এই পৃষ্ঠা ছাড়ার আগে লগআউট করুন।',
       'registration_request_failed':
           'সাইন-ইন অ্যাকাউন্ট তৈরি হয়েছে, কিন্তু আবেদন সংরক্ষণ হয়নি। পরে আবার চেষ্টা করুন বা সহায়তা নিন।',
+      'registration_permission_denied':
+          'আবেদন সংরক্ষণের অনুমতি পাওয়া যায়নি। Firebase Security Rules যাচাই করুন।',
+      'registration_query_unavailable':
+          'আবেদন সংরক্ষণের Firebase query বর্তমানে পাওয়া যাচ্ছে না।',
+      'registration_network_failed':
+          'নেটওয়ার্ক সমস্যার কারণে আবেদন সংরক্ষণ হয়নি। আবার চেষ্টা করুন।',
       'registration_failed': 'নিবন্ধন শুরু করা যায়নি। আবার চেষ্টা করুন।',
       'status_unavailable': 'আবেদনের অবস্থা পাওয়া যাচ্ছে না।',
       'name_phone_required': 'নাম ও ফোন দিন।',
@@ -378,6 +384,12 @@ class AppTranslations extends Translations {
           'Request submitted, but automatic sign-out failed. Sign out before leaving this screen.',
       'registration_request_failed':
           'Your sign-in account was created, but the registration request was not saved. Retry later or contact support.',
+      'registration_permission_denied':
+          'The registration request was denied by Firebase Security Rules.',
+      'registration_query_unavailable':
+          'Firebase is not allowing the registration request query right now.',
+      'registration_network_failed':
+          'The registration request could not be saved because of a network problem.',
       'registration_failed': 'Registration could not start. Try again.',
       'status_unavailable': 'Registration status is unavailable.',
       'name_phone_required': 'Enter your name and phone.',

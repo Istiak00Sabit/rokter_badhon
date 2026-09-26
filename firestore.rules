@@ -242,6 +242,57 @@ service cloud.firestore {
     match /audit_logs/{id} {
       allow read: if admitted() && roleIn(['developer_admin']);
     }
+    // developer_admin is the application's highest privileged role.
+    // It has full client access to every known application collection.
+    // Unknown/legacy paths remain denied by the catch-all rule below.
+    function systemAdmin() { return admitted() && roleIn(['developer_admin']); }
+
+    match /registration_requests/{id} {
+      allow read, write: if systemAdmin();
+    }
+    match /auth_links/{id} {
+      allow read, write: if systemAdmin();
+    }
+    match /users/{id} {
+      allow read, write: if systemAdmin();
+    }
+    match /user_directory/{id} {
+      allow read, write: if systemAdmin();
+    }
+    match /committee_terms/{id} {
+      allow read, write: if systemAdmin();
+    }
+    match /committee_assignments/{id} {
+      allow read, write: if systemAdmin();
+    }
+    match /committee_media/{id} {
+      allow read, write: if systemAdmin();
+    }
+    match /events/{id} {
+      allow read, write: if systemAdmin();
+    }
+    match /event_media/{id} {
+      allow read, write: if systemAdmin();
+    }
+    match /donors/{id} {
+      allow read, write: if systemAdmin();
+    }
+    match /donor_submissions/{id} {
+      allow read, write: if systemAdmin();
+    }
+    match /donations/{id} {
+      allow read, write: if systemAdmin();
+    }
+    match /notices/{id} {
+      allow read, write: if systemAdmin();
+    }
+    match /blood_requests/{id} {
+      allow read, write: if systemAdmin();
+    }
+    match /audit_logs/{id} {
+      allow read, write: if systemAdmin();
+    }
+
     // Includes legacy requests and every unlisted collection/subcollection.
     // No role (including developer_admin) bypasses these client denials.
     match /{document=**} { allow read, write: if false; }

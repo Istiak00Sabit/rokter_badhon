@@ -340,6 +340,19 @@ class AuthService {
     return mapAuthErrorCode(error);
   }
 
+  static String mapRegistrationSubmissionError(Object? error) {
+    final code = switch (error) {
+      FirebaseException firebaseError => firebaseError.code,
+      _ => null,
+    };
+    return switch (code) {
+      'permission-denied' => 'registration_permission_denied',
+      'failed-precondition' => 'registration_query_unavailable',
+      'unavailable' || 'network-request-failed' => 'registration_network_failed',
+      _ => error is FormatException ? 'registration_invalid' : 'registration_request_failed',
+    };
+  }
+
   static String mapAuthErrorCode(Object? error) {
     final code = switch (error) {
       FirebaseAuthException authError => authError.code,

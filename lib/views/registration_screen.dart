@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../constants/app_colors.dart';
+import '../constants/app_constants.dart';
+import '../services/auth_identity.dart';
 import '../models/registration_request_model.dart';
 import '../services/auth_services.dart';
 import '../widgets/auth_language_switch.dart';
@@ -34,10 +36,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   }
 
   Future<void> _register() async {
-    if (_name.text.trim().isEmpty ||
-        _phone.text.trim().isEmpty ||
-        _password.text.length < 6 ||
-        _password.text != _passwordConfirmation.text) {
+    if (!_validateApplicantFields(includePassword: true)) {
       setState(() => _message = 'registration_invalid');
       return;
     }
@@ -57,16 +56,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     if (!mounted) return;
     setState(() {
       _loading = false;
-      _message = switch (result.state) {
-        RegistrationSubmissionState.submitted => 'registration_submitted',
-        RegistrationSubmissionState.submittedVerificationEmailFailed =>
-          'registration_submitted',
-        RegistrationSubmissionState.submittedSignOutFailed =>
-          'registration_submitted_signout_failed',
-        RegistrationSubmissionState.authCreatedRequestFailed =>
-          'registration_request_failed',
-        RegistrationSubmissionState.failed => 'registration_failed',
-      };
+      _message = _registrationMessage(result);
     });
     if (result.requestSubmitted && _authService.currentUser != null) {
       await _refreshStatus();
@@ -90,8 +80,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   }
 
   Future<void> _submitForExistingAccount() async {
-    if (_name.text.trim().isEmpty || _phone.text.trim().isEmpty) {
-      setState(() => _message = 'name_phone_required');
+    if (!_validateApplicantFields()) {
+      setState(() => _message = 'registration_invalid');
       return;
     }
     setState(() => _loading = true);
@@ -104,16 +94,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         profession: _profession.text,
         address: _address.text,
       );
-      _message = switch (result.state) {
-        RegistrationSubmissionState.submitted => 'registration_submitted',
-        RegistrationSubmissionState.submittedVerificationEmailFailed =>
-          'registration_submitted_email_failed',
-        RegistrationSubmissionState.submittedSignOutFailed =>
-          'registration_submitted_signout_failed',
-        RegistrationSubmissionState.authCreatedRequestFailed =>
-          'registration_request_failed',
-        RegistrationSubmissionState.failed => 'registration_failed',
-      };
+      _message = _registrationMessage(result);
       if (result.requestSubmitted && _authService.currentUser != null) {
         await _refreshStatus();
       }
@@ -164,7 +145,14 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               _field(_name, 'name'.tr),
               _field(_phone, 'phone'.tr, type: TextInputType.phone),
               _field(_email, 'email'.tr, type: TextInputType.emailAddress),
-              _field(_bloodGroup, 'blood_group'.tr),
+              _buildDropdownField(
+                label: 'blood_group'.tr,
+                value: _bloodGroup.text.isEmpty ? null : _bloodGroup.text,
+                items: AppConstants.bloodGroups,
+                onChanged: (value) {
+                  setState(() => _bloodGroup.text = value ?? '');
+                },
+              ),
               _field(_profession, 'profession'.tr),
               _field(_address, 'address'.tr),
               _field(_password, 'password'.tr, obscure: true),
@@ -203,6 +191,17 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 const SizedBox(height: 16),
                 _field(_name, 'name'.tr),
                 _field(_phone, 'phone'.tr, type: TextInputType.phone),
+                _field(_email, 'email'.tr, type: TextInputType.emailAddress),
+                _buildDropdownField(
+                  label: 'blood_group'.tr,
+                  value: _bloodGroup.text.isEmpty ? null : _bloodGroup.text,
+                  items: AppConstants.bloodGroups,
+                  onChanged: (value) {
+                    setState(() => _bloodGroup.text = value ?? '');
+                  },
+                ),
+                _field(_profession, 'profession'.tr),
+                _field(_address, 'address'.tr),
                 ElevatedButton(
                   onPressed: _loading ? null : _submitForExistingAccount,
                   child: Text('retry_submission'.tr),
@@ -226,6 +225,87 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               ),
           ],
         ),
+      ),
+    );
+  }
+
+  bool _validateApplicantFields({bool includePassword = false}) {
+    if (_name.text.trim().isEmpty || _phone.text.trim().isEmpty) return false;
+    try {
+      AuthIdentity.normalizePhone(_phone.text);
+    } on FormatException {
+      return false;
+    }
+    final email = _email.text.trim();
+    if (email.isNotEmpty &&
+        !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+    TextEditingController controller,
+    String label, {
+    TextInputType? type,
+    bool obscure = false,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: TextField(
+        controller: controller,
+        keyboardType: type,
+        obscureText: obscure,
+        decoration: InputDecoration(
+          labelText: label,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      ),
+    );
+  }
+
+  String _statusLabel(RegistrationRequestModel? request) {
+    if (request == null) return 'status_unavailable'.tr;
+    return switch (request.status) {
+      RegistrationRequestStatus.pending => 'status.pending'.tr,
+      RegistrationRequestStatus.approved => 'status.approved'.tr,
+      RegistrationRequestStatus.rejected => 'status.rejected'.tr,
+    };
+  }
+}
+).hasMatch(email)) {
+      return false;
+    }
+    if (includePassword &&
+        (_password.text.length < 6 ||
+            _password.text != _passwordConfirmation.text)) {
+      return false;
+    }
+    return true;
+  }
+
+  String _registrationMessage(RegistrationSubmissionResult result) {
+    if (result.state == RegistrationSubmissionState.submitted) return 'registration_submitted';
+    if (result.state == RegistrationSubmissionState.submittedVerificationEmailFailed) return 'registration_submitted_email_failed';
+    if (result.state == RegistrationSubmissionState.submittedSignOutFailed) return 'registration_submitted_signout_failed';
+    if (result.state == RegistrationSubmissionState.authCreatedRequestFailed) {
+      return AuthService.mapRegistrationSubmissionError(result.error);
+    }
+    return 'registration_failed';
+  }
+
+  Widget _buildDropdownField({
+    required String label,
+    required String? value,
+    required List<String> items,
+    required ValueChanged<String?> onChanged,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: DropdownButtonFormField<String>(
+        initialValue: value,
+        decoration: InputDecoration(
+          labelText: label,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+        items: items.map((item) => DropdownMenuItem<String>(
+          value: item,
+          child: Text(item),
+        )).toList(),
+        onChanged: onChanged,
       ),
     );
   }
