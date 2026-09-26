@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 
 import '../constants/app_colors.dart';
 import '../constants/app_constants.dart';
+import '../data/ghatail_village_data.dart';
 import '../services/auth_identity.dart';
 import '../models/registration_request_model.dart';
 import '../services/auth_services.dart';
@@ -28,13 +29,30 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   String? _selectedUnion;
   String? _selectedVillage;
   bool _loading = false;
+  bool _locationsReady = false;
+  bool _locationLoadFailed = false;
   RegistrationRequestModel? _request;
   String? _message;
 
   @override
   void initState() {
     super.initState();
+    _loadLocations();
     if (_authService.currentUser != null) _refreshStatus();
+  }
+
+  Future<void> _loadLocations() async {
+    try {
+      await GhatailVillageData.load();
+      if (!mounted) return;
+      setState(() {
+        _locationsReady = true;
+        _locationLoadFailed = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _locationLoadFailed = true);
+    }
   }
 
   Future<void> _register() async {
@@ -149,7 +167,25 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (!signedIn) ...[
+            if (!_locationsReady)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 48),
+                child: Center(
+                  child: _locationLoadFailed
+                      ? Column(
+                          children: [
+                            Text('location_data_error'.tr),
+                            const SizedBox(height: 12),
+                            OutlinedButton(
+                              onPressed: _loadLocations,
+                              child: Text('retry'.tr),
+                            ),
+                          ],
+                        )
+                      : const CircularProgressIndicator(),
+                ),
+              ),
+            if (_locationsReady && !signedIn) ...[
               _field(_name, 'name'.tr),
               _field(_phone, 'phone'.tr, type: TextInputType.phone),
               _field(_email, 'email'.tr, type: TextInputType.emailAddress),
@@ -208,7 +244,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 ],
               ),
             ],
-            if (signedIn) ...[
+            if (_locationsReady && signedIn) ...[
               Text(
                 '${'request_status'.tr}: ${_statusLabel(_request)}',
                 style: const TextStyle(
