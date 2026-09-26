@@ -55,9 +55,9 @@ service cloud.firestore {
         || (admitted() && editorial() && resource.data.status == 'pending');
       allow list: if admitted() && editorial() && resource.data.status == 'pending';
       allow create: if unlinkedOwn(uid)
-        && request.resource.data.keys().hasAll(['auth_uid','name','phone','email','blood_group','profession','address','union','ward','village',
+        && request.resource.data.keys().hasAll(['auth_uid','name','phone','email','blood_group','profession','address','union', 'village',
           'status','requested_at','approved_by','approved_at','rejected_by','rejected_at','linked_user_id'])
-        && request.resource.data.keys().hasOnly(['auth_uid','name','phone','email','blood_group','profession','address','union','ward','village',
+        && request.resource.data.keys().hasOnly(['auth_uid','name','phone','email','blood_group','profession','address','union', 'village',
           'status','requested_at','approved_by','approved_at','rejected_by','rejected_at','linked_user_id'])
         && request.resource.data.auth_uid == request.auth.uid
         && request.resource.data.name is string && request.resource.data.phone is string
@@ -66,9 +66,6 @@ service cloud.firestore {
         && nullableString(request.resource.data.profession)
         && nullableString(request.resource.data.address)
         && request.resource.data.union is string && request.resource.data.union.size() > 0
-        && ((request.resource.data.union == 'ঘাটাইল পৌরসভা' && request.resource.data.ward is int
-              && request.resource.data.ward >= 1 && request.resource.data.ward <= 9)
-            || (request.resource.data.union != 'ঘাটাইল পৌরসভা' && request.resource.data.ward == null))
         && request.resource.data.village is string && request.resource.data.village.size() > 0
         && request.resource.data.status == 'pending' && request.resource.data.requested_at == request.time
         && request.resource.data.approved_by == null && request.resource.data.approved_at == null
@@ -96,10 +93,10 @@ service cloud.firestore {
     function eventReadable(e) { return e.active == true || (e.active == false && editorial()); }
     function validDonor(d) {
       return (
-          (d.keys().hasAll(['name','phone','blood_group','gender','photo_url','village','union','ward','upazila',
+          (d.keys().hasAll(['name','phone','blood_group','gender','photo_url','village','union','upazila',
               'district','profession','linked_user_id','active','last_donated_at','total_donations',
               'created_at','created_by','updated_at','updated_by'])
-            && d.keys().hasOnly(['name','phone','blood_group','gender','photo_url','village','union','ward','upazila',
+            && d.keys().hasOnly(['name','phone','blood_group','gender','photo_url','village','union','upazila',
               'district','profession','linked_user_id','active','last_donated_at','total_donations',
               'created_at','created_by','updated_at','updated_by']))
           ||
@@ -112,7 +109,6 @@ service cloud.firestore {
         )
         && d.name is string && d.phone is string && d.blood_group is string
         && nullableString(d.gender) && nullableString(d.village) && nullableString(d.union)
-        && (!d.keys().hasAll(['ward']) || d.ward == null || (d.ward is int && d.ward >= 1 && d.ward <= 9))
         && d.upazila is string && d.district is string && nullableString(d.profession)
         && (d.photo_url == null || (d.photo_url is string && d.photo_url.size() <= 2048
           && d.photo_url.matches('https://[^/]+.*')))
@@ -124,8 +120,8 @@ service cloud.firestore {
     }
     function validDonorPayload(d) {
       return (
-          (d.keys().hasAll(['name','phone','blood_group','gender','photo_url','village','union','ward','upazila','district','profession'])
-            && d.keys().hasOnly(['name','phone','blood_group','gender','photo_url','village','union','ward','upazila','district','profession']))
+          (d.keys().hasAll(['name','phone','blood_group','gender','photo_url','village','union','upazila','district','profession'])
+            && d.keys().hasOnly(['name','phone','blood_group','gender','photo_url','village','union','upazila','district','profession']))
           ||
           (d.keys().hasAll(['name','phone','blood_group','gender','photo_url','village','union','upazila','district','profession'])
             && d.keys().hasOnly(['name','phone','blood_group','gender','photo_url','village','union','upazila','district','profession']))
@@ -133,7 +129,6 @@ service cloud.firestore {
         && d.name is string && d.name.size() > 0 && d.phone is string && d.phone.size() > 0
         && d.blood_group is string && d.blood_group.size() > 0
         && nullableString(d.gender) && nullableString(d.village) && nullableString(d.union)
-        && (!d.keys().hasAll(['ward']) || d.ward == null || (d.ward is int && d.ward >= 1 && d.ward <= 9))
         && d.upazila is string && d.upazila.size() > 0 && d.district is string && d.district.size() > 0
         && nullableString(d.profession)
         && (d.photo_url == null || (d.photo_url is string && d.photo_url.size() <= 2048
@@ -163,9 +158,6 @@ service cloud.firestore {
         && d.blood_group == s.donor_payload.blood_group && d.gender == s.donor_payload.gender
         && d.photo_url == s.donor_payload.photo_url && d.village == s.donor_payload.village
         && d.union == s.donor_payload.union
-        && ((!d.keys().hasAll(['ward']) && !s.donor_payload.keys().hasAll(['ward']))
-          || (d.keys().hasAll(['ward']) && s.donor_payload.keys().hasAll(['ward'])
-              && d.ward == s.donor_payload.ward))
         && d.upazila == s.donor_payload.upazila
         && d.district == s.donor_payload.district && d.profession == s.donor_payload.profession
         && d.linked_user_id == null && d.active == true && d.last_donated_at == null
