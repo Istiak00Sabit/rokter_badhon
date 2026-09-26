@@ -125,28 +125,78 @@ class AddDonorScreen extends StatelessWidget {
             _sectionTitle('address'.tr),
             const SizedBox(height: 12),
 
-            // Village
-            _buildTextField(
-              controller: controller.villageController,
-              label: 'village'.tr,
-              hint: 'enter_village'.tr,
-              icon: Icons.home_outlined,
-            ),
-            const SizedBox(height: 14),
+            Obx(() {
+              if (!controller.locationsReady.value) {
+                return Column(
+                  children: [
+                    if (controller.locationLoadFailed.value)
+                      OutlinedButton.icon(
+                        onPressed: controller.retryLocations,
+                        icon: const Icon(Icons.refresh),
+                        label: Text('retry'.tr),
+                      )
+                    else
+                      const Center(child: CircularProgressIndicator()),
+                    const SizedBox(height: 14),
+                  ],
+                );
+              }
 
-            // Union
-            Obx(
-              () => _buildDropdown(
-                label: 'union'.tr,
-                icon: Icons.location_on_outlined,
-                value: controller.selectedUnion.value.isEmpty
-                    ? null
-                    : controller.selectedUnion.value,
-                items: AppConstants.unions,
-                onChanged: (val) => controller.selectedUnion.value = val!,
-              ),
-            ),
-            const SizedBox(height: 14),
+              final area = controller.selectedUnion.value;
+              final isMunicipality =
+                  area.isNotEmpty && AppConstants.isMunicipality(area);
+              final wards = isMunicipality
+                  ? AppConstants.wardsForArea(area)
+                  : const <int>[];
+              final localities = area.isEmpty
+                  ? const <String>[]
+                  : AppConstants.localitiesForArea(
+                      area,
+                      ward: controller.selectedWard.value,
+                    );
+
+              return Column(
+                children: [
+                  _buildDropdown(
+                    label: 'union_or_municipality'.tr,
+                    icon: Icons.location_on_outlined,
+                    value: area.isEmpty ? null : area,
+                    items: AppConstants.locationAreas,
+                    onChanged: (val) {
+                      controller.selectedUnion.value = val!;
+                      controller.selectedWard.value = null;
+                      controller.villageController.clear();
+                    },
+                  ),
+                  const SizedBox(height: 14),
+                  if (isMunicipality) ...[
+                    _buildDropdown<int>(
+                      label: 'ward'.tr,
+                      icon: Icons.map_outlined,
+                      value: controller.selectedWard.value,
+                      items: wards,
+                      itemLabel: (value) => value.toString(),
+                      onChanged: (val) {
+                        controller.selectedWard.value = val;
+                        controller.villageController.clear();
+                      },
+                    ),
+                    const SizedBox(height: 14),
+                  ],
+                  _buildDropdown<String>(
+                    label: isMunicipality ? 'mahalla'.tr : 'village'.tr,
+                    icon: Icons.home_outlined,
+                    value: controller.villageController.text.isEmpty
+                        ? null
+                        : controller.villageController.text,
+                    items: localities,
+                    onChanged: (val) =>
+                        controller.villageController.text = val ?? '',
+                  ),
+                  const SizedBox(height: 14),
+                ],
+              );
+            }),
 
             // Upazila & District (static - read only)
             Row(
@@ -284,13 +334,13 @@ class AddDonorScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDropdown({
+  Widget _buildDropdown<T>({
     required String label,
     required IconData icon,
-    required String? value,
-    required List<String> items,
-    required Function(String?) onChanged,
-    String Function(String)? itemLabel,
+    required T? value,
+    required List<T> items,
+    required Function(T?) onChanged,
+    String Function(T)? itemLabel,
   }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -316,13 +366,13 @@ class AddDonorScreen extends StatelessWidget {
           ),
           items: items
               .map(
-                (item) => DropdownMenuItem(
+                (item) => DropdownMenuItem<T>(
                   value: item,
                   child: Row(
                     children: [
                       Icon(icon, color: AppColors.primary, size: 18),
                       const SizedBox(width: 12),
-                      Text(itemLabel?.call(item) ?? item),
+                      Text(itemLabel?.call(item) ?? item.toString()),
                     ],
                   ),
                 ),
