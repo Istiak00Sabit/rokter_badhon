@@ -63,7 +63,7 @@ class AppConstants {
   static const String upazila = 'ঘাটাইল';
   static const String district = 'টাঙ্গাইল';
 
-  static const List<String> unions = GhatailVillageData.unions;
+  static List<String> get unions => GhatailVillageData.unions;
 
   static List<String> villagesForUnion(String union) =>
       GhatailVillageData.villagesForUnion(union);
