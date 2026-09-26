@@ -348,7 +348,7 @@ class AppTranslations extends Translations {
       'times': 'times',
       'ranklist_empty': 'No donation records yet',
       'ranklist_error': 'The ranklist could not be loaded.',
-      'role.developer_admin': 'Developer admin',
+      'role.developer_admin': 'Developer Admin',
       'role.leader': 'Leader',
       'role.executive': 'Executive',
       'role.committee': 'Committee member',
