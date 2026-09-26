@@ -27,7 +27,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final _password = TextEditingController();
   final _passwordConfirmation = TextEditingController();
   String? _selectedArea;
-  int? _selectedWard;
   String? _selectedLocality;
   bool _loading = false;
   bool _locationsReady = false;
@@ -74,7 +73,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       profession: _profession.text,
       address: _address.text,
       union: _selectedArea,
-      ward: _selectedWard,
       village: _selectedLocality,
     );
     if (!mounted) return;
@@ -118,7 +116,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         profession: _profession.text,
         address: _address.text,
         union: _selectedArea,
-        ward: _selectedWard,
         village: _selectedLocality,
       );
       _message = _registrationMessage(result);
@@ -208,24 +205,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 onChanged: (value) {
                   setState(() {
                     _selectedArea = value;
-                    _selectedWard = null;
                     _selectedLocality = null;
                   });
                 },
               ),
-              if (_selectedArea != null && AppConstants.isMunicipality(_selectedArea!))
-                _buildDropdownField<int>(
-                  label: 'ward'.tr,
-                  value: _selectedWard,
-                  items: AppConstants.wardsForArea(_selectedArea!),
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedWard = value;
-                      _selectedLocality = null;
-                    });
-                  },
-                  itemLabel: (value) => value.toString(),
-                ),
               _buildDropdownField<String>(
                 label: AppConstants.isMunicipality(_selectedArea ?? '')
                     ? 'mahalla'.tr
@@ -235,7 +218,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     ? const <String>[]
                     : AppConstants.localitiesForArea(
                         _selectedArea!,
-                        ward: _selectedWard,
                       ),
                 enabled: _selectedArea != null &&
                     (!AppConstants.isMunicipality(_selectedArea!) ||
@@ -298,34 +280,19 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   onChanged: (value) {
                     setState(() {
                       _selectedArea = value;
-                      _selectedWard = null;
                       _selectedLocality = null;
                     });
                   },
                 ),
-                if (_selectedArea != null && AppConstants.isMunicipality(_selectedArea!))
-                  _buildDropdownField<int>(
-                    label: 'ward'.tr,
-                    value: _selectedWard,
-                    items: AppConstants.wardsForArea(_selectedArea!),
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedWard = value;
-                        _selectedLocality = null;
-                      });
-                    },
-                    itemLabel: (value) => value.toString(),
-                  ),
                 _buildDropdownField<String>(
                   label: AppConstants.isMunicipality(_selectedArea ?? '')
-                      ? 'mahalla'.tr
-                      : 'village'.tr,
+                    ? 'mahalla'.tr
+                    : 'village'.tr,
                   value: _selectedLocality,
                   items: _selectedArea == null
                       ? const <String>[]
                       : AppConstants.localitiesForArea(
                           _selectedArea!,
-                          ward: _selectedWard,
                         ),
                   enabled: _selectedArea != null &&
                       (!AppConstants.isMunicipality(_selectedArea!) ||
@@ -367,8 +334,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         _phone.text.trim().isEmpty ||
         _email.text.trim().isEmpty ||
         _selectedArea == null ||
-        _selectedLocality == null ||
-        (AppConstants.isMunicipality(_selectedArea!) && _selectedWard == null)) {
+        _selectedLocality == null ||) {
       return false;
     }
     try {
