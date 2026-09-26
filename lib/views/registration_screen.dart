@@ -117,8 +117,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         bloodGroup: _bloodGroup.text,
         profession: _profession.text,
         address: _address.text,
-        union: _selectedUnion,
-        village: _selectedVillage,
+        union: _selectedArea,
+        ward: _selectedWard,
+        village: _selectedLocality,
       );
       _message = _registrationMessage(result);
       if (result.requestSubmitted && _authService.currentUser != null) {
@@ -331,17 +332,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                           _selectedWard != null),
                   onChanged: (value) {
                     setState(() => _selectedLocality = value);
-                  },
-                ),
-                _buildDropdownField(
-                  label: 'village'.tr,
-                  value: _selectedVillage,
-                  items: _selectedUnion == null
-                      ? const <String>[]
-                      : AppConstants.villagesForUnion(_selectedUnion!),
-                  enabled: _selectedUnion != null,
-                  onChanged: (value) {
-                    setState(() => _selectedVillage = value);
                   },
                 ),
                 _field(_address, 'address'.tr),
