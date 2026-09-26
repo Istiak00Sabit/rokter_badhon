@@ -11,7 +11,6 @@ Map<String, dynamic> validRequest({Map<String, dynamic> changes = const {}}) => 
   'profession': 'Teacher',
   'address': 'Address',
   'union': 'ঘাটাইল',
-  'ward': null,
   'village': 'নরজনা',
   'status': 'pending',
   'requested_at': Timestamp.fromMillisecondsSinceEpoch(1700000000000),
@@ -70,8 +69,7 @@ void main() {
           'profession': 'Teacher',
           'address': 'Address',
           'union': 'ঘাটাইল',
-          'ward': null,
-          'village': 'নরজনা',
+                  'village': 'নরজনা',
           field: null,
         }),
         throwsFormatException,
@@ -120,7 +118,6 @@ void main() {
         bloodGroup: 'A+',
         profession: 'Teacher',
         address: 'Address',
-        ward: null,
       ),
     );
     expect(payload.keys.toSet(), RegistrationRequestModel.fields);
