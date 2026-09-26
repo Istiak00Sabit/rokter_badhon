@@ -350,7 +350,7 @@ class AddDonorScreen extends StatelessWidget {
         border: Border.all(color: AppColors.textLight),
       ),
       child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
+        child: DropdownButton<T>(
           value: value,
           isExpanded: true,
           hint: Row(
