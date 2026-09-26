@@ -104,9 +104,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       if (result.requestSubmitted && _authService.currentUser != null) {
         await _refreshStatus();
       }
-    } catch (_) {
+    } catch (error) {
       if (mounted) {
-        setState(() => _message = 'registration_failed');
+        setState(
+          () => _message = AuthService.mapRegistrationSubmissionError(error),
+        );
       }
     } finally {
       if (mounted) setState(() => _loading = false);
