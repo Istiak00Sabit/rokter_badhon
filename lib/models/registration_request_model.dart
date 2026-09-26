@@ -11,6 +11,7 @@ class RegistrationApplicantInput {
     'profession',
     'address',
     'union',
+    'ward',
     'village',
   };
 
@@ -21,6 +22,7 @@ class RegistrationApplicantInput {
   final String? profession;
   final String? address;
   final String? union;
+  final int? ward;
   final String? village;
 
   const RegistrationApplicantInput({
@@ -31,6 +33,7 @@ class RegistrationApplicantInput {
     this.profession,
     this.address,
     this.union,
+    this.ward,
     this.village,
   });
 
@@ -49,6 +52,7 @@ class RegistrationApplicantInput {
       profession: _nullableString(map, 'profession'),
       address: _nullableString(map, 'address'),
       union: _nullableString(map, 'union'),
+      ward: _nullableInt(map, 'ward'),
       village: _nullableString(map, 'village'),
     );
   }
@@ -64,6 +68,7 @@ class RegistrationRequestModel {
     'profession',
     'address',
     'union',
+    'ward',
     'village',
     'status',
     'requested_at',
@@ -82,6 +87,7 @@ class RegistrationRequestModel {
   final String? profession;
   final String? address;
   final String? union;
+  final int? ward;
   final String? village;
   final RegistrationRequestStatus status;
   final DateTime requestedAt;
@@ -100,6 +106,7 @@ class RegistrationRequestModel {
     required this.profession,
     required this.address,
     required this.union,
+    required this.ward,
     required this.village,
     required this.status,
     required this.requestedAt,
@@ -115,7 +122,9 @@ class RegistrationRequestModel {
     String documentId,
   ) {
     final keys = map.keys.toSet();
-    if (keys.length != fields.length || !keys.containsAll(fields)) {
+    final legacyFields = fields.difference({'ward'});
+    if ((keys.length != fields.length || !keys.containsAll(fields)) &&
+        (keys.length != legacyFields.length || !keys.containsAll(legacyFields))) {
       throw const FormatException(
         'RegistrationRequest has missing or unapproved fields.',
       );
@@ -147,6 +156,7 @@ class RegistrationRequestModel {
       profession: _nullableString(map, 'profession'),
       address: _nullableString(map, 'address'),
       union: _nullableString(map, 'union'),
+      ward: _nullableInt(map, 'ward'),
       village: _nullableString(map, 'village'),
       status: status,
       requestedAt: _requiredTimestamp(map, 'requested_at').toDate(),
@@ -225,6 +235,7 @@ class RegistrationRequestPayload {
       'profession': applicant.profession,
       'address': applicant.address,
       'union': applicant.union,
+      'ward': applicant.ward,
       'village': applicant.village,
       'status': 'pending',
       'requested_at': FieldValue.serverTimestamp(),
@@ -241,6 +252,14 @@ String _requiredString(Map<String, dynamic> map, String key) {
   final value = map[key];
   if (value is! String) throw FormatException('$key must be a string.');
   return value;
+}
+
+int? _nullableInt(Map<String, dynamic> map, String key) {
+  final value = map[key];
+  if (value != null && value is! int) {
+    throw FormatException('$key must be an integer or null.');
+  }
+  return value as int?;
 }
 
 String? _nullableString(Map<String, dynamic> map, String key) {
