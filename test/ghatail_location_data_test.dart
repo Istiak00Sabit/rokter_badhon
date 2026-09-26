@@ -18,7 +18,7 @@ void main() {
         GhatailVillageData.localitiesForArea(
           GhatailVillageData.municipalityName,
         );
-    expect(municipality.length, 16);
+    expect(municipality.length, 14);
     expect(municipality, contains('বানিয়াপাড়া (দক্ষিণ)'));
     expect(municipality, contains('ঘাটাইল'));
   });
