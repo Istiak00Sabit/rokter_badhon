@@ -249,6 +249,8 @@ class AppTranslations extends Translations {
       'auth_check_failed': 'লগইন অনুমতি যাচাই করা যায়নি। আবার চেষ্টা করুন।',
       'auth_user_not_found': 'এই ইমেইলে কোনো অ্যাকাউন্ট নেই।',
       'auth_invalid_credential': 'ইমেইল বা পাসওয়ার্ড ভুল হয়েছে।',
+      'auth_operation_not_allowed': 'এই লগইন পদ্ধতি Firebase-এ সক্রিয় নেই।',
+      'auth_too_many_requests': 'অনেকবার চেষ্টা হয়েছে। কিছুক্ষণ পরে আবার চেষ্টা করুন।',
       'auth_invalid_email': 'ইমেইল ঠিকানা সঠিক নয়।',
       'auth_user_disabled': 'এই অ্যাকাউন্ট বন্ধ করা হয়েছে।',
       'auth_too_many_requests':
@@ -522,6 +524,8 @@ class AppTranslations extends Translations {
           'Login authorization could not be verified. Try again.',
       'auth_user_not_found': 'No account exists for this email.',
       'auth_invalid_credential': 'The email or password is incorrect.',
+      'auth_operation_not_allowed': 'Email/password sign-in is not enabled in Firebase.',
+      'auth_too_many_requests': 'Too many attempts. Please try again later.',
       'auth_invalid_email': 'The email address is invalid.',
       'auth_user_disabled': 'This account has been disabled.',
       'auth_too_many_requests': 'Too many attempts. Try again later.',
