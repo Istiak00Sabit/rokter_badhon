@@ -243,17 +243,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   setState(() => _selectedLocality = value);
                 },
               ),
-              _buildDropdownField(
-                label: 'village'.tr,
-                value: _selectedVillage,
-                items: _selectedUnion == null
-                    ? const <String>[]
-                    : AppConstants.villagesForUnion(_selectedUnion!),
-                enabled: _selectedUnion != null,
-                onChanged: (value) {
-                  setState(() => _selectedVillage = value);
-                },
-              ),
               _field(_address, 'address'.tr),
               _field(_password, 'password'.tr, obscure: true),
               _field(
