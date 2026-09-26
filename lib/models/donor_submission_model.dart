@@ -67,19 +67,12 @@ class DonorSubmissionModel {
       'photo_url',
       'village',
       'union',
-      'ward',
       'upazila',
       'district',
       'profession',
     };
-    final legacyPayloadFields = payloadFields.difference({'ward'});
-    final currentPayload =
-        values.keys.toSet().length == payloadFields.length &&
-        values.keys.toSet().containsAll(payloadFields);
-    final legacyPayload =
-        values.keys.toSet().length == legacyPayloadFields.length &&
-        values.keys.toSet().containsAll(legacyPayloadFields);
-    if (!currentPayload && !legacyPayload) {
+    if (values.keys.toSet().length != payloadFields.length ||
+        !values.keys.toSet().containsAll(payloadFields)) {
       throw const DonorDataException(
         'donor_payload has missing or unapproved fields.',
       );
@@ -102,7 +95,6 @@ class DonorSubmissionModel {
         photoUrl: _nullable(values['photo_url'], 'photo_url'),
         village: _nullable(values['village'], 'village'),
         union: _nullable(values['union'], 'union'),
-        ward: _nullableInt(values['ward'], 'ward'),
         upazila: _text(values['upazila'], 'upazila'),
         district: _text(values['district'], 'district'),
         profession: _nullable(values['profession'], 'profession'),
@@ -129,14 +121,6 @@ String _text(dynamic value, String field) {
     throw DonorDataException('$field must be a non-empty string.');
   }
   return value.trim();
-}
-
-int? _nullableInt(dynamic value, String field) {
-  if (value == null) return null;
-  if (value is! int || value < 1 || value > 9) {
-    throw DonorDataException('$field must be an integer from 1 to 9 or null.');
-  }
-  return value;
 }
 
 String? _nullable(dynamic value, String field) =>
