@@ -266,7 +266,6 @@ class AuthService {
     String? profession,
     String? address,
     String? union,
-    int? ward,
     String? village,
   }) async {
     User? createdUser;
@@ -288,7 +287,6 @@ class AuthService {
         profession: _nullableTrim(profession),
         address: _nullableTrim(address),
         union: _nullableTrim(union),
-        ward: ward,
         village: _nullableTrim(village),
       ),
       createIdentity: () async {
@@ -336,7 +334,6 @@ class AuthService {
     String? profession,
     String? address,
     String? union,
-    int? ward,
     String? village,
   }) async {
     final user = _auth.currentUser;
@@ -360,7 +357,6 @@ class AuthService {
         profession: _nullableTrim(profession),
         address: _nullableTrim(address),
         union: _nullableTrim(union),
-        ward: ward,
         village: _nullableTrim(village),
       ),
       writeRequest: (identity, payload) => _firestore
