@@ -20,6 +20,7 @@ class AppTranslations extends Translations {
       'login': 'লগইন',
       'login_title': 'Login',
       'login_subtitle': 'আপনার অ্যাকাউন্টে প্রবেশ করুন',
+      'email_or_phone': 'ইমেইল / ফোন',
       'email': 'ইমেইল',
       'password': 'পাসওয়ার্ড',
       'forgot_password': 'পাসওয়ার্ড ভুলে গেছেন?',
@@ -103,9 +104,9 @@ class AppTranslations extends Translations {
       'resend_verification': 'যাচাইকরণ ইমেইল আবার পাঠান',
       'retry_submission': 'আবেদন আবার পাঠান',
       'registration_invalid':
-          'নাম, ফোন, সঠিক ইমেইল এবং মিল থাকা পাসওয়ার্ড দিন।',
+          'নাম, ফোন, সঠিক ইমেইল, ইউনিয়ন, গ্রাম এবং মিল থাকা পাসওয়ার্ড দিন।',
       'registration_submitted':
-          'নিবন্ধন আবেদন পাঠানো হয়েছে। ইমেইল যাচাই করুন।',
+          'নিবন্ধন আবেদন সফলভাবে পাঠানো হয়েছে। এখন অ্যাডমিনের অনুমোদনের অপেক্ষায় থাকুন।',
       'registration_submitted_email_failed':
           'আবেদন পাঠানো হয়েছে, কিন্তু যাচাইকরণ ইমেইল যায়নি। আবার লগইন করে পাঠান।',
       'registration_submitted_signout_failed':
@@ -118,6 +119,7 @@ class AppTranslations extends Translations {
           'আবেদন সংরক্ষণের Firebase query বর্তমানে পাওয়া যাচ্ছে না।',
       'registration_network_failed':
           'নেটওয়ার্ক সমস্যার কারণে আবেদন সংরক্ষণ হয়নি। আবার চেষ্টা করুন।',
+      'registration_already_registered': 'এই ইমেইল দিয়ে ইতিমধ্যে অ্যাকাউন্ট রেজিস্টার করা আছে।',
       'registration_failed': 'নিবন্ধন শুরু করা যায়নি। আবার চেষ্টা করুন।',
       'status_unavailable': 'আবেদনের অবস্থা পাওয়া যাচ্ছে না।',
       'name_phone_required': 'নাম ও ফোন দিন।',
@@ -292,6 +294,7 @@ class AppTranslations extends Translations {
       'login': 'Login',
       'login_title': 'Sign in',
       'login_subtitle': 'Access your account',
+      'email_or_phone': 'Email / Phone',
       'email': 'Email',
       'password': 'Password',
       'forgot_password': 'Forgot Password?',
@@ -375,9 +378,9 @@ class AppTranslations extends Translations {
       'resend_verification': 'Resend verification email',
       'retry_submission': 'Retry request submission',
       'registration_invalid':
-          'Enter a name, phone, valid email, and matching passwords.',
+          'Enter a name, phone, valid email, union, village, and matching passwords.',
       'registration_submitted':
-          'Registration request submitted. Check your email for verification.',
+          'Registration request submitted successfully. Wait for administrator approval.',
       'registration_submitted_email_failed':
           'Request submitted, but the verification email was not sent. Sign in again to resend it.',
       'registration_submitted_signout_failed':
@@ -390,6 +393,7 @@ class AppTranslations extends Translations {
           'Firebase is not allowing the registration request query right now.',
       'registration_network_failed':
           'The registration request could not be saved because of a network problem.',
+      'registration_already_registered': 'This email is already registered.',
       'registration_failed': 'Registration could not start. Try again.',
       'status_unavailable': 'Registration status is unavailable.',
       'name_phone_required': 'Enter your name and phone.',
