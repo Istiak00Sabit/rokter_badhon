@@ -73,7 +73,7 @@ class AppTranslations extends Translations {
       'times': 'বার',
       'ranklist_empty': 'এখনো কোনো রক্তদান রেকর্ড নেই',
       'ranklist_error': 'র‍্যাংকলিস্ট লোড করা যায়নি।',
-      'role.developer_admin': 'সিস্টেম অ্যাডমিন',
+      'role.developer_admin': 'ডেভেলপার অ্যাডমিন',
       'role.leader': 'নেতৃত্ব',
       'role.executive': 'নির্বাহী',
       'role.committee': 'কমিটি সদস্য',

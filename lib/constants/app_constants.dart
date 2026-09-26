@@ -40,10 +40,6 @@ class AppConstants {
     roleMember,
   };
 
-  // The persisted role remains "developer_admin" for backward compatibility.
-  // In the application this role is the System Admin role.
-  static bool isSystemAdmin(String? role) => role == roleDeveloperAdmin;
-
   static String roleLabel(String role) =>
       roles.contains(role) ? 'role.$role'.tr : 'unknown'.tr;
 

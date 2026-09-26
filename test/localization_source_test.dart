@@ -21,8 +21,8 @@ void main() {
     expect(bangla['password'], 'পাসওয়ার্ড');
     expect(bangla['confirm_password'], 'পাসওয়ার্ড নিশ্চিত করুন');
     expect(bangla['forgot_password'], 'পাসওয়ার্ড ভুলে গেছেন?');
-    expect(bangla['role.developer_admin'], 'সিস্টেম অ্যাডমিন');
-    expect(english['role.developer_admin'], 'System Admin');
+    expect(bangla['role.developer_admin'], 'ডেভেলপার অ্যাডমিন');
+    expect(english['role.developer_admin'], 'Developer Admin');
   });
 
   test(
