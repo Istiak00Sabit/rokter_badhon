@@ -202,7 +202,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 children: [
                   Text('already_registered'.tr),
                   TextButton(
-                    onPressed: Get.back,
+                    onPressed: () => Get.back(),
                     child: Text('login'.tr),
                   ),
                 ],
