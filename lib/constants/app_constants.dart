@@ -1,5 +1,7 @@
 import 'package:get/get.dart';
 
+import '../data/ghatail_village_data.dart';
+
 class AppConstants {
   // Blood groups
   static const List<String> bloodGroups = [
@@ -61,17 +63,9 @@ class AppConstants {
   static const String upazila = 'ঘাটাইল';
   static const String district = 'টাঙ্গাইল';
 
-  static const List<String> unions = [
-    'ঘাটাইল পৌরসভা',
-    'দিঘলকান্দি',
-    'লোকেরপাড়',
-    'সংগ্রাম',
-    'ধলাপাড়া',
-    'আনেহলা',
-    'দেওপাড়া',
-    'রসুলপুর',
-    'জামুরকী',
-    'পাকুটিয়া',
-    'দিগড়',
-  ];
+  static const List<String> unions = GhatailVillageData.unions;
+
+  static List<String> villagesForUnion(String union) =>
+      GhatailVillageData.villagesForUnion(union);
+
 }
