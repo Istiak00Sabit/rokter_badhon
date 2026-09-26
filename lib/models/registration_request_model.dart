@@ -1,7 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import '../services/auth_identity.dart';
-
 enum RegistrationRequestStatus { pending, approved, rejected }
 
 class RegistrationApplicantInput {
@@ -12,6 +10,8 @@ class RegistrationApplicantInput {
     'blood_group',
     'profession',
     'address',
+    'union',
+    'village',
   };
 
   final String name;
@@ -20,6 +20,8 @@ class RegistrationApplicantInput {
   final String? bloodGroup;
   final String? profession;
   final String? address;
+  final String? union;
+  final String? village;
 
   const RegistrationApplicantInput({
     required this.name,
@@ -28,6 +30,8 @@ class RegistrationApplicantInput {
     this.bloodGroup,
     this.profession,
     this.address,
+    this.union,
+    this.village,
   });
 
   factory RegistrationApplicantInput.fromMap(Map<String, dynamic> map) {
@@ -44,6 +48,8 @@ class RegistrationApplicantInput {
       bloodGroup: _nullableString(map, 'blood_group'),
       profession: _nullableString(map, 'profession'),
       address: _nullableString(map, 'address'),
+      union: _nullableString(map, 'union'),
+      village: _nullableString(map, 'village'),
     );
   }
 }
@@ -73,6 +79,8 @@ class RegistrationRequestModel {
   final String? bloodGroup;
   final String? profession;
   final String? address;
+  final String? union;
+  final String? village;
   final RegistrationRequestStatus status;
   final DateTime requestedAt;
   final String? approvedBy;
@@ -89,6 +97,8 @@ class RegistrationRequestModel {
     required this.bloodGroup,
     required this.profession,
     required this.address,
+    required this.union,
+    required this.village,
     required this.status,
     required this.requestedAt,
     required this.approvedBy,
@@ -134,6 +144,8 @@ class RegistrationRequestModel {
       bloodGroup: _nullableString(map, 'blood_group'),
       profession: _nullableString(map, 'profession'),
       address: _nullableString(map, 'address'),
+      union: _nullableString(map, 'union'),
+      village: _nullableString(map, 'village'),
       status: status,
       requestedAt: _requiredTimestamp(map, 'requested_at').toDate(),
       approvedBy: approvedBy,
@@ -197,21 +209,10 @@ class RegistrationRequestPayload {
   static Map<String, dynamic> create({
     required String authUid,
     required RegistrationApplicantInput applicant,
-    String? internalAuthEmail,
-    // Retained as a source-compatible, ignored parameter for old callers.
-    // The Firebase internal email is never written to this public request.
     String? authenticatedEmail,
   }) {
     if (authUid.isEmpty) {
       throw const FormatException('Authenticated UID is required.');
-    }
-    final expectedInternalEmail = AuthIdentity.internalEmailForPhone(
-      applicant.phone,
-    );
-    if (internalAuthEmail != null && internalAuthEmail != expectedInternalEmail) {
-      throw const FormatException(
-        'Phone does not match the Firebase Auth identity.',
-      );
     }
     return {
       'auth_uid': authUid,
@@ -221,6 +222,8 @@ class RegistrationRequestPayload {
       'blood_group': applicant.bloodGroup,
       'profession': applicant.profession,
       'address': applicant.address,
+      'union': applicant.union,
+      'village': applicant.village,
       'status': 'pending',
       'requested_at': FieldValue.serverTimestamp(),
       'approved_by': null,
