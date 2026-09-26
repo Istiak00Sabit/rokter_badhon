@@ -145,15 +145,8 @@ class AddDonorScreen extends StatelessWidget {
               final area = controller.selectedUnion.value;
               final isMunicipality =
                   area.isNotEmpty && AppConstants.isMunicipality(area);
-              final wards = isMunicipality
-                  ? AppConstants.wardsForArea(area)
-                  : const <int>[];
               final localities = area.isEmpty
-                  ? const <String>[]
-                  : AppConstants.localitiesForArea(
-                      area,
-                      ward: controller.selectedWard.value,
-                    );
+                  ? const <String>[]: AppConstants.localitiesForArea(area);
 
               return Column(
                 children: [
@@ -164,25 +157,10 @@ class AddDonorScreen extends StatelessWidget {
                     items: AppConstants.locationAreas,
                     onChanged: (val) {
                       controller.selectedUnion.value = val!;
-                      controller.selectedWard.value = null;
                       controller.villageController.clear();
                     },
                   ),
                   const SizedBox(height: 14),
-                  if (isMunicipality) ...[
-                    _buildDropdown<int>(
-                      label: 'ward'.tr,
-                      icon: Icons.map_outlined,
-                      value: controller.selectedWard.value,
-                      items: wards,
-                      itemLabel: (value) => value.toString(),
-                      onChanged: (val) {
-                        controller.selectedWard.value = val;
-                        controller.villageController.clear();
-                      },
-                    ),
-                    const SizedBox(height: 14),
-                  ],
                   _buildDropdown<String>(
                     label: isMunicipality ? 'mahalla'.tr : 'village'.tr,
                     icon: Icons.home_outlined,
