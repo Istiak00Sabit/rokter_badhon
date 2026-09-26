@@ -84,8 +84,11 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys().hasAny(['name','blood_group','profession']);
     }
     function roleIn(roles) { return get(userPath(ownId())).data.access_role in roles; }
-    function editorial() { return roleIn(['developer_admin', 'leader']); }
-    function history() { return roleIn(['developer_admin', 'leader', 'executive']); }
+
+    // "developer_admin" is the persisted role name for System Admin.
+    function systemAdmin() { return roleIn(['developer_admin']); }
+    function editorial() { return systemAdmin() || roleIn(['leader']); }
+    function history() { return systemAdmin() || roleIn(['leader', 'executive']); }
     function validId(id) { return id is string && id.size() > 0 && !id.matches('.*[/].*'); }
     function eventReadable(e) { return e.active == true || (e.active == false && editorial()); }
     function validDonor(d) {

@@ -49,6 +49,15 @@ void main() {
     });
   }
 
+  test('developer_admin is the persisted System Admin role', () {
+    final user = UserModel.fromMap(
+      validUser(changes: {'access_role': 'developer_admin'}),
+      'user-id',
+    );
+    expect(user.isSystemAdmin, isTrue);
+    expect(user.hasRecognizedAccessRole, isTrue);
+  });
+
   test('unknown access role is preserved only for invalidRole admission', () {
     final user = UserModel.fromMap(
       validUser(changes: {'access_role': 'admin'}),
@@ -56,6 +65,7 @@ void main() {
     );
     expect(user.accessRole, 'admin');
     expect(user.hasRecognizedAccessRole, isFalse);
+    expect(user.isSystemAdmin, isFalse);
   });
 
   test('photo URL follows the Rules HTTPS invariant', () {

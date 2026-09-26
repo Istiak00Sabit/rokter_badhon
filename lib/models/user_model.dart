@@ -64,6 +64,10 @@ class UserModel {
 
   bool get hasRecognizedAccessRole => allowedAccessRoles.contains(accessRole);
 
+  // "developer_admin" is the persisted role name; the product-facing role
+  // name is System Admin.
+  bool get isSystemAdmin => accessRole == 'developer_admin';
+
   factory UserModel.fromMap(Map<String, dynamic> map, String documentId) {
     _requireExactFields(map, _fields, 'User');
     return UserModel(

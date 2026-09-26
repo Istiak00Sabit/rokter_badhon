@@ -15,16 +15,14 @@ void main() {
     expect(english['event_type.meeting'], 'Meeting');
     expect(bangla['position.general_secretary'], isNotNull);
     expect(english['position.general_secretary'], 'General Secretary');
-    for (final key in [
-      'login',
-      'register',
-      'email',
-      'password',
-      'confirm_password',
-      'forgot_password',
-    ]) {
-      expect(bangla[key], english[key]);
-    }
+    expect(bangla['login'], 'লগইন');
+    expect(bangla['register'], 'নিবন্ধন');
+    expect(bangla['email'], 'ইমেইল');
+    expect(bangla['password'], 'পাসওয়ার্ড');
+    expect(bangla['confirm_password'], 'পাসওয়ার্ড নিশ্চিত করুন');
+    expect(bangla['forgot_password'], 'পাসওয়ার্ড ভুলে গেছেন?');
+    expect(bangla['role.developer_admin'], 'সিস্টেম অ্যাডমিন');
+    expect(english['role.developer_admin'], 'System Admin');
   });
 
   test(

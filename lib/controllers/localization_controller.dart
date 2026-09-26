@@ -27,7 +27,13 @@ class LocalizationController extends GetxController {
     final normalized = language == AppTranslations.english
         ? AppTranslations.english
         : AppTranslations.bangla;
-    locale.value = Locale(normalized);
+    final nextLocale = Locale(normalized);
+
+    // GetX's locale must be updated explicitly so every ".tr" widget
+    // rebuilds immediately. The Rx value is kept in sync for app startup
+    // persistence and widgets that observe this controller directly.
+    await Get.updateLocale(nextLocale);
+    locale.value = nextLocale;
     await _preferences.setString(_preferenceKey, normalized);
   }
 }
