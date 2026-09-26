@@ -186,9 +186,9 @@ class AddDonorScreen extends StatelessWidget {
                   _buildDropdown<String>(
                     label: isMunicipality ? 'mahalla'.tr : 'village'.tr,
                     icon: Icons.home_outlined,
-                    value: controller.villageController.text.isEmpty
-                        ? null
-                        : controller.villageController.text,
+                    value: localities.contains(controller.villageController.text)
+                        ? controller.villageController.text
+                        : null,
                     items: localities,
                     onChanged: (val) =>
                         controller.villageController.text = val ?? '',
