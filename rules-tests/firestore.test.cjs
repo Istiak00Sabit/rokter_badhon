@@ -16,7 +16,7 @@ const projection = u => Object.fromEntries(['name','phone','blood_group','profes
 const db = (uid = 'auth-own', claims = {}) => env.authenticatedContext(uid,
   { email: `${uid}@example.test`, email_verified: true, ...claims }).firestore();
 const request = (extra = {}) => ({ auth_uid: 'applicant', name: 'Synthetic Applicant', phone: '00000000001',
-  email: 'applicant@example.test', blood_group: 'A+', profession: 'Teacher', address: 'Address',
+  email: 'applicant@example.test', blood_group: 'A+', profession: 'Teacher', address: 'Address', union: 'ঘাটাইল', village: 'নরজনা',
   status: 'pending', requested_at: serverTimestamp(),
   approved_by: null, approved_at: null, rejected_by: null, rejected_at: null, linked_user_id: null, ...extra });
 const metadata = () => ({ updated_at: serverTimestamp(), updated_by: 'person-own' });
