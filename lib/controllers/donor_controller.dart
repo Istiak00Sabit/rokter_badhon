@@ -22,7 +22,6 @@ class DonorController extends GetxController {
   final RxString selectedBloodGroup = ''.obs;
   final RxString selectedGender = ''.obs;
   final RxString selectedUnion = ''.obs;
-  final RxnInt selectedWard = RxnInt();
   final RxBool locationsReady = false.obs;
   final RxBool locationLoadFailed = false.obs;
   final RxBool isLoading = false.obs;
@@ -78,7 +77,6 @@ class DonorController extends GetxController {
     selectedBloodGroup.value = '';
     selectedGender.value = '';
     selectedUnion.value = '';
-    selectedWard.value = null;
     editingDonorId.value = null;
   }
 
@@ -95,7 +93,6 @@ class DonorController extends GetxController {
     selectedBloodGroup.value = donor.bloodGroup;
     selectedGender.value = donor.gender ?? '';
     selectedUnion.value = donor.union ?? '';
-    selectedWard.value = donor.ward;
   }
 
   DonorInput _input() => DonorInput(
@@ -107,7 +104,6 @@ class DonorController extends GetxController {
         ? null
         : villageController.text,
     union: selectedUnion.value.isEmpty ? null : selectedUnion.value,
-    ward: selectedWard.value,
     upazila: AppConstants.upazila,
     district: AppConstants.district,
     profession: professionController.text.trim().isEmpty
@@ -125,8 +121,6 @@ class DonorController extends GetxController {
         phoneController.text.trim().isEmpty ||
         selectedBloodGroup.value.isEmpty ||
         selectedUnion.value.isEmpty ||
-        (AppConstants.isMunicipality(selectedUnion.value) &&
-            selectedWard.value == null) ||
         villageController.text.trim().isEmpty) {
       _showError('invalid_input');
       return;
@@ -171,8 +165,6 @@ class DonorController extends GetxController {
         phoneController.text.trim().isEmpty ||
         selectedBloodGroup.value.isEmpty ||
         selectedUnion.value.isEmpty ||
-        (AppConstants.isMunicipality(selectedUnion.value) &&
-            selectedWard.value == null) ||
         villageController.text.trim().isEmpty) {
       _showError('invalid_input');
       return;
