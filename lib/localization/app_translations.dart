@@ -420,7 +420,8 @@ class AppTranslations extends Translations {
       'edit_donor': 'Edit donor information',
       'donor_form_note':
           'Add donor information only. This does not create an app user.',
-      'full_na      'union_or_municipality': 'Union / Municipality',
+      'full_name': 'Full name',
+      'union_or_municipality': 'Union / Municipality',
       'ward': 'Ward',
       'mahalla': 'Mahalla / Area',
 me': 'Full name',
