@@ -271,6 +271,37 @@ test('registration-to-admission emulator flow fails closed after live revocation
     updated_by: 'person-applicant',
   }));
 });
+test('developer_admin has full access to known application collections', async () => {
+  await seed('users/person-own', user({ access_role: 'developer_admin' }));
+  await seed('registration_requests/admin-known', request({ auth_uid: 'admin-known', requested_at: stamp }));
+  const c = db();
+  for (const path of [
+    'registration_requests/admin-known',
+    'users/person-own',
+    'user_directory/person-own',
+    'auth_links/auth-own',
+    'committee_terms/active',
+    'committee_assignments/active',
+    'committee_media/active-active',
+    'events/active',
+    'event_media/active-active',
+    'donors/active',
+    'donor_submissions/active',
+    'donations/active',
+    'notices/published',
+    'blood_requests/active',
+    'audit_logs/active',
+  ]) {
+    await assertSucceeds(getDoc(doc(c, path)));
+  }
+  await assertSucceeds(setDoc(doc(c, 'registration_requests/admin-write'), request({ auth_uid: 'admin-write', requested_at: stamp })));
+  await assertSucceeds(setDoc(doc(c, 'notices/admin-write'), {
+    title: 'Admin', body: 'Admin', important: false, status: 'draft',
+    created_by: 'person-own', created_at: stamp, updated_by: null, updated_at: null,
+  }));
+  await assertSucceeds(deleteDoc(doc(c, 'notices/admin-write')));
+});
+
 test('legacy and unknown collections/subcollections denied even to developer_admin', async () => {
   await seed('users/person-own', user({ access_role: 'developer_admin' }));
   const c = db();
@@ -338,31 +369,31 @@ const expectRead = (allowed, promise) => allowed ? assertSucceeds(promise) : ass
 for (const role of roles) {
   test(`${role}: business read audiences, parents and constrained queries`, async () => {
     await seedBusiness(); await seed('users/person-own', user({ access_role: role }));
-    const c = db(); const editorial = roles.indexOf(role) < 2; const history = roles.indexOf(role) < 3;
+    const c = db(); const admin = role === 'developer_admin'; const editorial = admin || roles.indexOf(role) < 2; const history = admin || roles.indexOf(role) < 3;
     for (const col of ['committee_terms','committee_assignments']) {
       for (const id of ['active','hidden']) await assertSucceeds(getDoc(doc(c, `${col}/${id}`)));
       await assertSucceeds(getDocs(collection(c, col)));
     }
     for (const parent of ['active','hidden','missing']) for (const state of ['active','hidden']) {
-      await expectRead(parent !== 'missing' && (state === 'active' || editorial),
+      await expectRead(admin || (parent !== 'missing' && (state === 'active' || editorial)),
         getDoc(doc(c, `committee_media/${parent}-${state}`)));
-      await expectRead(parent !== 'missing' && (parent === 'active' || editorial) && (state === 'active' || editorial),
+      await expectRead(admin || (parent !== 'missing' && (parent === 'active' || editorial) && (state === 'active' || editorial)),
         getDoc(doc(c, `event_media/${parent}-${state}`)));
     }
     for (const col of ['committee_media','event_media']) {
       const key = col === 'committee_media' ? 'term_id' : 'event_id';
       for (const parent of ['active','hidden','missing']) {
-        await expectRead(parent !== 'missing' && (col === 'committee_media' || parent === 'active' || editorial),
+        await expectRead(admin || (parent !== 'missing' && (col === 'committee_media' || parent === 'active' || editorial)),
           getDocs(query(collection(c, col), where(key,'==',parent), where('active','==',true), orderBy('sort_order'))));
-        await expectRead(parent !== 'missing' && editorial,
+        await expectRead(admin || (parent !== 'missing' && editorial),
           getDocs(query(collection(c, col), where(key,'==',parent), where('active','==',false))));
       }
       await assertFails(getDocs(collection(c, col)));
     }
     await assertSucceeds(getDoc(doc(c, 'events/active')));
-    await expectRead(editorial, getDoc(doc(c, 'events/hidden')));
+    await expectRead(admin || editorial, getDoc(doc(c, 'events/hidden')));
     await assertSucceeds(getDocs(query(collection(c, 'events'), where('active','==',true), orderBy('event_date','desc'))));
-    await expectRead(editorial, getDocs(query(collection(c, 'events'), where('active','==',false))));
+    await expectRead(admin || editorial, getDocs(query(collection(c, 'events'), where('active','==',false))));
     await assertSucceeds(getDoc(doc(c, 'donors/active')));
     await assertFails(getDoc(doc(c, 'donors/hidden')));
     await assertFails(getDocs(collection(c, 'donors')));
@@ -371,17 +402,17 @@ for (const role of roles) {
     await expectRead(history, getDoc(doc(c, 'donations/active')));
     await expectRead(history, getDocs(collection(c, 'donations')));
     for (const status of ['published','draft','archived','unknown']) {
-      const allowed = status === 'published' || (editorial && ['draft','archived'].includes(status));
+      const allowed = admin || status === 'published' || (editorial && ['draft','archived'].includes(status));
       await expectRead(allowed, getDoc(doc(c, `notices/${status}`)));
       await expectRead(allowed, getDocs(query(collection(c, 'notices'), where('status','==',status))));
     }
     for (const status of ['active','fulfilled','cancelled','unknown']) {
-      const allowed = status === 'active' || (history && ['fulfilled','cancelled'].includes(status));
+      const allowed = admin || status === 'active' || (history && ['fulfilled','cancelled'].includes(status));
       await expectRead(allowed, getDoc(doc(c, `blood_requests/${status}`)));
       await expectRead(allowed, getDocs(query(collection(c, 'blood_requests'), where('status','==',status))));
     }
-    await expectRead(role === 'developer_admin', getDoc(doc(c, 'audit_logs/active')));
-    await expectRead(role === 'developer_admin', getDocs(collection(c, 'audit_logs')));
+    await expectRead(admin, getDoc(doc(c, 'audit_logs/active')));
+    await expectRead(admin, getDocs(collection(c, 'audit_logs')));
   });
   test(`${role}: business write matrix and explicit denials`, async () => {
     await seedBusiness(); await seed('users/person-own', user({ access_role: role }));
@@ -389,26 +420,26 @@ for (const role of roles) {
     for (const col of readOnlyCollections) {
       const id = col.endsWith('_media') ? 'active-active' : col === 'notices' ? 'published' : 'active';
       const ref = doc(c, `${col}/${id}`);
-      await assertFails(setDoc(doc(c, `${col}/new`), { active: true }));
-      await assertFails(setDoc(ref, { active: true }));
-      await assertFails(updateDoc(ref, col === 'committee_terms' ? { group_photo_url: 'https://example.test/new' } : { active: false }));
-      await assertFails(deleteDoc(ref));
+      await (admin ? assertSucceeds : assertFails)(setDoc(doc(c, `${col}/new`), { active: true }));
+      await (admin ? assertSucceeds : assertFails)(setDoc(ref, { active: true }));
+      await (admin ? assertSucceeds : assertFails)(updateDoc(ref, col === 'committee_terms' ? { group_photo_url: 'https://example.test/new' } : { active: false }));
+      await (admin ? assertSucceeds : assertFails)(deleteDoc(ref));
     }
-    await assertFails(setDoc(doc(c, 'donors/new'), donor()));
-    await expectRead(roles.indexOf(role) < 3, updateDoc(doc(c, 'donors/active'), { phone: '00000000001', ...metadata() }));
-    await assertFails(updateDoc(doc(c, 'donors/hidden'), { phone: '00000000001', ...metadata() }));
+    await (admin ? assertSucceeds : assertFails)(setDoc(doc(c, 'donors/new'), donor()));
+    await expectRead(admin || roles.indexOf(role) < 3, updateDoc(doc(c, 'donors/active'), { phone: '00000000001', ...metadata() }));
+    await (admin ? assertSucceeds : assertFails)(updateDoc(doc(c, 'donors/hidden'), { phone: '00000000001', ...metadata() }));
     for (const extra of [{ active: false }, { total_donations: 1 }, { last_donated_at: stamp },
       { linked_user_id: 'person-own' }, { created_by: 'person-other' }, { created_at: serverTimestamp() },
       { access_role: 'leader' }, { updated_by: 'auth-own' }, { updated_at: stamp }])
-      await assertFails(updateDoc(doc(c, 'donors/active'), { name: 'Changed', ...metadata(), ...extra }));
-    await assertFails(updateDoc(doc(c, 'donors/hidden'), { active: true, ...metadata() }));
-    await assertFails(deleteDoc(doc(c, 'donors/active')));
+      await (admin ? assertSucceeds : assertFails)(updateDoc(doc(c, 'donors/active'), { name: 'Changed', ...metadata(), ...extra }));
+    await (admin ? assertSucceeds : assertFails)(updateDoc(doc(c, 'donors/hidden'), { active: true, ...metadata() }));
+    await (admin ? assertSucceeds : assertFails)(deleteDoc(doc(c, 'donors/active')));
     await assertSucceeds(setDoc(doc(c, 'blood_requests/new'), blood()));
     for (const id of ['new','fulfilled','cancelled']) {
       const ref = doc(c, `blood_requests/${id}`);
       for (const change of [{ hospital: 'Changed' }, { status: 'fulfilled', fulfilled_by: 'person-own', fulfilled_at: serverTimestamp() },
-        { status: 'cancelled' }, { status: 'active' }]) await assertFails(updateDoc(ref, change));
-      await assertFails(setDoc(ref, blood())); await assertFails(deleteDoc(ref));
+        { status: 'cancelled' }, { status: 'active' }]) await (admin ? assertSucceeds : assertFails)(updateDoc(ref, change));
+      await (admin ? assertSucceeds : assertFails)(setDoc(ref, blood())); await (admin ? assertSucceeds : assertFails)(deleteDoc(ref));
     }
   });
 }
