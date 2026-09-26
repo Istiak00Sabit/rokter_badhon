@@ -15,6 +15,7 @@ class DonorInput {
   final String? photoUrl;
   final String? village;
   final String? union;
+  final int? ward;
   final String upazila;
   final String district;
   final String? profession;
@@ -27,6 +28,7 @@ class DonorInput {
     this.photoUrl,
     this.village,
     this.union,
+    this.ward,
     required this.upazila,
     required this.district,
     this.profession,
@@ -40,6 +42,7 @@ class DonorInput {
     'photo_url': _optionalHttpsUrl(photoUrl, 'photo_url'),
     'village': _optionalText(village, 'village'),
     'union': _optionalText(union, 'union'),
+    'ward': ward,
     'upazila': _requiredText(upazila, 'upazila'),
     'district': _requiredText(district, 'district'),
     'profession': _optionalText(profession, 'profession'),
@@ -55,6 +58,7 @@ class DonorModel {
     'photo_url',
     'village',
     'union',
+    'ward',
     'upazila',
     'district',
     'profession',
@@ -76,6 +80,7 @@ class DonorModel {
   final String? photoUrl;
   final String? village;
   final String? union;
+  final int? ward;
   final String upazila;
   final String district;
   final String? profession;
@@ -97,6 +102,7 @@ class DonorModel {
     required this.photoUrl,
     required this.village,
     required this.union,
+    required this.ward,
     required this.upazila,
     required this.district,
     required this.profession,
@@ -115,8 +121,12 @@ class DonorModel {
       throw const DonorDataException('Invalid donor document ID.');
     }
     final keys = map.keys.toSet();
-    if (keys.difference(fields).isNotEmpty ||
-        fields.difference(keys).isNotEmpty) {
+    final legacyFields = fields.difference({'ward'});
+    final isCurrentSchema = keys.length == fields.length &&
+        keys.containsAll(fields);
+    final isLegacySchema = keys.length == legacyFields.length &&
+        keys.containsAll(legacyFields);
+    if (!isCurrentSchema && !isLegacySchema) {
       throw const DonorDataException('Donor has missing or unapproved fields.');
     }
     final total = map['total_donations'];
@@ -134,6 +144,7 @@ class DonorModel {
       photoUrl: _optionalHttpsUrl(map['photo_url'], 'photo_url'),
       village: _optionalText(map['village'], 'village'),
       union: _optionalText(map['union'], 'union'),
+      ward: _optionalInt(map['ward'], 'ward'),
       upazila: _requiredText(map['upazila'], 'upazila'),
       district: _requiredText(map['district'], 'district'),
       profession: _optionalText(map['profession'], 'profession'),
@@ -165,6 +176,14 @@ String? _optionalText(dynamic value, String field) {
     throw DonorDataException('$field must be a non-empty string or null.');
   }
   return value.trim();
+}
+
+int? _optionalInt(dynamic value, String field) {
+  if (value == null) return null;
+  if (value is! int || value < 1 || value > 9) {
+    throw DonorDataException('$field must be an integer from 1 to 9 or null.');
+  }
+  return value;
 }
 
 String _requiredId(dynamic value, String field) {
