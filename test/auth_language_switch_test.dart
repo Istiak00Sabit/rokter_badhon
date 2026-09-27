@@ -25,6 +25,7 @@ void main() {
         home: const Scaffold(body: AuthLanguageSwitch()),
       ),
     );
+    await tester.pumpAndSettle();
     return controller;
   }
 
@@ -37,12 +38,10 @@ void main() {
     expect(find.text('English'), findsOneWidget);
 
     await tester.tap(find.text('English'));
-    await tester.pump();
     await tester.pumpAndSettle();
     expect(controller.locale.value.languageCode, AppTranslations.english);
 
     await tester.tap(find.text('বাংলা'));
-    await tester.pump();
     await tester.pumpAndSettle();
     expect(controller.locale.value.languageCode, AppTranslations.bangla);
   });
@@ -50,13 +49,16 @@ void main() {
   testWidgets('auth language selection persists through controller restart', (
     tester,
   ) async {
-    var controller = await pumpSwitch(tester);
-    final change = controller.setLanguage(AppTranslations.english);
-    await tester.pump();
-    await change;
+    final controller = await pumpSwitch(tester);
+
+    await controller.setLanguage(AppTranslations.english);
+    await tester.pumpAndSettle();
 
     Get.reset();
-    controller = await LocalizationController.create();
-    expect(controller.locale.value.languageCode, AppTranslations.english);
+    final restartedController = await LocalizationController.create();
+    expect(
+      restartedController.locale.value.languageCode,
+      AppTranslations.english,
+    );
   });
 }
