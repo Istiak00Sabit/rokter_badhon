@@ -2,7 +2,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:rokter_badhon/data/ghatail_village_data.dart';
 
 void main() {
-  test('complete Ghatail locality JSON has the exact workbook totals', () async {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  test(
+    'complete Ghatail locality JSON has the exact workbook totals',
+    () async {
     await GhatailVillageData.load();
 
     expect(GhatailVillageData.unions.length, 14);
