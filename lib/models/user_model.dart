@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class UserModel {
   static const Set<String> allowedAccessRoles = {
     'developer_admin',
+    'admin',
     'leader',
     'executive',
     'committee',

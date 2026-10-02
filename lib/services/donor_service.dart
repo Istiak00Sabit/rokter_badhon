@@ -23,6 +23,7 @@ class DonorService {
     _validateId(actorUserId, 'actor');
     if (!{
       AppConstants.roleDeveloperAdmin,
+      AppConstants.roleAdmin,
       AppConstants.roleLeader,
       AppConstants.roleExecutive,
       AppConstants.roleCommittee,
@@ -30,7 +31,7 @@ class DonorService {
       throw const DonorServiceException('permission_denied');
     }
     String? assignmentId;
-    if (actorRole != AppConstants.roleDeveloperAdmin) {
+    if (actorRole != AppConstants.roleDeveloperAdmin && actorRole != AppConstants.roleAdmin) {
       final assignments = await _firestore
           .collection('committee_assignments')
           .where('user_id', isEqualTo: actorUserId)
@@ -150,6 +151,44 @@ class DonorService {
             'rejected_at': FieldValue.serverTimestamp(),
             'rejection_reason': reason.trim(),
           });
+    } on FirebaseException catch (error) {
+      throw DonorServiceException(_safeCode(error.code));
+    }
+  }
+
+  Future<void> deactivateDonor({
+    required String donorId,
+    required String actorUserId,
+  }) async {
+    _validateId(donorId, 'donor');
+    _validateId(actorUserId, 'actor');
+    try {
+      final reference = _firestore
+          .collection(AppConstants.donorsCollection)
+          .doc(donorId);
+      await _firestore.runTransaction((transaction) async {
+        final snapshot = await transaction.get(reference);
+        if (!snapshot.exists) {
+          throw const DonorServiceException('not_found');
+        }
+        final data = snapshot.data();
+        if (data == null) {
+          throw const DonorServiceException('malformed_data');
+        }
+        final donor = DonorModel.fromMap(data, snapshot.id);
+        if (!donor.active) {
+          throw const DonorServiceException('already_inactive');
+        }
+        transaction.update(reference, {
+          'active': false,
+          'updated_at': FieldValue.serverTimestamp(),
+          'updated_by': actorUserId,
+        });
+      });
+    } on DonorServiceException {
+      rethrow;
+    } on DonorDataException {
+      rethrow;
     } on FirebaseException catch (error) {
       throw DonorServiceException(_safeCode(error.code));
     }

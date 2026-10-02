@@ -1,5 +1,6 @@
 const RECOGNIZED_ROLES = new Set([
   'developer_admin',
+  'admin',
   'leader',
   'executive',
   'committee',
@@ -177,7 +178,7 @@ export function authorizeOperator({ authRecord, link, user }) {
     authRecord,
     link,
     user,
-    allowedRoles: ['developer_admin', 'leader'],
+    allowedRoles: ['developer_admin', 'admin', 'leader'],
   });
 }
 
@@ -205,7 +206,7 @@ export function authorizeTargetRole(operatorRole, targetRole) {
       'Registration approval may create only a member; later role assignment is a separate audited operation.',
     );
   }
-  if (operatorRole === 'developer_admin' || operatorRole === 'leader') return;
+  if (operatorRole === 'developer_admin' || operatorRole === 'admin' || operatorRole === 'leader') return;
   fail('unauthorized_role', `${operatorRole} cannot assign ${targetRole}.`);
 }
 

@@ -7,7 +7,7 @@ service cloud.firestore {
     function directoryPath(id) { return /databases/$(database)/documents/user_directory/$(id); }
     function ownId() { return get(linkPath()).data.user_id; }
     function knownRole(role) {
-      return role in ['developer_admin', 'leader', 'executive', 'committee', 'member'];
+      return role in ['developer_admin', 'admin', 'leader', 'executive', 'committee', 'member'];
     }
     function admitted() {
       return signedIn()
@@ -71,24 +71,96 @@ service cloud.firestore {
         && request.resource.data.approved_by == null && request.resource.data.approved_at == null
         && request.resource.data.rejected_by == null && request.resource.data.rejected_at == null
         && request.resource.data.linked_user_id == null;
+      allow update: if admitted() && editorial() && resource.data.status == 'pending'
+        && request.resource.data.auth_uid == resource.data.auth_uid
+        && request.resource.data.name == resource.data.name
+        && request.resource.data.phone == resource.data.phone
+        && request.resource.data.email == resource.data.email
+        && request.resource.data.blood_group == resource.data.blood_group
+        && request.resource.data.profession == resource.data.profession
+        && request.resource.data.address == resource.data.address
+        && request.resource.data.union == resource.data.union
+        && request.resource.data.village == resource.data.village
+        && (
+          (
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status','approved_by','approved_at','linked_user_id'
+            ])
+            && request.resource.data.status == 'approved'
+            && request.resource.data.approved_by == ownId()
+            && request.resource.data.approved_at == request.time
+            && request.resource.data.linked_user_id == uid
+            && request.resource.data.rejected_by == null
+            && request.resource.data.rejected_at == null
+            && getAfter(/databases/$(database)/documents/users/$(uid)).data.access_role == 'member'
+            && getAfter(/databases/$(database)/documents/users/$(uid)).data.active == true
+            && getAfter(/databases/$(database)/documents/users/$(uid)).data.login_enabled == true
+            && getAfter(/databases/$(database)/documents/auth_links/$(uid)).data.user_id == uid
+            && getAfter(/databases/$(database)/documents/auth_links/$(uid)).data.active == true
+          )
+          ||
+          (
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status','rejected_by','rejected_at'
+            ])
+            && request.resource.data.status == 'rejected'
+            && request.resource.data.rejected_by == ownId()
+            && request.resource.data.rejected_at == request.time
+            && request.resource.data.approved_by == null
+            && request.resource.data.approved_at == null
+            && request.resource.data.linked_user_id == null
+          )
+        );
     }
     match /auth_links/{uid} {
       allow get: if signedIn() && uid == request.auth.uid;
+      allow create: if admitted() && editorial()
+        && request.resource.data.keys().hasAll(['user_id','active','created_at','created_by'])
+        && request.resource.data.keys().hasOnly(['user_id','active','created_at','created_by'])
+        && request.resource.data.user_id == uid
+        && request.resource.data.active == true
+        && request.resource.data.created_at == request.time
+        && request.resource.data.created_by == ownId()
+        && getAfter(/databases/$(database)/documents/registration_requests/$(uid)).data.status == 'approved'
+        && getAfter(/databases/$(database)/documents/registration_requests/$(uid)).data.linked_user_id == uid;
     }
     match /users/{id} {
       allow get: if admitted() && id == ownId();
+      allow create: if admitted() && editorial() && validUser(request.resource.data)
+        && request.resource.data.access_role == 'member'
+        && request.resource.data.active == true
+        && request.resource.data.login_enabled == true
+        && request.resource.data.created_by == ownId()
+        && request.resource.data.updated_by == ownId()
+        && request.resource.data.created_at == request.time
+        && request.resource.data.updated_at == request.time
+        && getAfter(/databases/$(database)/documents/registration_requests/$(id)).data.status == 'approved'
+        && getAfter(/databases/$(database)/documents/registration_requests/$(id)).data.linked_user_id == id
+        && getAfter(/databases/$(database)/documents/registration_requests/$(id)).data.approved_by == ownId()
+        && getAfter(/databases/$(database)/documents/registration_requests/$(id)).data.approved_at == request.time
+        && request.resource.data.name == getAfter(/databases/$(database)/documents/registration_requests/$(id)).data.name
+        && request.resource.data.phone == getAfter(/databases/$(database)/documents/registration_requests/$(id)).data.phone
+        && request.resource.data.email == getAfter(/databases/$(database)/documents/registration_requests/$(id)).data.email
+        && request.resource.data.blood_group == getAfter(/databases/$(database)/documents/registration_requests/$(id)).data.blood_group
+        && request.resource.data.profession == getAfter(/databases/$(database)/documents/registration_requests/$(id)).data.profession
+        && request.resource.data.address == getAfter(/databases/$(database)/documents/registration_requests/$(id)).data.address;
       allow update: if ownProfileChange(id, resource.data, request.resource.data);
     }
     match /user_directory/{id} {
       allow read: if admitted() && resource.data.active == true;
+      allow create: if admitted() && editorial()
+        && request.resource.data.keys().hasAll(['name','phone','blood_group','profession','photo_url','active'])
+        && request.resource.data.keys().hasOnly(['name','phone','blood_group','profession','photo_url','active'])
+        && request.resource.data.active == true
+        && request.resource.data == projection(getAfter(/databases/$(database)/documents/users/$(id)).data);
       allow update: if ownProfileChange(id, get(userPath(id)).data, getAfter(userPath(id)).data)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','blood_group','profession'])
         && request.resource.data.diff(resource.data).affectedKeys().hasAny(['name','blood_group','profession']);
     }
     function roleIn(roles) { return get(userPath(ownId())).data.access_role in roles; }
 
-    function editorial() { return roleIn(['developer_admin', 'leader']); }
-    function history() { return roleIn(['developer_admin', 'leader', 'executive']); }
+    function editorial() { return roleIn(['developer_admin', 'admin', 'leader']); }
+    function history() { return roleIn(['developer_admin', 'admin', 'leader', 'executive']); }
     function validId(id) { return id is string && id.size() > 0 && !id.matches('.*[/].*'); }
     function eventReadable(e) { return e.active == true || (e.active == false && editorial()); }
     function validDonor(d) {
@@ -191,13 +263,26 @@ service cloud.firestore {
       allow create: if admitted() && editorial() && validDonor(request.resource.data)
         && donorMatchesSubmission(request.resource.data,
           getAfter(/databases/$(database)/documents/donor_submissions/$(id)).data, id);
-      allow update: if admitted() && history() && resource.data.active == true
-        && validDonor(resource.data) && validDonor(request.resource.data)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','phone','blood_group',
-          'gender','photo_url','village','union','upazila','district','profession','updated_at','updated_by'])
-        && request.resource.data.diff(resource.data).affectedKeys().hasAny(['name','phone','blood_group',
-          'gender','photo_url','village','union','upazila','district','profession'])
-        && request.resource.data.updated_at == request.time && request.resource.data.updated_by == ownId();
+      allow update: if admitted() && (
+        (
+          history() && resource.data.active == true
+          && validDonor(resource.data) && validDonor(request.resource.data)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','phone','blood_group',
+            'gender','photo_url','village','union','upazila','district','profession','updated_at','updated_by'])
+          && request.resource.data.diff(resource.data).affectedKeys().hasAny(['name','phone','blood_group',
+            'gender','photo_url','village','union','upazila','district','profession'])
+          && request.resource.data.updated_at == request.time && request.resource.data.updated_by == ownId()
+        )
+        ||
+        (
+          roleIn(['developer_admin','admin','leader'])
+          && resource.data.active == true && request.resource.data.active == false
+          && validDonor(resource.data) && validDonor(request.resource.data)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['active','updated_at','updated_by'])
+          && request.resource.data.updated_at == request.time
+          && request.resource.data.updated_by == ownId()
+        )
+      );
     }
     match /donor_submissions/{id} {
       allow read: if admitted() && (resource.data.submitted_by == ownId() || editorial());
@@ -208,7 +293,7 @@ service cloud.firestore {
         && request.resource.data.rejected_by == null && request.resource.data.rejected_at == null
         && request.resource.data.rejection_reason == null && request.resource.data.donor_id == null
         && ((roleIn(['leader','executive','committee']) && activeCommitteeParticipant(request.resource.data))
-          || (roleIn(['developer_admin']) && request.resource.data.committee_assignment_id == null));
+          || (roleIn(['developer_admin','admin']) && request.resource.data.committee_assignment_id == null));
       allow update: if admitted() && editorial() && validDonorSubmission(resource.data)
         && validDonorSubmission(request.resource.data) && resource.data.status == 'pending'
         && request.resource.data.submitted_by == resource.data.submitted_by
@@ -258,6 +343,22 @@ service cloud.firestore {
     }
     match /audit_logs/{id} {
       allow read: if admitted() && roleIn(['developer_admin']);
+      allow create: if admitted() && editorial()
+        && request.resource.data.keys().hasAll([
+          'action','actor_user_id','actor_auth_uid','target_path','occurred_at',
+          'operation_id','outcome','changes','reason'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'action','actor_user_id','actor_auth_uid','target_path','occurred_at',
+          'operation_id','outcome','changes','reason'
+        ])
+        && request.resource.data.actor_user_id == ownId()
+        && request.resource.data.actor_auth_uid == request.auth.uid
+        && request.resource.data.occurred_at == request.time
+        && request.resource.data.operation_id == id
+        && request.resource.data.outcome == 'committed'
+        && request.resource.data.target_path.matches('registration_requests/.*')
+        && request.resource.data.action in ['registration.approve','registration.reject'];
     }
     // developer_admin is the application's highest privileged role.
     // It has full client access to every known application collection.

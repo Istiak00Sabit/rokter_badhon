@@ -91,12 +91,12 @@ test('registration overwrite/update/delete/list/other read denied', async () => 
   await assertFails(getDocs(collection(c, 'registration_requests')));
   await assertFails(getDoc(doc(c, 'registration_requests/other')));
 });
-for (const role of ['developer_admin','leader','executive','committee','member']) {
+for (const role of ['developer_admin','admin','leader','executive','committee','member']) {
   test(`${role}: pending registration review audience is exact`, async () => {
     await seed('users/person-own', user({ access_role: role }));
     await seed('registration_requests/pending-review', request({ auth_uid: 'pending-review', requested_at: stamp }));
     await seed('registration_requests/rejected-review', request({ auth_uid: 'rejected-review', status: 'rejected', requested_at: stamp, rejected_by: 'person-own', rejected_at: stamp }));
-    const c = db(); const allowed = role === 'developer_admin' || role === 'leader';
+    const c = db(); const allowed = role === 'developer_admin' || role === 'admin' || role === 'leader';
     await (allowed ? assertSucceeds : assertFails)(getDoc(doc(c, 'registration_requests/pending-review')));
     await (allowed ? assertSucceeds : assertFails)(getDocs(query(collection(c, 'registration_requests'), where('status','==','pending'))));
     await assertFails(getDoc(doc(c, 'registration_requests/rejected-review')));
@@ -104,6 +104,73 @@ for (const role of ['developer_admin','leader','executive','committee','member']
     await assertFails(getDocs(collection(c, 'registration_requests')));
   });
 }
+test('admin approval atomically creates member, directory, and auth link', async () => {
+  await seed('users/person-own', user({ access_role: 'admin' }));
+  await seed('registration_requests/applicant', request());
+
+  const c = db();
+  const batch = writeBatch(c);
+  batch.set(doc(c, 'users/applicant'), user({
+    name: 'Synthetic Applicant',
+    phone: '00000000001',
+    email: 'applicant@example.test',
+    blood_group: 'A+',
+    profession: 'Teacher',
+    address: 'Address',
+    access_role: 'member',
+    active: true,
+    login_enabled: true,
+    created_at: serverTimestamp(),
+    created_by: 'person-own',
+    updated_at: serverTimestamp(),
+    updated_by: 'person-own',
+  }));
+  batch.set(doc(c, 'user_directory/applicant'), projection(user({
+    name: 'Synthetic Applicant',
+    phone: '00000000001',
+    blood_group: 'A+',
+    profession: 'Teacher',
+    photo_url: null,
+    active: true,
+  })));
+  batch.set(doc(c, 'auth_links/applicant'), {
+    user_id: 'applicant',
+    active: true,
+    created_at: serverTimestamp(),
+    created_by: 'person-own',
+  });
+  batch.update(doc(c, 'registration_requests/applicant'), {
+    status: 'approved',
+    approved_by: 'person-own',
+    approved_at: serverTimestamp(),
+    linked_user_id: 'applicant',
+  });
+  batch.set(doc(c, 'audit_logs/admin-registration-op'), {
+    action: 'registration.approve',
+    actor_user_id: 'person-own',
+    actor_auth_uid: 'auth-own',
+    target_path: 'registration_requests/applicant',
+    occurred_at: serverTimestamp(),
+    operation_id: 'admin-registration-op',
+    outcome: 'committed',
+    changes: {
+      status: { before: 'pending', after: 'approved' },
+      linked_user_id: { after: 'applicant' },
+      access_role: { after: 'member' },
+      login_enabled: { after: true },
+    },
+    reason: 'test',
+  });
+
+  await assertSucceeds(batch.commit());
+  assert.equal((await getDoc(doc(c, 'registration_requests/applicant'))).data().status, 'approved');
+  assert.equal((await getDoc(doc(c, 'users/applicant'))).data().access_role, 'member');
+  assert.equal((await getDoc(doc(c, 'auth_links/applicant'))).data().active, true);
+  await env.withSecurityRulesDisabled(async ctx => {
+    assert.equal((await getDoc(doc(ctx.firestore(), 'audit_logs/admin-registration-op'))).data().action, 'registration.approve');
+  });
+});
+
 for (const link of [{ active: true, user_id: 'person-own' }, { active: false, user_id: 'person-own' }, { active: true, user_id: 'missing' }, {}]) {
   test(`present link disqualifies registration: ${JSON.stringify(link)}`, async () => {
     await seed('auth_links/applicant', link);
@@ -155,7 +222,7 @@ test('no UID-path, directory or token-role fallback without link', async () => {
   await assertFails(getDoc(doc(c, 'users/unlinked')));
   await assertFails(getDoc(doc(c, 'user_directory/unlinked')));
 });
-for (const role of ['developer_admin','leader','executive','committee','member']) {
+for (const role of ['developer_admin','admin','leader','executive','committee','member']) {
   test(`${role}: own User and active directory allowed; private others/list denied`, async () => {
     await seed('users/person-own', user({ access_role: role }));
     const c = db();
@@ -314,7 +381,7 @@ test('legacy and unknown collections/subcollections denied even to developer_adm
 });
 
 // Phase 1B: synthetic business fixtures, sharing the unchanged Phase 1A gate.
-const roles = ['developer_admin','leader','executive','committee','member'];
+const roles = ['developer_admin','admin','leader','executive','committee','member'];
 const donor = (extra = {}) => ({ name: 'Synthetic Donor', phone: '00000000000', blood_group: 'A+',
   gender: null, photo_url: null, village: null, union: null, upazila: 'Synthetic', district: 'Synthetic',
   profession: null, linked_user_id: null, active: true, last_donated_at: null, total_donations: 0,
@@ -417,29 +484,35 @@ for (const role of roles) {
   test(`${role}: business write matrix and explicit denials`, async () => {
     await seedBusiness(); await seed('users/person-own', user({ access_role: role }));
     const c = db();
+    const fullAdmin = role === 'developer_admin';
+    const reviewer = fullAdmin || role === 'admin' || role === 'leader';
+    const history = reviewer || role === 'executive';
     for (const col of readOnlyCollections) {
       const id = col.endsWith('_media') ? 'active-active' : col === 'notices' ? 'published' : 'active';
       const ref = doc(c, `${col}/${id}`);
-      await (admin ? assertSucceeds : assertFails)(setDoc(doc(c, `${col}/new`), { active: true }));
-      await (admin ? assertSucceeds : assertFails)(setDoc(ref, { active: true }));
-      await (admin ? assertSucceeds : assertFails)(updateDoc(ref, col === 'committee_terms' ? { group_photo_url: 'https://example.test/new' } : { active: false }));
-      await (admin ? assertSucceeds : assertFails)(deleteDoc(ref));
+      await (fullAdmin ? assertSucceeds : assertFails)(setDoc(doc(c, `${col}/new`), { active: true }));
+      await (fullAdmin ? assertSucceeds : assertFails)(setDoc(ref, { active: true }));
+      await (fullAdmin ? assertSucceeds : assertFails)(updateDoc(ref, col === 'committee_terms' ? { group_photo_url: 'https://example.test/new' } : { active: false }));
+      await (fullAdmin ? assertSucceeds : assertFails)(deleteDoc(ref));
     }
-    await (admin ? assertSucceeds : assertFails)(setDoc(doc(c, 'donors/new'), donor()));
-    await expectRead(admin || roles.indexOf(role) < 3, updateDoc(doc(c, 'donors/active'), { phone: '00000000001', ...metadata() }));
-    await (admin ? assertSucceeds : assertFails)(updateDoc(doc(c, 'donors/hidden'), { phone: '00000000001', ...metadata() }));
-    for (const extra of [{ active: false }, { total_donations: 1 }, { last_donated_at: stamp },
+    await (fullAdmin ? assertSucceeds : assertFails)(setDoc(doc(c, 'donors/new'), donor()));
+    await expectRead(history, updateDoc(doc(c, 'donors/active'), { phone: '00000000001', ...metadata() }));
+    await (fullAdmin ? assertSucceeds : assertFails)(updateDoc(doc(c, 'donors/hidden'), { phone: '00000000001', ...metadata() }));
+    await (reviewer ? assertSucceeds : assertFails)(
+      updateDoc(doc(c, 'donors/active'), { active: false, ...metadata() })
+    );
+    for (const extra of [{ total_donations: 1 }, { last_donated_at: stamp },
       { linked_user_id: 'person-own' }, { created_by: 'person-other' }, { created_at: serverTimestamp() },
       { access_role: 'leader' }, { updated_by: 'auth-own' }, { updated_at: stamp }])
-      await (admin ? assertSucceeds : assertFails)(updateDoc(doc(c, 'donors/active'), { name: 'Changed', ...metadata(), ...extra }));
-    await (admin ? assertSucceeds : assertFails)(updateDoc(doc(c, 'donors/hidden'), { active: true, ...metadata() }));
-    await (admin ? assertSucceeds : assertFails)(deleteDoc(doc(c, 'donors/active')));
+      await (fullAdmin ? assertSucceeds : assertFails)(updateDoc(doc(c, 'donors/active'), { name: 'Changed', ...metadata(), ...extra }));
+    await (fullAdmin ? assertSucceeds : assertFails)(updateDoc(doc(c, 'donors/hidden'), { active: true, ...metadata() }));
+    await (fullAdmin ? assertSucceeds : assertFails)(deleteDoc(doc(c, 'donors/active')));
     await assertSucceeds(setDoc(doc(c, 'blood_requests/new'), blood()));
     for (const id of ['new','fulfilled','cancelled']) {
       const ref = doc(c, `blood_requests/${id}`);
       for (const change of [{ hospital: 'Changed' }, { status: 'fulfilled', fulfilled_by: 'person-own', fulfilled_at: serverTimestamp() },
-        { status: 'cancelled' }, { status: 'active' }]) await (admin ? assertSucceeds : assertFails)(updateDoc(ref, change));
-      await (admin ? assertSucceeds : assertFails)(setDoc(ref, blood())); await (admin ? assertSucceeds : assertFails)(deleteDoc(ref));
+        { status: 'cancelled' }, { status: 'active' }]) await (fullAdmin ? assertSucceeds : assertFails)(updateDoc(ref, change));
+      await (fullAdmin ? assertSucceeds : assertFails)(setDoc(ref, blood())); await (fullAdmin ? assertSucceeds : assertFails)(deleteDoc(ref));
     }
   });
 }
@@ -482,6 +555,15 @@ for (const role of ['committee','executive','leader']) {
     await assertFails(setDoc(doc(db(), `donors/${role}`), donor()));
   });
 }
+
+test('admin can submit a pending donor without committee assignment', async () => {
+  await seedBusiness();
+  await seed('users/person-own', user({ access_role: 'admin' }));
+  await assertSucceeds(setDoc(doc(db(), 'donor_submissions/admin'), donorSubmission({
+    committee_assignment_id: null,
+  })));
+  await assertFails(setDoc(doc(db(), 'donors/admin'), donor()));
+});
 
 test('ordinary member and non-current committee role cannot submit donors', async () => {
   await seedBusiness();

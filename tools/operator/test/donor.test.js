@@ -32,7 +32,7 @@ async function rejectsCode(promise, code) {
 }
 
 test('developer_admin and leader deactivate donor atomically with minimal audit', async () => {
-  for (const role of ['developer_admin', 'leader']) {
+  for (const role of ['developer_admin', 'admin', 'leader']) {
     const input = args(role);
     const result = await deactivateDonor(input);
     const stored = input.db.documents.get('donors/donor-id');

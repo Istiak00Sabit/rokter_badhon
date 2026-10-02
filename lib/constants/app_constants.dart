@@ -30,12 +30,14 @@ class AppConstants {
   // =========================================================
 
   static const String roleDeveloperAdmin = 'developer_admin';
+  static const String roleAdmin = 'admin';
   static const String roleLeader = 'leader';
   static const String roleExecutive = 'executive';
   static const String roleCommittee = 'committee';
   static const String roleMember = 'member';
   static const Set<String> roles = {
     roleDeveloperAdmin,
+    roleAdmin,
     roleLeader,
     roleExecutive,
     roleCommittee,

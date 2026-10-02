@@ -596,9 +596,9 @@ bool _canViewDonationHistory(String? role) =>
     role == 'developer_admin' || role == 'leader' || role == 'executive';
 
 bool _canReviewRegistrations(String? role) =>
-    role == 'developer_admin' || role == 'leader';
+    role == 'developer_admin' || role == 'admin' || role == 'leader';
 
 bool _canReviewDonors(String? role) =>
-    role == 'developer_admin' || role == 'leader';
+    role == 'developer_admin' || role == 'admin' || role == 'leader';
 
 bool _canCreateDonor(String? role) => role != null && role != 'member';

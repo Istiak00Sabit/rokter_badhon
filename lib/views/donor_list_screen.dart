@@ -434,6 +434,36 @@ class DonorListScreen extends StatelessWidget {
                 },
                 icon: const Icon(Icons.edit_outlined, color: AppColors.primary),
               ),
+            if (controller.canDeactivate)
+              IconButton(
+                tooltip: 'deactivate_donor'.tr,
+                onPressed: () async {
+                  final confirmed = await Get.dialog<bool>(
+                    AlertDialog(
+                      title: Text('deactivate_donor'.tr),
+                      content: Text(
+                        'deactivate_donor_confirm'.trParams({
+                          'name': donor.name,
+                        }),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Get.back(result: false),
+                          child: Text('cancel'.tr),
+                        ),
+                        FilledButton(
+                          onPressed: () => Get.back(result: true),
+                          child: Text('confirm'.tr),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (confirmed == true) {
+                    await controller.deactivateDonor(donor);
+                  }
+                },
+                icon: const Icon(Icons.person_remove_outlined, color: AppColors.primary),
+              ),
             IconButton(
               onPressed: () {
                 // Display the number without requesting device-call privileges.

@@ -32,14 +32,21 @@ class DonorController extends GetxController {
   String? get _role => _authController.currentUser.value?.accessRole;
   bool get canCreate => {
     AppConstants.roleDeveloperAdmin,
+    AppConstants.roleAdmin,
     AppConstants.roleLeader,
     AppConstants.roleExecutive,
     AppConstants.roleCommittee,
   }.contains(_role);
   bool get canEdit => {
     AppConstants.roleDeveloperAdmin,
+    AppConstants.roleAdmin,
     AppConstants.roleLeader,
     AppConstants.roleExecutive,
+  }.contains(_role);
+  bool get canDeactivate => {
+    AppConstants.roleDeveloperAdmin,
+    AppConstants.roleAdmin,
+    AppConstants.roleLeader,
   }.contains(_role);
 
   @override
@@ -187,6 +194,35 @@ class DonorController extends GetxController {
       );
     } on DonorDataException {
       _showError('invalid_input');
+    } on DonorServiceException catch (error) {
+      _showError(error.code);
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> deactivateDonor(DonorModel donor) async {
+    final actor = _authController.currentUser.value;
+    if (!canDeactivate || actor == null) {
+      _showError('permission_denied');
+      return;
+    }
+    try {
+      isLoading.value = true;
+      errorCode.value = '';
+      await _donorService.deactivateDonor(
+        donorId: donor.id,
+        actorUserId: actor.id,
+      );
+      donors.removeWhere((item) => item.id == donor.id);
+      Get.snackbar(
+        'success'.tr,
+        'donor_deactivated'.tr,
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
+    } on DonorDataException {
+      _showError('malformed_data');
     } on DonorServiceException catch (error) {
       _showError(error.code);
     } finally {

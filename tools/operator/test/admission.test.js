@@ -310,6 +310,16 @@ test('leader may approve a new member', async () => {
   assert.equal(args.db.documents.get(`users/${result.userId}`).access_role, 'member');
 });
 
+test('admin may approve a new member', async () => {
+  const args = approveArgs({
+    fixture: { operatorRole: 'admin' },
+    targetRole: 'member',
+    operationId: 'admin-member',
+  });
+  const result = await approveRegistration(args);
+  assert.equal(args.db.documents.get(`users/${result.userId}`).access_role, 'member');
+});
+
 test('approval-time elevation and developer_admin creation are denied', async () => {
   for (const targetRole of ['committee', 'executive', 'leader', 'developer_admin']) {
     await rejectsCode(
