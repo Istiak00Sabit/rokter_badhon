@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/services.dart' show rootBundle;
 
 import '../models/committee_assignment_model.dart';
 import '../models/committee_member_model.dart';
@@ -18,11 +21,13 @@ class CommitteeRoster {
   final CommitteeTermModel term;
   final List<CommitteeMemberModel> members;
   final List<CommitteeMediaModel> gallery;
+  final bool isBundledPreview;
 
   const CommitteeRoster({
     required this.term,
     required this.members,
     required this.gallery,
+    this.isBundledPreview = false,
   });
 }
 
@@ -37,6 +42,83 @@ class CommitteeService {
 
   CommitteeService({FirebaseFirestore? firestore})
     : _firestore = firestore ?? FirebaseFirestore.instance;
+
+  /// Read-only preview of the reviewed 2025-2027 JSON roster. This does not
+  /// create a Firestore User, account, or permission. Once the official
+  /// records are imported, the live Firestore roster takes precedence.
+  Future<CommitteeRoster> getBundledOfficialRoster() async {
+    final source = await rootBundle.loadString(
+      'assets/data/committee_2025_2027.json',
+    );
+    final decoded = jsonDecode(source);
+    if (decoded is! List || decoded.length != 51) {
+      throw const CommitteeDataException(
+        'The bundled official committee source is incomplete.',
+      );
+    }
+    final seenPhones = <String>{};
+    final members = <CommitteeMemberModel>[];
+    for (var index = 0; index < decoded.length; index++) {
+      final raw = decoded[index];
+      if (raw is! Map<String, dynamic> || raw['serial'] != index + 1) {
+        throw const CommitteeDataException('Invalid committee source order.');
+      }
+      final serial = (index + 1).toString().padLeft(3, '0');
+      final userId = 'committee-2025-2027-' + serial;
+      final phone = raw['phone'];
+      if (phone is! String || !seenPhones.add(phone)) {
+        throw const CommitteeDataException('Invalid committee source phone.');
+      }
+      for (final key in ['name', 'position', 'profession', 'blood_group']) {
+        if (raw[key] is! String || (raw[key] as String).trim().isEmpty) {
+          throw const CommitteeDataException(
+            'Incomplete official committee member.',
+          );
+        }
+      }
+      members.add(
+        CommitteeMemberModel(
+          assignment: CommitteeAssignmentModel(
+            id: '2025-2027-' + serial,
+            userId: userId,
+            termId: '2025-2027',
+            position: raw['position'] as String,
+            active: true,
+            assignedAt: DateTime.utc(2025),
+            assignedBy: 'bundled-source',
+            endedAt: null,
+          ),
+          directory: UserDirectoryModel(
+            id: userId,
+            name: raw['name'] as String,
+            phone: phone,
+            bloodGroup: raw['blood_group'] as String,
+            profession: raw['profession'] as String,
+            photoUrl: null,
+            active: true,
+          ),
+        ),
+      );
+    }
+    final term = CommitteeTermModel(
+      id: '2025-2027',
+      name: '2025–2027',
+      startYear: 2025,
+      endYear: 2027,
+      startDate: null,
+      endDate: null,
+      active: true,
+      groupPhotoUrl: null,
+      createdAt: DateTime.utc(2025),
+      createdBy: 'bundled-source',
+    );
+    return CommitteeRoster(
+      term: term,
+      members: List<CommitteeMemberModel>.unmodifiable(members),
+      gallery: const <CommitteeMediaModel>[],
+      isBundledPreview: true,
+    );
+  }
 
   Future<CommitteeTermModel?> getCurrentTerm() async {
     final snapshot = await _firestore
