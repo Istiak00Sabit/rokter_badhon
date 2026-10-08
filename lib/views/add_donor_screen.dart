@@ -156,6 +156,7 @@ class AddDonorScreen extends StatelessWidget {
                     icon: Icons.location_on_outlined,
                     value: area.isEmpty ? null : area,
                     items: AppConstants.locationAreas,
+                    itemLabel: AppConstants.locationAreaLabel,
                     onChanged: (val) {
                       controller.selectedUnion.value = val!;
                       controller.villageController.clear();
@@ -183,7 +184,7 @@ class AddDonorScreen extends StatelessWidget {
                 Expanded(
                   child: _buildReadOnlyField(
                     label: 'upazila'.tr,
-                    value: AppConstants.upazila,
+                    value: AppConstants.upazilaDisplay,
                     icon: Icons.map_outlined,
                   ),
                 ),
@@ -191,7 +192,7 @@ class AddDonorScreen extends StatelessWidget {
                 Expanded(
                   child: _buildReadOnlyField(
                     label: 'district'.tr,
-                    value: AppConstants.district,
+                    value: AppConstants.districtDisplay,
                     icon: Icons.location_city_outlined,
                   ),
                 ),
