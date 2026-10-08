@@ -112,10 +112,15 @@ export async function seedOfficialCommittee({
   db,
   serverTimestamp,
   rows = loadOfficialCommitteeSource(),
+  allowProduction = false,
 }) {
-  if (projectId !== 'demo-rokter-badhon') {
-    fail('unsafe_target', 'The official committee preload runs only against demo-rokter-badhon.');
+  const production = allowProduction && projectId === 'rokterbadhon-b247b';
+  if (projectId !== 'demo-rokter-badhon' && !production) {
+    fail('unsafe_target', 'Official committee import requires an approved target.');
   }
+  const seedActor = production
+    ? 'trusted-operator-official-committee-import'
+    : OFFICIAL_COMMITTEE_SEED_ACTOR;
   const source = validateOfficialCommitteeSource(rows);
   const termReference = db.collection('committee_terms').doc(OFFICIAL_COMMITTEE_TERM_ID);
   const activeTermsQuery = db.collection('committee_terms').where('active', '==', true);
@@ -163,14 +168,14 @@ export async function seedOfficialCommittee({
         active: true,
         group_photo_url: null,
         created_at: now,
-        created_by: OFFICIAL_COMMITTEE_SEED_ACTOR,
+        created_by: seedActor,
       });
     } else {
       const term = termSnapshot.data();
       if (!fixedValuesMatch(term, {
         name: '2025-2027', start_year: 2025, end_year: 2027, start_date: null,
         end_date: null, active: true, group_photo_url: null,
-        created_by: OFFICIAL_COMMITTEE_SEED_ACTOR,
+        created_by: seedActor,
       })) fail('existing_conflict', 'Existing 2025-2027 committee term does not match the reviewed preload.');
     }
 
@@ -194,7 +199,7 @@ export async function seedOfficialCommittee({
         term_id: OFFICIAL_COMMITTEE_TERM_ID,
         position: state.row.position,
         active: true,
-        assigned_by: OFFICIAL_COMMITTEE_SEED_ACTOR,
+        assigned_by: seedActor,
         ended_at: null,
       };
       if (!state.assignmentSnapshot.exists) {
