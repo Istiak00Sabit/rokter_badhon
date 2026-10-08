@@ -99,6 +99,14 @@ test('explicit trusted production import creates directory-only members safely',
     db.documents.get('committee_assignments/2025-2027-001').assigned_by,
     'trusted-operator-official-committee-import',
   );
+  assert.equal(
+    [...db.documents.keys()].filter((key) => key.startsWith('audit_logs/')).length,
+    51,
+  );
+  assert.equal(
+    db.documents.get('audit_logs/official-committee-2025-2027-001').action,
+    'committee.member_seed',
+  );
   const retry = await seedOfficialCommittee(args);
   assert.equal(retry.createdUsers, 0);
   assert.equal(retry.createdAssignments, 0);
