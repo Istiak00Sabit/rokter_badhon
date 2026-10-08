@@ -74,4 +74,32 @@ test('preload fails closed on duplicate identity, conflicting records, and non-d
     seedOfficialCommittee({ projectId: 'production-project', db: new FakeFirestore(), serverTimestamp: () => SERVER_TIME, rows: source }),
     (error) => error.code === 'unsafe_target',
   );
+  await assert.rejects(
+    seedOfficialCommittee({ projectId: 'rokterbadhon-b247b', db: new FakeFirestore(), serverTimestamp: () => SERVER_TIME, rows: source }),
+    (error) => error.code === 'unsafe_target',
+  );
+});
+
+test('explicit trusted production import creates directory-only members safely', async () => {
+  const db = new FakeFirestore();
+  const args = {
+    projectId: 'rokterbadhon-b247b',
+    db,
+    serverTimestamp: () => SERVER_TIME,
+    rows: source,
+    allowProduction: true,
+  };
+  const first = await seedOfficialCommittee(args);
+  assert.equal(first.createdUsers, 51);
+  assert.equal(first.createdAssignments, 51);
+  const leader = db.documents.get('users/committee-2025-2027-001');
+  assert.equal(leader.login_enabled, false);
+  assert.equal(leader.access_role, 'leader');
+  assert.equal(
+    db.documents.get('committee_assignments/2025-2027-001').assigned_by,
+    'trusted-operator-official-committee-import',
+  );
+  const retry = await seedOfficialCommittee(args);
+  assert.equal(retry.createdUsers, 0);
+  assert.equal(retry.createdAssignments, 0);
 });
