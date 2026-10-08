@@ -21,6 +21,40 @@ class GhatailVillageData {
 
   static String get municipalityName => 'ঘাটাইল পৌরসভা';
 
+  /// English display-only spellings for the 14 unions and municipality.
+  /// Firestore continues to store the original Bangla name as the key.
+  static const Map<String, String> _englishAreas = {
+    'আনেহলা': 'Anehla',
+    'দেওপাড়া': 'Deopara',
+    'দেউলাবাড়ী': 'Deulabari',
+    'দিঘলকান্দি': 'Dighalkandi',
+    'দিগড়': 'Digar',
+    'ঘাটাইল': 'Ghatail',
+    'জামুরিয়া': 'Jamuria',
+    'লোকেরপাড়া': 'Lokerpara',
+    'লক্ষিন্দর': 'Lakkhindar',
+    'রসুলপুর': 'Rasulpur',
+    'ধলাপাড়া': 'Dhalapara',
+    'সন্ধানপুর': 'Sandhanpur',
+    'সংগ্রামপুর': 'Sangrampur',
+    'সাগরদিঘী': 'Sagardighi',
+    'ঘাটাইল পৌরসভা': 'Ghatail Municipality',
+  };
+
+  static String areaLabel(String area, {required bool english}) =>
+      english ? (_englishAreas[area] ?? area) : area;
+
+  static List<String> locationAreasForLanguage({required bool english}) {
+    if (!english) return locationAreas;
+    final values = [..._villagesByUnion.keys, municipalityName];
+    values.sort((a, b) => areaLabel(a, english: true)
+        .toLowerCase()
+        .compareTo(areaLabel(b, english: true).toLowerCase()));
+    return List<String>.unmodifiable(values);
+  }
+
+
+
   /// Sorts names alphabetically in their own script. Bangla and English
   /// names remain unchanged, so their saved Firestore values stay stable.
   static List<String> alphabetical(Iterable<String> names) {
