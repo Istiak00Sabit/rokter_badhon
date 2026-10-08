@@ -25,7 +25,7 @@ class CommitteeController extends GetxController {
       final currentTerm = results[0] as CommitteeTermModel?;
       pastTerms.assignAll(results[1] as List<CommitteeTermModel>);
       currentRoster.value = currentTerm == null
-          ? null
+          ? await service.getBundledOfficialRoster()
           : await service.getCurrentRoster(currentTerm);
     } catch (_) {
       currentRoster.value = null;
