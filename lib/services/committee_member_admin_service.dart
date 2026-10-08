@@ -83,6 +83,20 @@ class CommitteeMemberAdminService {
     final userId = matches.docs.isEmpty
         ? 'committee-added-' + phone
         : matches.docs.single.id;
+    // Check all assignment IDs, not only the deterministic ID used by
+    // this form. Imported members have serial-based IDs.
+    final priorAssignments = await _firestore
+        .collection('committee_assignments')
+        .where('user_id', isEqualTo: userId)
+        .where('term_id', isEqualTo: termId)
+        .limit(1)
+        .get();
+    if (priorAssignments.docs.isNotEmpty) {
+      throw const CommitteeMemberAdminException(
+        'This User already has a committee assignment for the term.',
+      );
+    }
+
     final assignmentId = termId + '-added-' + phone;
     final termRef = _firestore.collection('committee_terms').doc(termId);
     final userRef = _firestore.collection('users').doc(userId);
