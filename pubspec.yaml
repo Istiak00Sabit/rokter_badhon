@@ -41,6 +41,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/data/ghatail_locations.json
+    - assets/data/committee_2025_2027.json
 
   # fonts:
   #   - family: Kalpurush
