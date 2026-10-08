@@ -4,11 +4,13 @@ import 'package:get/get.dart';
 import '../constants/app_colors.dart';
 import '../constants/app_constants.dart';
 import '../controllers/committee_controller.dart';
+import '../controllers/auth_controller.dart';
 import '../models/committee_member_model.dart';
 import '../models/committee_media_model.dart';
 import '../models/committee_term_model.dart';
 import '../services/committee_service.dart';
 import 'member_list_screen.dart';
+import 'add_committee_member_screen.dart';
 
 class CommitteeScreen extends StatefulWidget {
   const CommitteeScreen({super.key});
@@ -84,6 +86,23 @@ class _CommitteeScreenState extends State<CommitteeScreen> {
                 ],
               ),
               const SizedBox(height: 16),
+              if (Get.isRegistered<AuthController>() &&
+                  Get.find<AuthController>().currentUser.value?.accessRole ==
+                      AppConstants.roleDeveloperAdmin) ...[
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final added = await Get.to<bool>(
+                      () => AddCommitteeMemberScreen(
+                        termId: roster?.term.id ?? '2025-2027',
+                      ),
+                    );
+                    if (added == true) await controller.loadCommittee();
+                  },
+                  icon: const Icon(Icons.person_add_alt_1),
+                  label: Text('add_committee_member'.tr),
+                ),
+                const SizedBox(height: 16),
+              ],
               if (roster == null)
                 _EmptyCommittee(message: 'no_current_committee'.tr)
               else
