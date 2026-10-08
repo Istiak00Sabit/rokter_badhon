@@ -21,10 +21,20 @@ class GhatailVillageData {
 
   static String get municipalityName => 'ঘাটাইল পৌরসভা';
 
-  static List<String> get unions =>
-      List<String>.unmodifiable(_villagesByUnion.keys);
+  /// Sorts names alphabetically in their own script. Bangla and English
+  /// names remain unchanged, so their saved Firestore values stay stable.
+  static List<String> alphabetical(Iterable<String> names) {
+    final sorted = names.toList();
+    sorted.sort((a, b) {
+      final result = a.trim().toLowerCase().compareTo(b.trim().toLowerCase());
+      return result != 0 ? result : a.compareTo(b);
+    });
+    return List<String>.unmodifiable(sorted);
+  }
 
-  static List<String> get locationAreas => List<String>.unmodifiable([
+  static List<String> get unions => alphabetical(_villagesByUnion.keys);
+
+  static List<String> get locationAreas => alphabetical([
     ..._villagesByUnion.keys,
     municipalityName,
   ]);
@@ -55,7 +65,7 @@ class GhatailVillageData {
       if (name is! String || name.trim().isEmpty || villages is! List) {
         throw const FormatException('Invalid union data.');
       }
-      parsedUnions[name] = List<String>.unmodifiable(
+      parsedUnions[name] = alphabetical(
         villages.whereType<String>().where((v) => v.trim().isNotEmpty),
       );
     }
@@ -66,7 +76,7 @@ class GhatailVillageData {
       throw const FormatException('Invalid municipality data.');
     }
 
-    final parsedMahallas = List<String>.unmodifiable(
+    final parsedMahallas = alphabetical(
       rawMahallas.whereType<String>().where((v) => v.trim().isNotEmpty),
     );
 
