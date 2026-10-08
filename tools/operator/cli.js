@@ -92,8 +92,11 @@ async function main() {
   const { command, options } = parseArguments(process.argv.slice(2));
   const projectId = options['project-id'];
   console.log(`Target Firebase project: ${projectId ?? '(missing)'}`);
-  const isProductionMutation = command === 'provision-committee-accounts' ||
-    command === 'repair-legacy-developer-admin';
+  const isProductionMutation = [
+    'provision-committee-accounts',
+    'repair-legacy-developer-admin',
+    'seed-official-committee',
+  ].includes(command);
   assertSafeTarget({
     projectId,
     firestoreEmulatorHost: process.env.FIRESTORE_EMULATOR_HOST,
@@ -132,6 +135,8 @@ async function main() {
       projectId,
       db: dependencies.db,
       serverTimestamp: dependencies.serverTimestamp,
+      allowProduction: options['allow-production'] === 'true' &&
+        options['confirm-project-id'] === projectId,
     });
   } else if (command === 'provision-committee-accounts') {
     const sourceFile = options.file === undefined
