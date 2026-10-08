@@ -65,7 +65,16 @@ class AppConstants {
 
   static List<String> get unions => GhatailVillageData.unions;
 
-  static List<String> get locationAreas => GhatailVillageData.locationAreas;
+  static bool get englishLocations => Get.locale?.languageCode == 'en';
+
+  static List<String> get locationAreas =>
+      GhatailVillageData.locationAreasForLanguage(english: englishLocations);
+
+  static String locationAreaLabel(String area) =>
+      GhatailVillageData.areaLabel(area, english: englishLocations);
+
+  static String get upazilaDisplay => englishLocations ? 'Ghatail' : upazila;
+  static String get districtDisplay => englishLocations ? 'Tangail' : district;
 
   static String get municipalityName => GhatailVillageData.municipalityName;
 
