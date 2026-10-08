@@ -255,6 +255,14 @@ class CommitteeRosterView extends StatelessWidget {
             child: _CommitteeImage(url: roster.term.groupPhotoUrl, group: true),
           ),
         ),
+        if (roster.isBundledPreview) ...[
+          const SizedBox(height: 12),
+          Text(
+            'committee_bundled_preview'.tr,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: AppColors.textGrey),
+          ),
+        ],
         const SizedBox(height: 14),
         Text(
           roster.term.name,
