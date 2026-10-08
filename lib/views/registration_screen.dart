@@ -202,6 +202,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 label: 'union_or_municipality'.tr,
                 value: _selectedArea,
                 items: AppConstants.locationAreas,
+                    itemLabel: AppConstants.locationAreaLabel,
                 onChanged: (value) {
                   setState(() {
                     _selectedArea = value;
@@ -275,6 +276,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   label: 'union_or_municipality'.tr,
                   value: _selectedArea,
                   items: AppConstants.locationAreas,
+                    itemLabel: AppConstants.locationAreaLabel,
                   onChanged: (value) {
                     setState(() {
                       _selectedArea = value;
