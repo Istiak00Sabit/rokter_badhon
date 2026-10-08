@@ -139,6 +139,9 @@ export async function seedOfficialCommittee({
       const userReference = db.collection('users').doc(userId);
       const directoryReference = db.collection('user_directory').doc(userId);
       const assignmentReference = db.collection('committee_assignments').doc(assignmentId);
+      const auditReference = production
+        ? db.collection('audit_logs').doc('official-committee-2025-2027-' + String(row.serial).padStart(3, '0'))
+        : null;
       const [userSnapshot, directorySnapshot, assignmentSnapshot, phoneMatches, assignmentMatches] = await Promise.all([
         transaction.get(userReference),
         transaction.get(directoryReference),
@@ -146,13 +149,24 @@ export async function seedOfficialCommittee({
         transaction.get(db.collection('users').where('phone', '==', row.phone)),
         transaction.get(db.collection('committee_assignments').where('user_id', '==', userId).where('term_id', '==', OFFICIAL_COMMITTEE_TERM_ID)),
       ]);
+      const auditSnapshot = auditReference
+        ? await transaction.get(auditReference)
+        : null;
+      if (production && userSnapshot.exists && !auditSnapshot?.exists) {
+        fail('existing_conflict', 'Existing production committee User has no import audit record.');
+      }
+      if (auditSnapshot?.exists &&
+          (auditSnapshot.data().action !== 'committee.member_seed' ||
+           auditSnapshot.data().changes?.user_id?.after !== userId)) {
+        fail('existing_conflict', 'An unrelated import audit record already exists.');
+      }
       const foreignPhoneMatch = phoneMatches.docs.find((doc) => doc.id !== userId);
       if (foreignPhoneMatch) fail('duplicate_identity', `Phone ${row.phone} already belongs to another User.`);
       const foreignAssignment = assignmentMatches.docs.find((doc) => doc.id !== assignmentId);
       if (foreignAssignment) fail('duplicate_assignment', `User ${userId} already has another assignment for 2025-2027.`);
       if (!userSnapshot.exists && directorySnapshot.exists) fail('existing_conflict', `Orphan directory ${userId} conflicts with the preload.`);
       if (!userSnapshot.exists && assignmentSnapshot.exists) fail('existing_conflict', `Orphan assignment ${assignmentId} conflicts with the preload.`);
-      states.push({ row, userId, assignmentId, userReference, directoryReference, assignmentReference, userSnapshot, directorySnapshot, assignmentSnapshot });
+      states.push({ row, userId, assignmentId, userReference, directoryReference, assignmentReference, auditReference, auditSnapshot, userSnapshot, directorySnapshot, assignmentSnapshot });
     }
 
     const now = serverTimestamp();
@@ -207,6 +221,24 @@ export async function seedOfficialCommittee({
         createdAssignments += 1;
       } else if (!fixedValuesMatch(state.assignmentSnapshot.data(), expectedAssignment)) {
         fail('existing_conflict', `Existing assignment ${state.assignmentId} conflicts with official source.`);
+      }
+      if (production && !state.auditSnapshot?.exists) {
+        transaction.create(state.auditReference, {
+          action: 'committee.member_seed',
+          actor_user_id: null,
+          actor_auth_uid: null,
+          target_path: state.userReference.path,
+          occurred_at: now,
+          operation_id: 'official-committee-2025-2027-' + String(state.row.serial).padStart(3, '0'),
+          outcome: 'committed',
+          changes: {
+            user_id: { after: state.userId },
+            access_role: { after: state.row.access_role },
+            login_enabled: { after: false },
+            committee_assignment_id: { after: state.assignmentId },
+          },
+          reason: 'Trusted import from reviewed official committee JSON.',
+        });
       }
     }
 
