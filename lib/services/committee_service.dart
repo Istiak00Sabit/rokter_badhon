@@ -64,7 +64,7 @@ class CommitteeService {
         throw const CommitteeDataException('Invalid committee source order.');
       }
       final serial = (index + 1).toString().padLeft(3, '0');
-      final userId = 'committee-2025-2027-' + serial;
+      final userId = 'committee-2025-2027-$serial';
       final phone = raw['phone'];
       if (phone is! String || !seenPhones.add(phone)) {
         throw const CommitteeDataException('Invalid committee source phone.');
@@ -79,7 +79,7 @@ class CommitteeService {
       members.add(
         CommitteeMemberModel(
           assignment: CommitteeAssignmentModel(
-            id: '2025-2027-' + serial,
+            id: '2025-2027-$serial',
             userId: userId,
             termId: '2025-2027',
             position: raw['position'] as String,
