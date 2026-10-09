@@ -1,0 +1,68 @@
+# Live Firestore Rules and indexes: owner read-only verification
+
+Target project: `rokterbadhon-b247b`. The initial live data/Auth preflight
+identified 51 planned committee members with no detected import collisions, but
+one legacy email-based Firebase Auth account lacked both `auth_links` and a
+`registration_requests` record. That legacy identity is **not** deleted or
+modified by this process.
+
+## Production changes are not authorized by running this audit
+
+The user has declined a Firestore backup. This is an informed operational
+choice, **not** evidence that a future production import is risk free.
+Preserve existing records. Do not deploy security rules or seed the committee
+until this report is reviewed and a separate explicit production-write decision
+has been made.
+
+Use Windows VS Code PowerShell in the repo root:
+
+```powershell
+cd C:\rokter_badhon
+git status
+git pull --ff-only origin main
+gcloud auth list
+node tools/operator/live_rules_audit.js --project-id rokterbadhon-b247b --confirm-project-id rokterbadhon-b247b
+```
+
+If `git status` has local modifications, stop and protect them before pulling.
+Log into the owner Google Cloud CLI account with `gcloud auth login` if needed.
+No need to change ADC settings or use the Read-only Service Account here.
+
+The audit invokes `gcloud auth print-access-token` internally and keeps the
+short-lived token in process memory; it never logs the token or writes a file.
+Only **HTTP GET** is used against:
+
+- `firebaserules.googleapis.com` to retrieve the published `cloud.firestore`
+  release and linked ruleset.
+- `firestore.googleapis.com` to list the current composite indexes for
+  `(default)` using pagination.
+
+It reads only local `firestore.rules` and `firestore.indexes.json`. No
+Firebase Authentication user data or Firestore documents are accessed by this
+audit. No backup is created.
+
+Expected report flags:
+
+- `firestoreRules.verified`: the deployed Rules source was read.
+- `firestoreRules.exactContentMatch`: normalized live and local text equal.
+- `compositeIndexes.verified`: live composite list was read.
+- `compositeIndexes.exactCompositeMatch`: no missing, not-ready or extra
+  composite indexes. The system-added `__name__` field is ignored.
+- `compositeIndexes.fieldOverridesVerified`: **false**, because this tool does
+  not inspect Firestore single-field index exemptions/TTL/field overrides.
+- `writesPerformed`: always 0. A failure returns exit code 2 but prints JSON.
+
+If `verified=false` with `HTTP 403`, the owner CLI account may lack the
+required Rules/Index read permission, or the API may be restricted. Review IAM
+and deployed Rules/Indexes in Firebase Console; do not grant wide access
+blindly. If either exact match is false, share only the redacted JSON report,
+not OAuth credentials or entire production data.
+
+Even if both matches are true, this does not prove the app can register and
+approve users on real devices. Current deployed configuration, the old Auth
+identity and real Android acceptance tests are separate launch gates.
+
+Official API reference:
+- https://firebase.google.com/docs/reference/rules/rest/v1/projects.releases/get
+- https://firebase.google.com/docs/reference/rules/rest/v1/projects.rulesets/get
+- https://firebase.google.com/docs/firestore/reference/rest/v1/projects.databases.collectionGroups.indexes/list
