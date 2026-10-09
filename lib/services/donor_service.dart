@@ -29,23 +29,25 @@ class DonorService {
     }.contains(actorRole)) {
       throw const DonorServiceException('permission_denied');
     }
-    String? assignmentId;
-    if (actorRole != AppConstants.roleDeveloperAdmin) {
-      final assignments = await _firestore
-          .collection('committee_assignments')
-          .where('user_id', isEqualTo: actorUserId)
-          .where('active', isEqualTo: true)
-          .limit(2)
-          .get();
-      if (assignments.docs.length != 1) {
-        throw const DonorServiceException('committee_assignment_required');
-      }
-      assignmentId = assignments.docs.single.id;
-    }
-    final reference = _firestore
-        .collection(AppConstants.donorSubmissionsCollection)
-        .doc();
+
     try {
+      String? assignmentId;
+      if (actorRole != AppConstants.roleDeveloperAdmin) {
+        final assignments = await _firestore
+            .collection('committee_assignments')
+            .where('user_id', isEqualTo: actorUserId)
+            .where('active', isEqualTo: true)
+            .limit(2)
+            .get();
+        if (assignments.docs.length != 1) {
+          throw const DonorServiceException('committee_assignment_required');
+        }
+        assignmentId = assignments.docs.single.id;
+      }
+
+      final reference = _firestore
+          .collection(AppConstants.donorSubmissionsCollection)
+          .doc();
       await reference.set({
         'donor_payload': input.profileFields(),
         'committee_assignment_id': assignmentId,
