@@ -139,7 +139,7 @@ class _AddCommitteeMemberScreenState extends State<AddCommitteeMemberScreen> {
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
-              value: _bloodGroup,
+              initialValue: _bloodGroup,
               isExpanded: true,
               decoration: InputDecoration(labelText: 'blood_group'.tr),
               items: [
