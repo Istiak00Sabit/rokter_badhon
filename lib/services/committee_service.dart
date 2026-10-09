@@ -309,54 +309,20 @@ class CommitteeService {
         )
         .toList();
     members.sort((left, right) {
-      // Keep the reviewed 2025-2027 committee in source serial order.
-      // New members follow the original 51; other terms use position/name.
-      final officialId = RegExp(r'^2025-2027-([0-9]{3})
-    return members;
-  }
-
-  static List<CommitteeMediaModel> validateGallery(
-    String termId,
-    Iterable<CommitteeMediaModel> media,
-  ) {
-    final gallery = media.toList(growable: false);
-    if (gallery.any((item) => !item.active || item.termId != termId)) {
-      throw const CommitteeDataException(
-        'Gallery query returned hidden media or another term.',
-      );
-    }
-    final ordered = [...gallery]
-      ..sort((left, right) {
-        final order = left.sortOrder.compareTo(right.sortOrder);
-        return order != 0 ? order : left.id.compareTo(right.id);
-      });
-    return List.unmodifiable(ordered);
-  }
-
-  static UserDirectoryModel? _visibleDirectory(UserDirectoryModel? entry) {
-    return entry != null && entry.active ? entry : null;
-  }
-
-  static void _requireDocumentId(String value, String label) {
-    if (value.isEmpty || value.contains('/')) {
-      throw CommitteeDataException('Invalid $label document ID.');
-    }
-  }
-}
-);
-      final leftSerial = officialId.firstMatch(left.assignment.id);
-      final rightSerial = officialId.firstMatch(right.assignment.id);
-      if (leftSerial != null && rightSerial != null) {
-        return int.parse(leftSerial.group(1)!)
-            .compareTo(int.parse(rightSerial.group(1)!));
+      // Original committee serial numbers come first; newly added members
+      // follow those records, then use position/name ordering.
+      final serial = RegExp(r'^2025-2027-([0-9]{3})$');
+      final leftMatch = serial.firstMatch(left.assignment.id);
+      final rightMatch = serial.firstMatch(right.assignment.id);
+      if (leftMatch != null && rightMatch != null) {
+        return int.parse(leftMatch.group(1)!)
+            .compareTo(int.parse(rightMatch.group(1)!));
       }
-      if (leftSerial != null) return -1;
-      if (rightSerial != null) return 1;
-      final position = left.position.compareTo(right.position);
-      if (position != 0) return position;
-      return (left.directory?.name ?? '').compareTo(
-        right.directory?.name ?? '',
-      );
+      if (leftMatch != null) return -1;
+      if (rightMatch != null) return 1;
+      final positionComparison = left.position.compareTo(right.position);
+      if (positionComparison != 0) return positionComparison;
+      return (left.directory?.name ?? '').compareTo(right.directory?.name ?? '');
     });
     return members;
   }
