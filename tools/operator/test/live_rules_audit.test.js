@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
-  PROJECT_ID, RULES_RELEASE, INDEX_PARENT,
-  compareRules, compareIndexes,
+  PROJECT_ID, RULES_RELEASE,
+  compareRules, compareIndexes, parseGcloudCompositeIndexesJson,
   makeCloudRead, auditLiveRules, auditLiveIndexes,
 } from '../src/live_rules_audit.js';
 
@@ -68,7 +68,7 @@ test('Firestore index comparison removes the system generated document-name fiel
   assert.equal(extra.extra.length, 1);
 });
 
-test('GET-only network wrapper allows only expected Rules and Index APIs', async () => {
+test('GET-only network wrapper allows only expected Firebase Rules APIs', async () => {
   const requests = [];
   const read = makeCloudRead({
     getAccessToken: async () => 'synthetic-redacted-token',
@@ -79,45 +79,57 @@ test('GET-only network wrapper allows only expected Rules and Index APIs', async
   });
   await read('https://firebaserules.googleapis.com/v1/' + RULES_RELEASE);
   await read('https://firebaserules.googleapis.com/v1/' + release.rulesetName);
-  await read('https://firestore.googleapis.com/v1/' + INDEX_PARENT + '/indexes?pageSize=100');
-  assert.equal(requests.length, 3);
+  assert.equal(requests.length, 2);
   assert.ok(requests.every((x) => x.opts.method === 'GET'));
   assert.ok(requests.every((x) => x.opts.redirect === 'error'));
   assert.ok(requests.every((x) => !x.opts.body));
   assert.ok(!JSON.stringify(requests.map((x) => x.url)).includes('synthetic-redacted'));
   await assert.rejects(read('https://firebaserules.googleapis.com/v1/projects/another/release'));
   await assert.rejects(read('https://example.com/v1/' + RULES_RELEASE));
-  await assert.rejects(read('https://firestore.googleapis.com/v1/' + INDEX_PARENT + '/indexes/create'));
+  await assert.rejects(read('https://firestore.googleapis.com/v1/projects/rokterbadhon-b247b/databases/(default)/collectionGroups/-/indexes'));
 });
 
-test('Rules retrieval and paginated composite index audit use only read operations', async () => {
+test('Rules retrieval and gcloud-provided composite indexes are read-only', async () => {
   const requested = [];
   const read = async (url) => {
     requested.push(url);
     if (url.endsWith('/releases/cloud.firestore')) return release;
     if (url.endsWith('/rulesets/test123')) return getRuleset();
-    if (url.includes('pageToken=second')) return { indexes: [] };
-    if (url.includes('/indexes?')) return { indexes: [remoteIndex], nextPageToken: 'second' };
-    throw new Error('Unexpected request');
+    throw new Error('Unexpected read endpoint');
   };
   const rules = await auditLiveRules({
     projectId: PROJECT_ID, localRules: expectedRules, read,
   });
+  let calls = 0;
   const indexes = await auditLiveIndexes({
-    projectId: PROJECT_ID, localIndexes: { indexes: [sourceIndex] }, read,
+    projectId: PROJECT_ID,
+    localIndexes: { indexes: [sourceIndex] },
+    listCompositeIndexes: async () => {
+      calls++;
+      return parseGcloudCompositeIndexesJson(JSON.stringify([remoteIndex]));
+    },
   });
   assert.equal(rules.exactContentMatch, true);
   assert.equal(indexes.exactCompositeMatch, true);
-  assert.equal(requested.length, 4);
-  assert.ok(requested.every((url) => !url.includes('token=')));
+  assert.equal(indexes.source, 'gcloud firestore indexes composite list');
+  assert.equal(requested.length, 2);
+  assert.equal(calls, 1);
 });
 
-test('pagination loops and unknown index resource cannot mark audit as verified', async () => {
+test('gcloud JSON validation and unknown index resources cannot falsely verify', async () => {
+  assert.deepEqual(parseGcloudCompositeIndexesJson('[]'), []);
+  assert.throws(() => parseGcloudCompositeIndexesJson('not json'), /valid composite index JSON/);
+  assert.throws(() => parseGcloudCompositeIndexesJson('{"indexes":[]}'), /Invalid gcloud/);
+  assert.throws(() => parseGcloudCompositeIndexesJson(JSON.stringify({})), /Invalid gcloud/);
   await assert.rejects(auditLiveIndexes({
-    projectId: PROJECT_ID,
+    projectId: PROJECT_ID, localIndexes: { indexes: [] },
+    listCompositeIndexes: async () => { throw new Error('read-only CLI failed'); },
+  }), /read-only CLI failed/);
+  await assert.rejects(auditLiveIndexes({
+    projectId: 'different-project',
     localIndexes: { indexes: [] },
-    read: async () => ({ indexes: [], nextPageToken: 'repeat' }),
-  }), /Repeated or invalid/);
+    listCompositeIndexes: async () => [],
+  }), /Unsafe project/);
   assert.throws(() => compareIndexes({ indexes: [sourceIndex] }, [{
     ...remoteIndex,
     name: 'projects/other/databases/(default)/collectionGroups/donors/indexes/bad',
