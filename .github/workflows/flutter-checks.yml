@@ -31,14 +31,23 @@ jobs:
           distribution: temurin
           java-version: '21'
       - run: flutter build apk --debug
+
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
+          cache: npm
       - name: Install operator dependencies
-        if: always()
         run: npm --prefix tools/operator ci
       - name: Run operator tests
-        if: always()
         run: npm --prefix tools/operator test
       - name: Install rules test dependencies
         if: always()
