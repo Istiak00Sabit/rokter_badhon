@@ -81,7 +81,7 @@ class CommitteeMemberAdminService {
     }
 
     final userId = matches.docs.isEmpty
-        ? 'committee-added-' + phone
+        ? 'committee-added-$phone'
         : matches.docs.single.id;
     // Check all assignment IDs, not only the deterministic ID used by
     // this form. Imported members have serial-based IDs.
@@ -97,7 +97,7 @@ class CommitteeMemberAdminService {
       );
     }
 
-    final assignmentId = termId + '-added-' + phone;
+    final assignmentId = '${termId}-added-$phone';
     final termRef = _firestore.collection('committee_terms').doc(termId);
     final userRef = _firestore.collection('users').doc(userId);
     final directoryRef = _firestore.collection('user_directory').doc(userId);
