@@ -97,7 +97,7 @@ class CommitteeMemberAdminService {
       );
     }
 
-    final assignmentId = '${termId}-added-$phone';
+    final assignmentId = '$termId-added-$phone';
     final termRef = _firestore.collection('committee_terms').doc(termId);
     final userRef = _firestore.collection('users').doc(userId);
     final directoryRef = _firestore.collection('user_directory').doc(userId);
