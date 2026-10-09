@@ -24,9 +24,17 @@ class CommitteeController extends GetxController {
       ]);
       final currentTerm = results[0] as CommitteeTermModel?;
       pastTerms.assignAll(results[1] as List<CommitteeTermModel>);
-      currentRoster.value = currentTerm == null
-          ? await service.getBundledOfficialRoster()
-          : await service.getCurrentRoster(currentTerm);
+      if (currentTerm == null) {
+        currentRoster.value = await service.getBundledOfficialRoster();
+      } else {
+        final liveRoster = await service.getCurrentRoster(currentTerm);
+        // A partially imported official term has no live assignments yet.
+        // Show the bundled list until the Firestore import finishes.
+        currentRoster.value =
+            currentTerm.id == '2025-2027' && liveRoster.members.isEmpty
+                ? await service.getBundledOfficialRoster()
+                : liveRoster;
+      }
     } catch (_) {
       currentRoster.value = null;
       pastTerms.clear();
