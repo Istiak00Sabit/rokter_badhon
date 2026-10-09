@@ -83,6 +83,72 @@ Legacy email-based Firebase Auth accounts must be reviewed by an operator;
 do not delete them, overwrite their identifiers or manufacture a new User
 to bypass the mismatch.
 
+## Free-plan encrypted local Firestore backup (before any production import)
+
+This is a **best-effort logical export of Firestore documents**, NOT the Google
+Cloud managed backup/export service and NOT a single point-in-time snapshot.
+It does **not** require enabling project billing, but still uses Firestore read
+operations and is subject to free-tier read quotas. Run when the app is quiet,
+preferably without concurrent writes, as changes during the export can produce
+an inconsistent view. The script never requests Firestore mutations.
+
+The operator CLI uses existing **read-only impersonated ADC credentials**.
+It discovers every root collection, each nested subcollection, and missing
+parent documents by calling Firestore REST read-only list endpoints with
+pagination. The archive stores raw typed Firestore REST fields, including
+integer strings, timestamps, byte strings, geo-points, references, arrays
+and maps, without converting through JavaScript numbers.
+
+From an interactive PowerShell terminal in the repository root:
+
+    git status
+    git pull --ff-only origin main
+    npm --prefix tools/operator ci
+    gcloud auth application-default print-access-token 1>$null
+    Write-Host "ADC Status: $LASTEXITCODE"
+    node tools/operator/local_firestore_backup.js --project-id rokterbadhon-b247b --confirm-project-id rokterbadhon-b247b --run true
+
+The token command must show **ADC Status: 0**. Do not print access tokens
+or paste them into chat. On backup start, the tool asks for a **16+ character
+passphrase twice**, with hidden typing. Keep it offline: it cannot be
+recovered. It uses scrypt and AES-256-GCM, encrypts all document data
+**before** writing it to disk, and then verifies the archive (authentication
+tag, record hash, counts and project ID). It writes the backup only under the
+Git-ignored directory:
+
+    tools/operator/.local/backups/firestore-rokterbadhon-b247b-<timestamp>.rbfsenc
+
+The backup contains personal information. Never commit or upload the file,
+put it in a public cloud link, or share the passphrase. Copy it to a second
+encrypted drive only after it reports "verified": true. Verification can
+be repeated locally with the backup **filename only**:
+
+    node tools/operator/local_firestore_backup.js --project-id rokterbadhon-b247b --confirm-project-id rokterbadhon-b247b --verify firestore-rokterbadhon-b247b-YYYYMMDDTHHMMSSSZ.rbfsenc
+
+Replace the sample filename with the actual filename printed after
+the successful backup. The backup tool reads **only** Firestore documents.
+It does **not** back up Firebase Authentication user accounts/passwords,
+Cloud Storage objects, IAM policies, deployed Firestore Rules or indexes,
+or hosted configuration. Retain the repository Rules/Indexes separately
+and review deployed versions in Firebase Console.
+
+**Restoration limitation:** this encrypted format is export/verification
+only. No automatic production restore is provided. It preserves Firestore
+document paths and typed values for a future *reviewed* restore utility.
+Do not point any ad hoc restore script at production without testing it on
+an isolated Firebase project first. Successful verification demonstrates
+local archive integrity, not that real-world restoration has been tested.
+
+Next gates before importing official committee members:
+
+1. Identify the one legacy email-based Auth identity that has neither
+   auth_links nor registration_requests. Do not delete it.
+2. Review the live Firestore Rules and indexes in Firebase Console against
+   firestore.rules and firestore.indexes.json (the preflight does not check them).
+3. Complete the local backup and offline verification and secure a copy.
+4. Use a **separate reviewed write-authorized operator identity**, not
+   the read-only preflight account, for the one-time committee import.
+
 ## Import the initial 51 people into Firebase
 
 Import **only after reviewing a backup and confirming the intended Firebase
