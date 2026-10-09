@@ -118,3 +118,46 @@ test('legacy registration identity classification is safe and does not migrate',
     phone: 'invalid-phone', authEmail: 'old-address@example.test',
   }), 'invalid_registration_phone');
 });
+
+test('Firestore-only preflight avoids all Firebase Auth calls and never marks import safe', async () => {
+  const db = new FakeFirestore();
+  const neverCallAuth = {
+    async getUserByEmail() {
+      throw new Error('Authentication lookup must not run');
+    },
+  };
+  const stages = [];
+  const result = await inspectCommitteeImport({
+    projectId: 'rokterbadhon-b247b',
+    db,
+    auth: neverCallAuth,
+    rows,
+    skipAuth: true,
+    onStage: (value) => stages.push(value),
+  });
+  assert.equal(result.firestoreRecordsCompatible, true);
+  assert.equal(result.authLookupsComplete, false);
+  assert.equal(result.safeToConsiderImport, false);
+  assert.equal(result.counts.existingPhoneAuthIdentities, null);
+  assert.deepEqual(stages, ['committee.firestore']);
+  assert.equal(db.documents.size, 0);
+});
+
+test('normal preflight reports Firebase Auth lookup as separate stage', async () => {
+  const db = new FakeFirestore();
+  const error = new Error('Synthetic Auth error');
+  error.code = 'auth/internal-error';
+  const stages = [];
+  await assert.rejects(
+    inspectCommitteeImport({
+      projectId: 'demo-rokter-badhon',
+      db, rows,
+      auth: { async getUserByEmail() { throw error; } },
+      onStage: (value) => stages.push(value),
+    }),
+    (caught) => caught.code === 'auth/internal-error',
+  );
+  assert.deepEqual(stages, ['committee.firestore', 'committee.firebase_auth']);
+  assert.equal(db.documents.size, 0);
+});
+
