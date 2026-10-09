@@ -26,6 +26,11 @@ jobs:
       - run: dart format --output=none lib test
       - run: flutter analyze
       - run: flutter test
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: flutter build apk --debug
       - name: Install operator dependencies
         if: always()
         run: npm --prefix tools/operator ci
