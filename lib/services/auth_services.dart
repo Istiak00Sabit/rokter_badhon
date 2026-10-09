@@ -8,6 +8,12 @@ import '../models/registration_request_model.dart';
 import '../models/user_model.dart';
 import 'auth_identity.dart';
 
+/// A previously created Firebase identity requires operator-led migration.
+/// No client-side account replacement, password reset, or identity relinking.
+class RegistrationIdentityReviewRequired implements Exception {
+  const RegistrationIdentityReviewRequired();
+}
+
 enum RegistrationSubmissionState {
   submitted,
   @Deprecated('Email verification is not part of admission.')
@@ -341,9 +347,7 @@ class AuthService {
     final normalizedPhone = AuthIdentity.normalizePhone(phone);
     final expectedIdentity = AuthIdentity.internalEmailForPhone(normalizedPhone);
     if (user.email?.toLowerCase() != expectedIdentity) {
-      throw const FormatException(
-        'Account does not match the registration phone.',
-      );
+      throw const RegistrationIdentityReviewRequired();
     }
     final profileEmail = _nullableTrim(email)?.toLowerCase();
     if (profileEmail != null &&
@@ -380,6 +384,9 @@ class AuthService {
   }
 
   static String mapRegistrationSubmissionError(Object? error) {
+    if (error is RegistrationIdentityReviewRequired) {
+      return 'registration_identity_review_required';
+    }
     final code = switch (error) {
       FirebaseAuthException authError => authError.code,
       FirebaseException firebaseError => firebaseError.code,
