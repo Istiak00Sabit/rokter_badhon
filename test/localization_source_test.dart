@@ -70,7 +70,10 @@ void main() {
       contains(RegExp(r'const\s+Locale\(\s*AppTranslations\.bangla,\s*\)\.obs')),
     );
     expect(controller, contains("stored == AppTranslations.english"));
-    expect(controller, contains("setString(_preferenceKey, normalized)"));
+    expect(
+      controller,
+      contains(RegExp(r'setString\(\s*_preferenceKey,\s*normalized,\s*\)')),
+    );
     expect(
       main,
       contains("fallbackLocale: const Locale(AppTranslations.bangla)"),
