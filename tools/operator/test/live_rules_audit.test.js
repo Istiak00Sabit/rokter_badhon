@@ -4,7 +4,7 @@ import test from 'node:test';
 import {
   PROJECT_ID, RULES_RELEASE,
   compareRules, compareIndexes, parseGcloudCompositeIndexesJson,
-  makeCloudRead, auditLiveRules, auditLiveIndexes,
+  makeCloudRead, safeGoogleApiError, auditLiveRules, auditLiveIndexes,
 } from '../src/live_rules_audit.js';
 
 const release = {
@@ -134,4 +134,56 @@ test('gcloud JSON validation and unknown index resources cannot falsely verify',
     ...remoteIndex,
     name: 'projects/other/databases/(default)/collectionGroups/donors/indexes/bad',
   }]), /Unexpected deployed composite index/);
+});
+
+
+test('Google Rules 403 diagnostics allowlist reasons without leaking identity or token', async () => {
+  const sensitiveResponse = {
+    error: {
+      code: 403,
+      status: 'PERMISSION_DENIED',
+      message: 'Bearer secret_token for private-account@example.com',
+      details: [{
+        '@type': 'type.googleapis.com/google.rpc.ErrorInfo',
+        reason: 'SERVICE_DISABLED',
+        metadata: {
+          consumer: 'projects/confidential-example',
+          service: 'firebaserules.googleapis.com',
+        },
+      }],
+    },
+  };
+  assert.equal(
+    safeGoogleApiError(403, sensitiveResponse),
+    'Google Cloud read HTTP 403 status=PERMISSION_DENIED reason=SERVICE_DISABLED',
+  );
+  const read = makeCloudRead({
+    getAccessToken: async () => 'sensitive-test-token-do-not-show',
+    fetchImpl: async () => ({
+      ok: false,
+      status: 403,
+      json: async () => sensitiveResponse,
+    }),
+  });
+  let seen = null;
+  try {
+    await read('https://firebaserules.googleapis.com/v1/' + RULES_RELEASE);
+  } catch (error) {
+    seen = error.message;
+  }
+  assert.ok(seen?.includes('SERVICE_DISABLED'));
+  assert.ok(!seen.includes('private-account'));
+  assert.ok(!seen.includes('sensitive-test-token'));
+  assert.ok(!seen.includes('confidential-example'));
+
+  assert.equal(
+    safeGoogleApiError(403, {
+      error: {
+        status: 'PERMISSION_DENIED',
+        details: [{ reason: 'UNKNOWN_TEXT_FROM_SERVER', data: 'private PII' }],
+      },
+    }),
+    'Google Cloud read HTTP 403 status=PERMISSION_DENIED',
+  );
+  assert.equal(safeGoogleApiError(403, null), 'Google Cloud read HTTP 403');
 });
