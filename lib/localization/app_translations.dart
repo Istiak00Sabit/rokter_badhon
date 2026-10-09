@@ -114,6 +114,8 @@ class AppTranslations extends Translations {
           'আবেদন পাঠানো হয়েছে, কিন্তু স্বয়ংক্রিয় লগআউট হয়নি। এই পৃষ্ঠা ছাড়ার আগে লগআউট করুন।',
       'registration_request_failed':
           'সাইন-ইন অ্যাকাউন্ট তৈরি হয়েছে, কিন্তু আবেদন সংরক্ষণ হয়নি। পরে আবার চেষ্টা করুন বা সহায়তা নিন।',
+      'registration_identity_review_required':
+          'এই পুরোনো অ্যাকাউন্টের লগইন পরিচয় বর্তমান ফোনভিত্তিক নিয়মের সঙ্গে মিলছে না। পুরোনো অ্যাকাউন্ট মুছবেন না। অ্যাডমিনের সঙ্গে যোগাযোগ করে পরিচয় যাচাই করান।',
       'registration_permission_denied':
           'আবেদন সংরক্ষণের অনুমতি পাওয়া যায়নি। Firebase Security Rules যাচাই করুন।',
       'registration_query_unavailable':
@@ -399,6 +401,8 @@ class AppTranslations extends Translations {
           'Request submitted, but automatic sign-out failed. Sign out before leaving this screen.',
       'registration_request_failed':
           'Your sign-in account was created, but the registration request was not saved. Retry later or contact support.',
+      'registration_identity_review_required':
+          'This older account does not match the current phone sign-in identity. Do not delete it. Ask an administrator to review and link your existing account.',
       'registration_permission_denied':
           'The registration request was denied by Firebase Security Rules.',
       'registration_query_unavailable':
