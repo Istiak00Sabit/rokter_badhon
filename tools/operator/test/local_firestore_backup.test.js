@@ -223,3 +223,22 @@ test('Firestore pagination token repetition fails instead of looping forever', a
     }
   }, /repeated pagination token/);
 });
+
+test('an already existing incomplete backup is never overwritten or deleted', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'rb-backup-test-'));
+  const file = join(dir, 'existing.rbfsenc');
+  try {
+    await writeFile(file + '.partial', 'KEEP THIS INCOMPLETE BACKUP');
+    const { request } = fakeReader();
+    await assert.rejects(() => writeEncryptedFirestoreBackup({
+      projectId: PROJECT,
+      destination: file,
+      passphrase: PASSWORD,
+      request,
+    }));
+    assert.equal((await readFile(file + '.partial')).toString(), 'KEEP THIS INCOMPLETE BACKUP');
+    await assert.rejects(() => stat(file), { code: 'ENOENT' });
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
