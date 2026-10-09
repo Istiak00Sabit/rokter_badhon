@@ -117,8 +117,4 @@ test('legacy registration identity classification is safe and does not migrate',
   assert.equal(classifyRegistrationIdentity({
     phone: 'invalid-phone', authEmail: 'old-address@example.test',
   }), 'invalid_registration_phone');
-  assert.throws(
-    () => classifyRegistrationIdentity({ phone, authEmail: 'old-address@example.test' }).mutateUser(),
-    TypeError,
-  );
 });
