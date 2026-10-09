@@ -17,12 +17,21 @@ function parseArgs(values) {
   return args;
 }
 
-async function inspectPendingRequests(db, auth, limit) {
+async function inspectPendingRequests(db, auth, limit, onStage = () => {}) {
   if (!Number.isInteger(limit) || limit < 1 || limit > 200) {
     throw new Error('pending-limit must be between 1 and 200.');
   }
+  onStage('registrations.firestore');
   const snapshot = await db.collection('registration_requests')
     .where('status', '==', 'pending').limit(limit).get();
+  if (auth == null) {
+    return {
+      scanned: snapshot.size,
+      identityCheck: 'NOT_RUN',
+      possibleMore: snapshot.size === limit,
+    };
+  }
+  onStage('registrations.firebase_auth');
   const counts = {
     scanned: snapshot.size,
     phoneIdentity: 0,
@@ -54,15 +63,17 @@ async function inspectPendingRequests(db, auth, limit) {
   return counts;
 }
 
-async function inspectAuthWithoutRequest(db, auth, maxUsers) {
+async function inspectAuthWithoutRequest(db, auth, maxUsers, onStage = () => {}) {
   if (maxUsers === 0) return { enabled: false, scanned: 0, incomplete: true };
   if (!Number.isInteger(maxUsers) || maxUsers < 1 || maxUsers > 1000) {
     throw new Error('auth-scan-limit must be from 0 to 1000.');
   }
+  onStage('historical_auth.list_users');
   const batch = await auth.listUsers(maxUsers);
   const legacy = batch.users.filter((record) =>
     record.email && !record.email.toLowerCase().endsWith('@auth.rokterbadhon.internal'));
   let withoutLinkOrRequest = 0;
+  onStage('historical_auth.firestore_lookup');
   for (const record of legacy) {
     const [link, request] = await Promise.all([
       db.collection('auth_links').doc(record.uid).get(),
@@ -81,6 +92,12 @@ async function inspectAuthWithoutRequest(db, auth, maxUsers) {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
+  if (args['firestore-only'] !== undefined &&
+      args['firestore-only'] !== 'true' &&
+      args['firestore-only'] !== 'false') {
+    throw new Error('--firestore-only must be true or false.');
+  }
+  const firestoreOnly = args['firestore-only'] === 'true';
   const projectId = args['project-id'];
   const production = projectId === 'rokterbadhon-b247b';
   assertSafeTarget({
@@ -95,37 +112,60 @@ async function main() {
     projectId,
     ...(production ? { credential: applicationDefault() } : {}),
   });
+  let stage = 'initialize';
   try {
     const db = getFirestore(app);
-    const auth = getAuth(app);
-    const [committee, registrations, historicalAuth] = await Promise.all([
-      inspectCommitteeImport({ projectId, db, auth }),
-      inspectPendingRequests(db, auth, Number(args['pending-limit'] ?? '100')),
-      inspectAuthWithoutRequest(db, auth, Number(args['auth-scan-limit'] ?? '0')),
-    ]);
+    const auth = firestoreOnly ? null : getAuth(app);
+    const onStage = (value) => { stage = value; };
+
+    // Sequential execution avoids unhandled parallel requests and identifies
+    // exactly which read-only API failed; no Auth calls in Firestore-only mode.
+    const committee = await inspectCommitteeImport({
+      projectId, db, auth, skipAuth: firestoreOnly, onStage,
+    });
+    const registrations = await inspectPendingRequests(
+      db, auth, Number(args['pending-limit'] ?? '100'), onStage,
+    );
+    const historicalAuth = firestoreOnly
+      ? { enabled: false, scanned: 0, incomplete: true, identityCheck: 'NOT_RUN' }
+      : await inspectAuthWithoutRequest(
+          db, auth, Number(args['auth-scan-limit'] ?? '0'), onStage,
+        );
     const report = {
       mode: 'READ_ONLY',
       production,
+      firestoreOnly,
       committee,
       pendingRegistrations: registrations,
       historicalAuth,
-      requiresOwnerReview: !committee.safeToConsiderImport ||
+      requiresOwnerReview: firestoreOnly ||
+        !committee.safeToConsiderImport ||
         committee.counts.existingPhoneAuthIdentities > 0 ||
-        registrations.legacyEmailIdentity > 0 ||
+        (registrations.legacyEmailIdentity ?? 0) > 0 ||
         (historicalAuth.legacyUnlinkedWithoutRequest ?? 0) > 0,
       writesPerformed: 0,
       deployedRulesAndIndexesVerified: false,
     };
     console.log(JSON.stringify(report, null, 2));
     if (report.requiresOwnerReview) process.exitCode = 2;
+  } catch (error) {
+    // Keep backend response messages private: they can contain identifiers
+    // and occasionally credentials. Print only a short machine error code.
+    const code = typeof error?.code === 'string'
+      ? error.code.replace(/[^a-zA-Z0-9/_-]/g, '').slice(0, 80)
+      : 'operation_failed';
+    console.error('Preflight failed: stage=' + stage + ', code=' + code + '.');
+    if (code === 'auth/internal-error') {
+      console.error('Google Cloud CLI end-user ADC can be rejected by Firebase Authentication. Use an approved service-account impersonation or a project-specific Desktop OAuth client, not a credential pasted into chat.');
+    }
+    console.error('No database writes were requested. See docs/COMMITTEE_SETUP.md for read-only troubleshooting.');
+    process.exitCode = 1;
   } finally {
     await deleteApp(app);
   }
 }
 
-main().catch((error) => {
-  // Do not print arbitrary upstream error text, which may include private data.
-  console.error('Preflight failed (' + (error.code || error.name || 'unknown') +
-    '). Check project identity, read-only ADC permissions, emulator endpoints and indexes.');
+main().catch(() => {
+  console.error('Preflight could not initialize. Verify the command arguments, configured project and local Application Default Credentials without exposing their contents.');
   process.exitCode = 1;
 });
