@@ -26,5 +26,9 @@ jobs:
       - run: dart format --output=none lib test
       - run: flutter analyze
       - run: flutter test
-      - run: npm --prefix tools/operator ci
-      - run: npm --prefix tools/operator test
+      - name: Install operator dependencies
+        if: always()
+        run: npm --prefix tools/operator ci
+      - name: Run operator tests
+        if: always()
+        run: npm --prefix tools/operator test
