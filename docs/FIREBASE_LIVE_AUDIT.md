@@ -30,12 +30,16 @@ No need to change ADC settings or use the Read-only Service Account here.
 
 The audit invokes `gcloud auth print-access-token` internally and keeps the
 short-lived token in process memory; it never logs the token or writes a file.
-Only **HTTP GET** is used against:
+Only read operations are performed:
 
-- `firebaserules.googleapis.com` to retrieve the published `cloud.firestore`
-  release and linked ruleset.
-- `firestore.googleapis.com` to list the current composite indexes for
-  `(default)` using pagination.
+- **HTTP GET** to `firebaserules.googleapis.com` retrieves the published
+  `cloud.firestore` release and linked ruleset.
+- The official `gcloud firestore indexes composite list --project=rokterbadhon-b247b --format=json --quiet`
+  command lists all composite indexes from the `(default)` database.
+  This replaces the earlier hand-built `collectionGroups/-/indexes` REST
+  request, which returned HTTP 400 in this project. Google Cloud CLI handles
+  the Firestore Admin API endpoint, pagination and output. No index is created
+  or deleted.
 
 It reads only local `firestore.rules` and `firestore.indexes.json`. No
 Firebase Authentication user data or Firestore documents are accessed by this
@@ -51,6 +55,13 @@ Expected report flags:
 - `compositeIndexes.fieldOverridesVerified`: **false**, because this tool does
   not inspect Firestore single-field index exemptions/TTL/field overrides.
 - `writesPerformed`: always 0. A failure returns exit code 2 but prints JSON.
+
+If composite index verification previously failed with `HTTP 400`, first
+`git pull --ff-only origin main` to get the official CLI-based fix, then rerun
+the audit. If the listing still fails, run the **read-only** diagnostic
+`gcloud firestore indexes composite list --project=rokterbadhon-b247b --format=json --quiet`
+locally, but do not paste entire index metadata or any credentials into a
+public issue.
 
 If `verified=false` with `HTTP 403`, the owner CLI account may lack the
 required Rules/Index read permission, or the API may be restricted. Review IAM
