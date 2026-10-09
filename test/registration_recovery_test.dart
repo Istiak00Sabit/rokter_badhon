@@ -5,7 +5,7 @@ import 'package:rokter_badhon/services/auth_services.dart';
 void main() {
   const identity = RegistrationIdentity(
     uid: 'auth-id',
-    authEmail: 'typed@example.test',
+    authEmail: 'p01900000000@auth.rokterbadhon.internal',
   );
   const applicant = RegistrationApplicantInput(
     name: 'Applicant',
@@ -39,7 +39,7 @@ void main() {
   );
 
   test(
-    'email delivery is not attempted and registration remains admitted only after approval',
+    'email delivery is not attempted and registration remains pending until approval',
     () async {
       Map<String, dynamic>? written;
       final result = await RegistrationWorkflow.createAndSubmit(
@@ -61,6 +61,39 @@ void main() {
       expect(written?['email'], applicant.email);
     },
   );
+
+  test('mismatched Firebase Auth phone identity is rejected', () async {
+    var writes = 0;
+    final result = await RegistrationWorkflow.createAndSubmit(
+      applicant: applicant,
+      createIdentity: () async => const RegistrationIdentity(
+        uid: 'other',
+        authEmail: 'p01800000000@auth.rokterbadhon.internal',
+      ),
+      writeRequest: (_, _) async => writes += 1,
+      signOut: () async {},
+    );
+    expect(result.state, RegistrationSubmissionState.failed);
+    expect(writes, 0);
+  });
+
+  test('optional public email does not affect phone login identity', () async {
+    Map<String, dynamic>? payload;
+    final result = await RegistrationWorkflow.createAndSubmit(
+      applicant: const RegistrationApplicantInput(
+        name: 'Applicant',
+        phone: '01900000000',
+        email: null,
+        union: 'ঘাটাইল',
+        village: 'নরজনা',
+      ),
+      createIdentity: () async => identity,
+      writeRequest: (_, data) async => payload = data,
+      signOut: () async {},
+    );
+    expect(result.state, RegistrationSubmissionState.submitted);
+    expect(payload?['email'], isNull);
+  });
 
   test(
     'Firestore failure keeps account recoverable and exact retry succeeds',
@@ -143,3 +176,4 @@ void main() {
     },
   );
 }
+
