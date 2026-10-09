@@ -31,6 +31,9 @@ jobs:
           distribution: temurin
           java-version: '21'
       - run: flutter build apk --debug
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
       - name: Install operator dependencies
         if: always()
         run: npm --prefix tools/operator ci
