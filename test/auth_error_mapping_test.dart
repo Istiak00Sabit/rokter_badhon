@@ -82,6 +82,19 @@ void main() {
     );
   });
 
+  test('legacy Auth identities require review without client migration', () {
+    expect(
+      AuthService.mapRegistrationSubmissionError(
+        const RegistrationIdentityReviewRequired(),
+      ),
+      'registration_identity_review_required',
+    );
+    final source = File('lib/services/auth_services.dart').readAsStringSync();
+    expect(source, contains('throw const RegistrationIdentityReviewRequired()'));
+    expect(source, isNot(contains('updateEmail(')));
+    expect(source, isNot(contains('deleteUser(')));
+  });
+
   test('the resolver has explicit auth-link and admission branches', () {
     final source = File('lib/services/auth_services.dart').readAsStringSync();
     expect(source, contains("collection('auth_links')"));
