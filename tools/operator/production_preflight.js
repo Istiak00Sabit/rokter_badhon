@@ -5,6 +5,7 @@ import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 import { inspectCommitteeImport, classifyRegistrationIdentity } from './src/production_preflight.js';
 import { assertSafeTarget } from './src/safety.js';
+import { classifyPreflightError } from './src/preflight_error.js';
 
 function parseArgs(values) {
   const args = {};
@@ -149,16 +150,24 @@ async function main() {
     console.log(JSON.stringify(report, null, 2));
     if (report.requiresOwnerReview) process.exitCode = 2;
   } catch (error) {
-    // Keep backend response messages private: they can contain identifiers
-    // and occasionally credentials. Print only a short machine error code.
-    const code = typeof error?.code === 'string'
-      ? error.code.replace(/[^a-zA-Z0-9/_-]/g, '').slice(0, 80)
-      : 'operation_failed';
-    console.error('Preflight failed: stage=' + stage + ', code=' + code + '.');
-    if (code === 'auth/internal-error') {
-      console.error('Google Cloud CLI end-user ADC can be rejected by Firebase Authentication. Use an approved service-account impersonation or a project-specific Desktop OAuth client, not a credential pasted into chat.');
+    const diagnostic = classifyPreflightError(error);
+    console.error(
+      'Preflight failed: stage=' + stage +
+      ', code=' + diagnostic.code +
+      ', category=' + diagnostic.category + '.',
+    );
+    if (diagnostic.category === 'credentials_or_permissions') {
+      console.error(
+        'Check that impersonated Application Default Credentials can mint an access token and that the target service account has Firestore read access. Do not share tokens.',
+      );
+    } else if (diagnostic.category === 'network_or_service') {
+      console.error(
+        'Check connectivity to Google Cloud and retry the read-only operation.',
+      );
     }
-    console.error('No database writes were requested. See docs/COMMITTEE_SETUP.md for read-only troubleshooting.');
+    console.error(
+      'No database writes were requested. Do not run the production import until the full preflight is successful.',
+    );
     process.exitCode = 1;
   } finally {
     await deleteApp(app);
