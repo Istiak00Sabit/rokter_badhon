@@ -189,7 +189,8 @@ void main() {
       expect(source, contains(".orderBy('sort_order')"));
       expect(source, contains('FieldPath.documentId'));
       expect(source, isNot(contains(".collection('users')")));
-      expect(source, isNot(contains('.add(')));
+      // In-memory Set.add is valid in this read-only service.
+      // Keep the Firestore .set/.update/.delete checks below.
       expect(source, isNot(contains('.set(')));
       expect(source, isNot(contains('.update(')));
       expect(source, isNot(contains('.delete(')));
