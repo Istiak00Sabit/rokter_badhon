@@ -1,10 +1,9 @@
-// Zero-mutation production audit: Firebase Rules release + Firestore composite indexes.
-// Explicitly restrict network operations to two Google services and HTTP GET.
+// Zero-mutation production audit: deployed Rules and gcloud-listed composite indexes.
+// REST is restricted to Firebase Rules GET; gcloud handles composite index listing.
 import { createHash } from 'node:crypto';
 
 export const PROJECT_ID = 'rokterbadhon-b247b';
 export const RULES_RELEASE = 'projects/' + PROJECT_ID + '/releases/cloud.firestore';
-export const INDEX_PARENT = 'projects/' + PROJECT_ID + '/databases/(default)/collectionGroups/-';
 
 function fail(message) { throw new Error(message); }
 function checkedProject(projectId) {
@@ -110,23 +109,16 @@ export function compareIndexes(local, deployedIndexes) {
 
 function validateGoogleUrl(url) {
   const parsed = new URL(url);
-  const permitted = ['firebaserules.googleapis.com', 'firestore.googleapis.com'];
-  if (parsed.protocol !== 'https:' || !permitted.includes(parsed.hostname) ||
-      parsed.username || parsed.password || parsed.hash) {
-    fail('Unexpected Google Cloud endpoint.');
+  if (parsed.protocol !== 'https:' ||
+      parsed.hostname !== 'firebaserules.googleapis.com' ||
+      parsed.username || parsed.password || parsed.hash ||
+      parsed.search) {
+    fail('Unexpected Firebase Rules API endpoint.');
   }
-  const prefix = parsed.hostname === 'firebaserules.googleapis.com'
-    ? '/v1/projects/' + PROJECT_ID + '/'
-    : '/v1/projects/' + PROJECT_ID + '/databases/(default)/collectionGroups/-/indexes';
-  // URL.pathname retains literal parentheses for an input created here.
-  if (!parsed.pathname.startsWith(prefix)) fail('Unexpected project resource URL.');
-  if (parsed.hostname === 'firebaserules.googleapis.com' &&
-      !(/^\/v1\/projects\/rokterbadhon-b247b\/releases\/cloud\.firestore$/.test(parsed.pathname) ||
-        /^\/v1\/projects\/rokterbadhon-b247b\/rulesets\/[a-zA-Z0-9_-]+$/.test(parsed.pathname))) {
-    fail('Disallowed Rules API resource.');
+  if (!(/^\/v1\/projects\/rokterbadhon-b247b\/releases\/cloud\.firestore$/.test(parsed.pathname) ||
+      /^\/v1\/projects\/rokterbadhon-b247b\/rulesets\/[a-zA-Z0-9_-]+$/.test(parsed.pathname))) {
+    fail('Disallowed Firebase Rules API resource.');
   }
-  if (parsed.hostname === 'firestore.googleapis.com' &&
-      parsed.pathname !== prefix) fail('Disallowed index API resource.');
 }
 
 export function makeCloudRead({ getAccessToken, fetchImpl = fetch }) {
@@ -168,26 +160,37 @@ export async function auditLiveRules({ projectId, localRules, read }) {
   return compareRules(localRules, release, ruleset);
 }
 
-export async function auditLiveIndexes({ projectId, localIndexes, read }) {
+
+/**
+ * gcloud firestore indexes composite list --format=json returns the complete
+ * database-wide index array. This avoids a hand-built collectionGroups/- REST
+ * request that returned HTTP 400 on the production project.
+ */
+export function parseGcloudCompositeIndexesJson(output) {
+  if (typeof output !== 'string' || output.length > 10000000) {
+    fail('Invalid gcloud composite index JSON size.');
+  }
+  let decoded;
+  try {
+    decoded = JSON.parse(output);
+  } catch (_) {
+    fail('gcloud did not return valid composite index JSON.');
+  }
+  if (!Array.isArray(decoded) || decoded.length > 10000) {
+    fail('Invalid gcloud composite index JSON array.');
+  }
+  return decoded;
+}
+
+export async function auditLiveIndexes({ projectId, localIndexes, listCompositeIndexes }) {
   checkedProject(projectId);
-  const collection = [];
-  let token;
-  const seen = new Set();
-  do {
-    const url = new URL('https://firestore.googleapis.com/v1/' + INDEX_PARENT + '/indexes');
-    url.searchParams.set('pageSize', '100');
-    if (token) url.searchParams.set('pageToken', token);
-    const result = await read(url.toString());
-    if (result.indexes !== undefined && !Array.isArray(result.indexes)) {
-      fail('Unexpected index listing response.');
-    }
-    collection.push(...(result.indexes ?? []));
-    token = result.nextPageToken;
-    if (token && (typeof token !== 'string' || token.length > 4096 || seen.has(token))) {
-      fail('Repeated or invalid Firestore index page token.');
-    }
-    if (token) seen.add(token);
-    if (collection.length > 10000) fail('Unusually large Firestore index list.');
-  } while (token);
-  return compareIndexes(localIndexes, collection);
+  if (typeof listCompositeIndexes !== 'function') {
+    fail('No read-only composite index listing function.');
+  }
+  const collection = await listCompositeIndexes();
+  const comparison = compareIndexes(localIndexes, collection);
+  return {
+    ...comparison,
+    source: 'gcloud firestore indexes composite list',
+  };
 }
