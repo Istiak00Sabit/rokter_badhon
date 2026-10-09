@@ -178,7 +178,7 @@ class AuthService {
         email: authEmail,
         password: password,
       );
-      return resolveSession(firebaseUser: credential.user);
+      return await resolveSession(firebaseUser: credential.user);
     } on FirebaseAuthException catch (error) {
       _logAuthFailure('sign-in', error);
       return AuthSessionResult(AuthSessionState.error, error: error);
