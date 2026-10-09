@@ -102,7 +102,9 @@ test('Free V1 source has no hosted execution, scheduler, Storage, or upload depe
     pubspec,
   ].join('\n');
 
-  assert.deepEqual(Object.keys(firebase), ['flutter']);
+  assert.deepEqual(Object.keys(firebase).sort(), ['firestore', 'flutter']);
+  assert.equal(firebase.firestore.rules, 'firestore.rules');
+  assert.equal(firebase.firestore.indexes, 'firestore.indexes.json');
   assert.deepEqual(Object.keys(rootPackage.scripts), ['test:rules']);
   assert.doesNotMatch(
     trackedConfig,
