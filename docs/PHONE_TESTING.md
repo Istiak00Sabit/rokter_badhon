@@ -4,6 +4,25 @@ This project has two intentionally separate Firebase targets. A normal build
 uses the real project configured in `lib/firebase_options.dart`. Emulator mode
 is opt-in at compile time and never changes the production default.
 
+## Install the automated test APK
+
+Open the latest successful GitHub Actions **Flutter checks** run on the
+repository. Under **Artifacts**, download `rokter-badhon-debug-apk`,
+extract the ZIP and install `app-debug.apk` on an Android phone
+(only install builds from your own trusted repository). This is a debug
+build for testing and is **not** a signed production release.
+
+Use a new phone number not already registered to test Registration →
+Pending → trusted approval → Phone + Password Login. Confirm that
+a pending applicant cannot access protected screens. Separately test
+developer_admin Committee Add, JSON roster, Donor Add, Donor Approve/Reject,
+and Bengali/English locality selectors.
+
+For existing real users, test approved logins **without deleting or
+recreating their accounts**. Older email-based identities may require
+an operator-reviewed migration. Do not attempt to bypass the admission
+rules by writing User/AuthLink documents manually.
+
 ## Real Firebase (production)
 
 Run the normal command with no emulator defines:
