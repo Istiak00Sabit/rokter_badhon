@@ -121,6 +121,34 @@ function validateGoogleUrl(url) {
   }
 }
 
+
+/**
+ * Error responses may include account IDs, URLs or private headers.
+ * Only an explicit allowlist of Google status/reason tokens can be surfaced.
+ */
+export function safeGoogleApiError(status, body) {
+  const approvedStatuses = new Set([
+    'PERMISSION_DENIED', 'UNAUTHENTICATED',
+    'FAILED_PRECONDITION', 'UNAVAILABLE', 'NOT_FOUND', 'INVALID_ARGUMENT',
+  ]);
+  const approvedReasons = new Set([
+    'IAM_PERMISSION_DENIED', 'ACCESS_TOKEN_SCOPE_INSUFFICIENT',
+    'SERVICE_DISABLED', 'CONSUMER_INVALID', 'SERVICE_CONFIG_NOT_FOUND',
+    'BILLING_DISABLED', 'ORG_RESTRICTION_VIOLATION', 'VPC_SERVICE_CONTROLS',
+    'ACCESS_DENIED', 'API_KEY_SERVICE_BLOCKED',
+  ]);
+  const code = Number.isInteger(status) && status >= 400 && status <= 599
+    ? status : 'unknown';
+  const details = body?.error?.details;
+  const remoteStatus = body?.error?.status;
+  const safeStatus = approvedStatuses.has(remoteStatus) ? remoteStatus : null;
+  const reason = Array.isArray(details)
+    ? details.find((item) => approvedReasons.has(item?.reason))?.reason : null;
+  return 'Google Cloud read HTTP ' + code +
+    (safeStatus ? ' status=' + safeStatus : '') +
+    (reason ? ' reason=' + reason : '');
+}
+
 export function makeCloudRead({ getAccessToken, fetchImpl = fetch }) {
   return async (url) => {
     validateGoogleUrl(url);
@@ -139,7 +167,15 @@ export function makeCloudRead({ getAccessToken, fetchImpl = fetch }) {
     } catch (_) {
       fail('Google Cloud read network failed.');
     }
-    if (!response.ok) fail('Google Cloud read HTTP ' + response.status);
+    if (!response.ok) {
+      let responseBody = null;
+      try {
+        responseBody = await response.json();
+      } catch (_) {
+        // Only response status is needed when Google does not send valid JSON.
+      }
+      fail(safeGoogleApiError(response.status, responseBody));
+    }
     try {
       return await response.json();
     } catch (_) {
