@@ -37,3 +37,9 @@ jobs:
       - name: Run operator tests
         if: always()
         run: npm --prefix tools/operator test
+      - name: Install rules test dependencies
+        if: always()
+        run: npm ci
+      - name: Test Firestore security rules
+        if: always()
+        run: npm run test:rules
