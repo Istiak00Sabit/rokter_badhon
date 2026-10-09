@@ -99,9 +99,9 @@ for (const role of ['developer_admin','leader','executive','committee','member']
     const c = db(); const allowed = role === 'developer_admin' || role === 'leader';
     await (allowed ? assertSucceeds : assertFails)(getDoc(doc(c, 'registration_requests/pending-review')));
     await (allowed ? assertSucceeds : assertFails)(getDocs(query(collection(c, 'registration_requests'), where('status','==','pending'))));
-    await assertFails(getDoc(doc(c, 'registration_requests/rejected-review')));
-    await assertFails(getDocs(query(collection(c, 'registration_requests'), where('status','==','rejected'))));
-    await assertFails(getDocs(collection(c, 'registration_requests')));
+    await (role === 'developer_admin' ? assertSucceeds : assertFails)(getDoc(doc(c, 'registration_requests/rejected-review')));
+    await (role === 'developer_admin' ? assertSucceeds : assertFails)(getDocs(query(collection(c, 'registration_requests'), where('status','==','rejected'))));
+    await (role === 'developer_admin' ? assertSucceeds : assertFails)(getDocs(collection(c, 'registration_requests')));
   });
 }
 for (const link of [{ active: true, user_id: 'person-own' }, { active: false, user_id: 'person-own' }, { active: true, user_id: 'missing' }, {}]) {
@@ -158,14 +158,14 @@ test('no UID-path, directory or token-role fallback without link', async () => {
 for (const role of ['developer_admin','leader','executive','committee','member']) {
   test(`${role}: own User and active directory allowed; private others/list denied`, async () => {
     await seed('users/person-own', user({ access_role: role }));
-    const c = db();
+    const c = db(); const admin = role === 'developer_admin';
     await assertSucceeds(getDoc(doc(c, 'users/person-own')));
-    await assertFails(getDoc(doc(c, 'users/person-other')));
-    await assertFails(getDocs(collection(c, 'users')));
+    await (admin ? assertSucceeds : assertFails)(getDoc(doc(c, 'users/person-other')));
+    await (admin ? assertSucceeds : assertFails)(getDocs(collection(c, 'users')));
     await assertSucceeds(getDoc(doc(c, 'user_directory/person-other')));
     await assertSucceeds(getDocs(query(collection(c, 'user_directory'), where('active','==',true))));
-    await assertFails(getDoc(doc(c, 'user_directory/inactive')));
-    await assertFails(getDocs(collection(c, 'user_directory')));
+    await (admin ? assertSucceeds : assertFails)(getDoc(doc(c, 'user_directory/inactive')));
+    await (admin ? assertSucceeds : assertFails)(getDocs(collection(c, 'user_directory')));
     await assertSucceeds(batchProfile({ name: 'Changed' }));
   });
 }
@@ -388,15 +388,15 @@ for (const role of roles) {
         await expectRead(admin || (parent !== 'missing' && editorial),
           getDocs(query(collection(c, col), where(key,'==',parent), where('active','==',false))));
       }
-      await assertFails(getDocs(collection(c, col)));
+      await (admin ? assertSucceeds : assertFails)(getDocs(collection(c, col)));
     }
     await assertSucceeds(getDoc(doc(c, 'events/active')));
     await expectRead(admin || editorial, getDoc(doc(c, 'events/hidden')));
     await assertSucceeds(getDocs(query(collection(c, 'events'), where('active','==',true), orderBy('event_date','desc'))));
     await expectRead(admin || editorial, getDocs(query(collection(c, 'events'), where('active','==',false))));
     await assertSucceeds(getDoc(doc(c, 'donors/active')));
-    await assertFails(getDoc(doc(c, 'donors/hidden')));
-    await assertFails(getDocs(collection(c, 'donors')));
+    await (admin ? assertSucceeds : assertFails)(getDoc(doc(c, 'donors/hidden')));
+    await (admin ? assertSucceeds : assertFails)(getDocs(collection(c, 'donors')));
     for (const [field, direction] of [['name','asc'],['total_donations','desc']])
       await assertSucceeds(getDocs(query(collection(c, 'donors'), where('active','==',true), orderBy(field,direction))));
     await expectRead(history, getDoc(doc(c, 'donations/active')));
@@ -416,7 +416,7 @@ for (const role of roles) {
   });
   test(`${role}: business write matrix and explicit denials`, async () => {
     await seedBusiness(); await seed('users/person-own', user({ access_role: role }));
-    const c = db();
+    const c = db(); const admin = role === 'developer_admin';
     for (const col of readOnlyCollections) {
       const id = col.endsWith('_media') ? 'active-active' : col === 'notices' ? 'published' : 'active';
       const ref = doc(c, `${col}/${id}`);
@@ -443,8 +443,8 @@ for (const role of roles) {
     }
   });
 }
-test('active donor cannot be fabricated directly and existing donor profile edits remain constrained', async () => {
-  await seed('users/person-own', user({ access_role: 'developer_admin' }));
+test('leader cannot fabricate donors directly; existing donor edits remain constrained', async () => {
+  await seed('users/person-own', user({ access_role: 'leader' }));
   const ref = doc(db(), 'donors/new');
   for (const extra of [{ total_donations: 1 }, { total_donations: -1 }, { total_donations: 0.5 },
     { last_donated_at: stamp }, { linked_user_id: 'person-own' }, { active: false },
@@ -580,7 +580,8 @@ test('parent hide revokes existing client media reads without child rewrites; ma
   await env.withSecurityRulesDisabled(ctx => updateDoc(doc(ctx.firestore(), 'events/active'), { active: false }));
   await assertFails(getDoc(doc(c, 'event_media/active-active')));
   await assertFails(getDocs(query(collection(c, 'event_media'), where('event_id','==','active'), where('active','==',true))));
-  await seed('users/person-own', user({ access_role: 'developer_admin' }));
+  // A normal member must still fail to read malformed records; the
+  // developer_admin client-access override has a different explicit policy.
   for (const col of ['events','event_media','committee_media','donors','notices','blood_requests']) {
     for (const state of [{}, { active: 'true', status: 'unknown' }]) {
       await seed(`${col}/malformed`, { event_id: 'active', term_id: 'active', ...state });
