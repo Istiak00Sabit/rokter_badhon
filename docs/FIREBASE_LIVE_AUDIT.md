@@ -63,10 +63,31 @@ the audit. If the listing still fails, run the **read-only** diagnostic
 locally, but do not paste entire index metadata or any credentials into a
 public issue.
 
-If `verified=false` with `HTTP 403`, the owner CLI account may lack the
-required Rules/Index read permission, or the API may be restricted. Review IAM
-and deployed Rules/Indexes in Firebase Console; do not grant wide access
-blindly. If either exact match is false, share only the redacted JSON report,
+If `firestoreRules.verified=false` with `HTTP 403`, the owner CLI account
+may lack a Firebase Rules read permission, the active CLI account may not be
+the owner, or the Firebase Rules API may be unavailable/disabled for the
+project. The script safely prints allowlisted Google statuses/reasons when
+provided (e.g., `SERVICE_DISABLED`, `IAM_PERMISSION_DENIED` or
+`ACCESS_TOKEN_SCOPE_INSUFFICIENT`), never the full response body.
+
+Use these read-only checks before any IAM/API configuration changes:
+
+```powershell
+gcloud auth list --filter="status:ACTIVE" --format="value(account)"
+gcloud services list --enabled --project=rokterbadhon-b247b --filter="config.name:firebaserules.googleapis.com" --format="value(config.name)"
+```
+
+The first must be the intended account with authorization. The second should
+print `firebaserules.googleapis.com` if enabled. Empty output means it is
+not in the enabled-services listing or your service-list access is limited;
+check the command's errors and Firebase Console before taking action.
+
+Firebase Rules GET access needs `firebaserules.releases.get` and
+`firebaserules.rulesets.get`. The specific
+`roles/firebaserules.viewer` role grants these reads, but do **not**
+grant new roles blindly—project Owners often already have access.
+Do not enable APIs or modify IAM without reviewing the actual reason.
+ If either exact match is false, share only the redacted JSON report,
 not OAuth credentials or entire production data.
 
 Even if both matches are true, this does not prove the app can register and
