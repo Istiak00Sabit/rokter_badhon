@@ -4,7 +4,7 @@
 import { randomBytes, scrypt as scryptCallback, createCipheriv, createDecipheriv, createHash } from 'node:crypto';
 import { promisify } from 'node:util';
 import { createReadStream, createWriteStream } from 'node:fs';
-import { mkdir, readFile, rename, rm, stat } from 'node:fs/promises';
+import { mkdir, open, rename, rm, stat } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { Readable, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
@@ -154,8 +154,9 @@ function encodeResource(resource) {
  */
 export function makeFirestoreReader({ getAccessToken, fetchImpl = fetch, timeoutMs = 45000 }) {
   return async function request({ method, parent, collectionId, operation, pageSize, pageToken, showMissing }) {
-    if (!parent.startsWith('projects/' + PROJECT + '/databases/' + DB_NAME + '/documents') ||
-        parent.includes('..') || parent.includes('?') || parent.includes('#')) {
+    const root = firestoreRoot(PROJECT);
+    if (!(parent === root || parent.startsWith(root + '/')) ||
+        parent.split('/').some((segment) => segment === '..' || segment === '.')) {
       throw new Error('Unsupported Firestore parent path.');
     }
     if (!Number.isInteger(pageSize) || pageSize < 1 || pageSize > PAGE_SIZE) {
@@ -293,7 +294,9 @@ export async function writeEncryptedFirestoreBackup({
   }
 
   let created = false;
+  let partialOpened = false;
   const out = createWriteStream(partial, { flags: 'wx', mode: 0o600 });
+  out.on('open', () => { partialOpened = true; });
   const envelope = new Transform({
     transform(chunk, _encoding, done) {
       if (!created) {
@@ -328,7 +331,8 @@ export async function writeEncryptedFirestoreBackup({
     return { ...validated, file: destination };
   } catch (error) {
     out.destroy();
-    await rm(partial, { force: true }).catch(() => {});
+    // If 'wx' failed because a prior .partial file exists, never remove it.
+    if (partialOpened) await rm(partial, { force: true }).catch(() => {});
     throw error;
   }
 }
@@ -339,7 +343,7 @@ export async function verifyEncryptedFirestoreBackup({ file, passphrase, expecte
   if (!fileStat.isFile() || fileStat.size <= HEADER_LENGTH + TAG_LENGTH) {
     throw new Error('Invalid or truncated backup archive.');
   }
-  const handle = await import('node:fs/promises').then((mod) => mod.open(file, 'r'));
+  const handle = await open(file, 'r');
   let header, tag;
   try {
     header = Buffer.alloc(HEADER_LENGTH);
