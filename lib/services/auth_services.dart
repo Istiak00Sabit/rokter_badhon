@@ -265,11 +265,18 @@ class AuthService {
     String? union,
     String? village,
   }) async {
-    User? createdUser;
     final normalizedPhone = AuthIdentity.normalizePhone(phone);
     final profileEmail = _nullableTrim(email)?.toLowerCase();
     if (profileEmail != null &&
-        !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+
+        !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(profileEmail)) {
+      return const RegistrationSubmissionResult(
+        RegistrationSubmissionState.failed,
+        error: FormatException('Enter a valid profile email.'),
+      );
+    }
+    // Both account creation and phone login use the same private identifier.
+    final authEmail = AuthIdentity.internalEmailForPhone(normalizedPhone);
+    return RegistrationWorkflow.createAndSubmit(
       applicant: RegistrationApplicantInput(
         name: name.trim(),
         phone: normalizedPhone,
@@ -285,15 +292,15 @@ class AuthService {
           email: authEmail,
           password: password,
         );
-        createdUser = credential.user;
+        final createdUser = credential.user;
         if (createdUser == null ||
-            createdUser!.email?.toLowerCase() != authEmail) {
+            createdUser.email?.toLowerCase() != authEmail) {
           throw StateError(
-            'Firebase Auth did not return the requested email identity.',
+            'Firebase Auth did not return the requested phone identity.',
           );
         }
         return RegistrationIdentity(
-          uid: createdUser!.uid,
+          uid: createdUser.uid,
           authEmail: authEmail,
         );
       },
@@ -340,452 +347,18 @@ class AuthService {
     }
     final profileEmail = _nullableTrim(email)?.toLowerCase();
     if (profileEmail != null &&
-        !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+
-      identity: RegistrationIdentity(uid: user.uid, authEmail: expectedIdentity),
+        !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(profileEmail)) {
+      throw const FormatException('Enter a valid profile email.');
+    }
+    return RegistrationWorkflow.submitExisting(
+      identity: RegistrationIdentity(
+        uid: user.uid,
+        authEmail: expectedIdentity,
+      ),
       applicant: RegistrationApplicantInput(
         name: name.trim(),
         phone: normalizedPhone,
         email: profileEmail,
-        bloodGroup: _nullableTrim(bloodGroup),
-        profession: _nullableTrim(profession),
-        address: _nullableTrim(address),
-        union: _nullableTrim(union),
-        village: _nullableTrim(village),
-      ),
-      writeRequest: (identity, payload) => _firestore
-          .collection('registration_requests')
-          .doc(identity.uid)
-          .set(payload),
-      signOut: _auth.signOut,
-    );
-  }
-
-  Future<void> logout() => _auth.signOut();
-
-  String authErrorCode(Object? error) {
-    return mapAuthErrorCode(error);
-  }
-
-  static String mapRegistrationSubmissionError(Object? error) {
-    final code = switch (error) {
-      FirebaseAuthException authError => authError.code,
-      FirebaseException firebaseError => firebaseError.code,
-      _ => null,
-    };
-    return switch (code) {
-      'email-already-in-use' => 'registration_already_registered',
-      'invalid-email' => 'auth_invalid_email',
-      'weak-password' => 'password_min_length',
-      'operation-not-allowed' => 'auth_operation_not_allowed',
-      'too-many-requests' => 'auth_too_many_requests',
-      'permission-denied' => 'registration_permission_denied',
-      'failed-precondition' => 'registration_query_unavailable',
-      'unavailable' || 'network-request-failed' => 'registration_network_failed',
-      _ => error is FormatException
-          ? 'registration_invalid'
-          : 'registration_request_failed',
-    };
-  }
-
-  static String mapAuthErrorCode(Object? error) {
-    final code = switch (error) {
-      FirebaseAuthException authError => authError.code,
-      FirebaseException firebaseError => firebaseError.code,
-      _ => null,
-    };
-    if (code == null) return 'auth_check_failed';
-    switch (code) {
-      case 'user-not-found':
-      case 'invalid-password':
-      case 'wrong-password':
-      case 'invalid-credential':
-        // Avoid revealing whether an email exists while still reporting a
-        // credential/login failure rather than a connectivity problem.
-        return 'auth_invalid_credential';
-      case 'invalid-email':
-        return 'auth_invalid_email';
-      case 'user-disabled':
-        return 'auth_user_disabled';
-      case 'too-many-requests':
-        return 'auth_too_many_requests';
-      case 'network-request-failed':
-      case 'unavailable':
-        return 'network_unavailable';
-      default:
-        return error is FirebaseAuthException
-            ? 'login_failed'
-            : 'auth_check_failed';
-    }
-  }
-
-  static String? _nullableTrim(String? value) {
-    final trimmed = value?.trim();
-    return trimmed == null || trimmed.isEmpty ? null : trimmed;
-  }
-
-  void _logAuthFailure(String stage, Object error) {
-    if (!kDebugMode) return;
-    final code = switch (error) {
-      FirebaseAuthException authError => authError.code,
-      FirebaseException firebaseError => firebaseError.code,
-      _ => null,
-    };
-    // Codes are useful for local diagnosis; passwords, emails, tokens and
-    // backend exception messages are intentionally excluded.
-    debugPrint('Auth $stage failed${code == null ? '' : ' code=$code'}');
-  }
-}
-).hasMatch(profileEmail)) {
-      return const RegistrationSubmissionResult(
-        RegistrationSubmissionState.failed,
-        error: FormatException('Enter a valid profile email.'),
-      );
-    }
-    final authEmail = AuthIdentity.internalEmailForPhone(normalizedPhone);
-    return RegistrationWorkflow.createAndSubmit(
-      applicant: RegistrationApplicantInput(
-        name: name.trim(),
-        phone: normalizedPhone,
-        email: authEmail,
-        bloodGroup: _nullableTrim(bloodGroup),
-        profession: _nullableTrim(profession),
-        address: _nullableTrim(address),
-        union: _nullableTrim(union),
-        village: _nullableTrim(village),
-      ),
-      createIdentity: () async {
-        final credential = await _auth.createUserWithEmailAndPassword(
-          email: authEmail,
-          password: password,
-        );
-        createdUser = credential.user;
-        if (createdUser == null ||
-            createdUser!.email?.toLowerCase() != authEmail) {
-          throw StateError(
-            'Firebase Auth did not return the requested email identity.',
-          );
-        }
-        return RegistrationIdentity(
-          uid: createdUser!.uid,
-          authEmail: authEmail,
-        );
-      },
-      writeRequest: (identity, payload) => _firestore
-          .collection('registration_requests')
-          .doc(identity.uid)
-          .set(payload),
-      signOut: _auth.signOut,
-    );
-  }
-
-  Future<RegistrationRequestModel?> getOwnRegistrationRequest() async {
-    final user = _auth.currentUser;
-    if (user == null) throw StateError('Authentication is required.');
-    final document = await _firestore
-        .collection('registration_requests')
-        .doc(user.uid)
-        .get();
-    final data = document.data();
-    if (!document.exists || data == null) return null;
-    return RegistrationRequestModel.fromMap(data, document.id);
-  }
-
-  Future<RegistrationSubmissionResult> submitOwnRegistrationRequest({
-    required String name,
-    required String phone,
-    String? email,
-    String? bloodGroup,
-    String? profession,
-    String? address,
-    String? union,
-    String? village,
-  }) async {
-    final user = _auth.currentUser;
-    if (user == null || user.email == null) {
-      throw StateError('An authenticated Firebase account is required.');
-    }
-    final normalizedPhone = AuthIdentity.normalizePhone(phone);
-    final authEmail = _nullableTrim(email)?.toLowerCase();
-    if (authEmail == null || user.email?.toLowerCase() != authEmail) {
-      throw const FormatException(
-        'Email does not match the Firebase Auth identity.',
-      );
-    }
-    return RegistrationWorkflow.submitExisting(
-      identity: RegistrationIdentity(uid: user.uid, authEmail: authEmail),
-      applicant: RegistrationApplicantInput(
-        name: name.trim(),
-        phone: normalizedPhone,
-        email: _nullableTrim(email),
-        bloodGroup: _nullableTrim(bloodGroup),
-        profession: _nullableTrim(profession),
-        address: _nullableTrim(address),
-        union: _nullableTrim(union),
-        village: _nullableTrim(village),
-      ),
-      writeRequest: (identity, payload) => _firestore
-          .collection('registration_requests')
-          .doc(identity.uid)
-          .set(payload),
-      signOut: _auth.signOut,
-    );
-  }
-
-  Future<void> logout() => _auth.signOut();
-
-  String authErrorCode(Object? error) {
-    return mapAuthErrorCode(error);
-  }
-
-  static String mapRegistrationSubmissionError(Object? error) {
-    final code = switch (error) {
-      FirebaseAuthException authError => authError.code,
-      FirebaseException firebaseError => firebaseError.code,
-      _ => null,
-    };
-    return switch (code) {
-      'email-already-in-use' => 'registration_already_registered',
-      'invalid-email' => 'auth_invalid_email',
-      'weak-password' => 'password_min_length',
-      'operation-not-allowed' => 'auth_operation_not_allowed',
-      'too-many-requests' => 'auth_too_many_requests',
-      'permission-denied' => 'registration_permission_denied',
-      'failed-precondition' => 'registration_query_unavailable',
-      'unavailable' || 'network-request-failed' => 'registration_network_failed',
-      _ => error is FormatException
-          ? 'registration_invalid'
-          : 'registration_request_failed',
-    };
-  }
-
-  static String mapAuthErrorCode(Object? error) {
-    final code = switch (error) {
-      FirebaseAuthException authError => authError.code,
-      FirebaseException firebaseError => firebaseError.code,
-      _ => null,
-    };
-    if (code == null) return 'auth_check_failed';
-    switch (code) {
-      case 'user-not-found':
-      case 'invalid-password':
-      case 'wrong-password':
-      case 'invalid-credential':
-        // Avoid revealing whether an email exists while still reporting a
-        // credential/login failure rather than a connectivity problem.
-        return 'auth_invalid_credential';
-      case 'invalid-email':
-        return 'auth_invalid_email';
-      case 'user-disabled':
-        return 'auth_user_disabled';
-      case 'too-many-requests':
-        return 'auth_too_many_requests';
-      case 'network-request-failed':
-      case 'unavailable':
-        return 'network_unavailable';
-      default:
-        return error is FirebaseAuthException
-            ? 'login_failed'
-            : 'auth_check_failed';
-    }
-  }
-
-  static String? _nullableTrim(String? value) {
-    final trimmed = value?.trim();
-    return trimmed == null || trimmed.isEmpty ? null : trimmed;
-  }
-
-  void _logAuthFailure(String stage, Object error) {
-    if (!kDebugMode) return;
-    final code = switch (error) {
-      FirebaseAuthException authError => authError.code,
-      FirebaseException firebaseError => firebaseError.code,
-      _ => null,
-    };
-    // Codes are useful for local diagnosis; passwords, emails, tokens and
-    // backend exception messages are intentionally excluded.
-    debugPrint('Auth $stage failed${code == null ? '' : ' code=$code'}');
-  }
-}
-).hasMatch(profileEmail)) {
-      throw const FormatException('Enter a valid profile email.');
-    }
-    return RegistrationWorkflow.submitExisting(
-      identity: RegistrationIdentity(uid: user.uid, authEmail: authEmail),
-      applicant: RegistrationApplicantInput(
-        name: name.trim(),
-        phone: normalizedPhone,
-        email: _nullableTrim(email),
-        bloodGroup: _nullableTrim(bloodGroup),
-        profession: _nullableTrim(profession),
-        address: _nullableTrim(address),
-        union: _nullableTrim(union),
-        village: _nullableTrim(village),
-      ),
-      writeRequest: (identity, payload) => _firestore
-          .collection('registration_requests')
-          .doc(identity.uid)
-          .set(payload),
-      signOut: _auth.signOut,
-    );
-  }
-
-  Future<void> logout() => _auth.signOut();
-
-  String authErrorCode(Object? error) {
-    return mapAuthErrorCode(error);
-  }
-
-  static String mapRegistrationSubmissionError(Object? error) {
-    final code = switch (error) {
-      FirebaseAuthException authError => authError.code,
-      FirebaseException firebaseError => firebaseError.code,
-      _ => null,
-    };
-    return switch (code) {
-      'email-already-in-use' => 'registration_already_registered',
-      'invalid-email' => 'auth_invalid_email',
-      'weak-password' => 'password_min_length',
-      'operation-not-allowed' => 'auth_operation_not_allowed',
-      'too-many-requests' => 'auth_too_many_requests',
-      'permission-denied' => 'registration_permission_denied',
-      'failed-precondition' => 'registration_query_unavailable',
-      'unavailable' || 'network-request-failed' => 'registration_network_failed',
-      _ => error is FormatException
-          ? 'registration_invalid'
-          : 'registration_request_failed',
-    };
-  }
-
-  static String mapAuthErrorCode(Object? error) {
-    final code = switch (error) {
-      FirebaseAuthException authError => authError.code,
-      FirebaseException firebaseError => firebaseError.code,
-      _ => null,
-    };
-    if (code == null) return 'auth_check_failed';
-    switch (code) {
-      case 'user-not-found':
-      case 'invalid-password':
-      case 'wrong-password':
-      case 'invalid-credential':
-        // Avoid revealing whether an email exists while still reporting a
-        // credential/login failure rather than a connectivity problem.
-        return 'auth_invalid_credential';
-      case 'invalid-email':
-        return 'auth_invalid_email';
-      case 'user-disabled':
-        return 'auth_user_disabled';
-      case 'too-many-requests':
-        return 'auth_too_many_requests';
-      case 'network-request-failed':
-      case 'unavailable':
-        return 'network_unavailable';
-      default:
-        return error is FirebaseAuthException
-            ? 'login_failed'
-            : 'auth_check_failed';
-    }
-  }
-
-  static String? _nullableTrim(String? value) {
-    final trimmed = value?.trim();
-    return trimmed == null || trimmed.isEmpty ? null : trimmed;
-  }
-
-  void _logAuthFailure(String stage, Object error) {
-    if (!kDebugMode) return;
-    final code = switch (error) {
-      FirebaseAuthException authError => authError.code,
-      FirebaseException firebaseError => firebaseError.code,
-      _ => null,
-    };
-    // Codes are useful for local diagnosis; passwords, emails, tokens and
-    // backend exception messages are intentionally excluded.
-    debugPrint('Auth $stage failed${code == null ? '' : ' code=$code'}');
-  }
-}
-).hasMatch(profileEmail)) {
-      return const RegistrationSubmissionResult(
-        RegistrationSubmissionState.failed,
-        error: FormatException('Enter a valid profile email.'),
-      );
-    }
-    final authEmail = AuthIdentity.internalEmailForPhone(normalizedPhone);
-    return RegistrationWorkflow.createAndSubmit(
-      applicant: RegistrationApplicantInput(
-        name: name.trim(),
-        phone: normalizedPhone,
-        email: authEmail,
-        bloodGroup: _nullableTrim(bloodGroup),
-        profession: _nullableTrim(profession),
-        address: _nullableTrim(address),
-        union: _nullableTrim(union),
-        village: _nullableTrim(village),
-      ),
-      createIdentity: () async {
-        final credential = await _auth.createUserWithEmailAndPassword(
-          email: authEmail,
-          password: password,
-        );
-        createdUser = credential.user;
-        if (createdUser == null ||
-            createdUser!.email?.toLowerCase() != authEmail) {
-          throw StateError(
-            'Firebase Auth did not return the requested email identity.',
-          );
-        }
-        return RegistrationIdentity(
-          uid: createdUser!.uid,
-          authEmail: authEmail,
-        );
-      },
-      writeRequest: (identity, payload) => _firestore
-          .collection('registration_requests')
-          .doc(identity.uid)
-          .set(payload),
-      signOut: _auth.signOut,
-    );
-  }
-
-  Future<RegistrationRequestModel?> getOwnRegistrationRequest() async {
-    final user = _auth.currentUser;
-    if (user == null) throw StateError('Authentication is required.');
-    final document = await _firestore
-        .collection('registration_requests')
-        .doc(user.uid)
-        .get();
-    final data = document.data();
-    if (!document.exists || data == null) return null;
-    return RegistrationRequestModel.fromMap(data, document.id);
-  }
-
-  Future<RegistrationSubmissionResult> submitOwnRegistrationRequest({
-    required String name,
-    required String phone,
-    String? email,
-    String? bloodGroup,
-    String? profession,
-    String? address,
-    String? union,
-    String? village,
-  }) async {
-    final user = _auth.currentUser;
-    if (user == null || user.email == null) {
-      throw StateError('An authenticated Firebase account is required.');
-    }
-    final normalizedPhone = AuthIdentity.normalizePhone(phone);
-    final authEmail = _nullableTrim(email)?.toLowerCase();
-    if (authEmail == null || user.email?.toLowerCase() != authEmail) {
-      throw const FormatException(
-        'Email does not match the Firebase Auth identity.',
-      );
-    }
-    return RegistrationWorkflow.submitExisting(
-      identity: RegistrationIdentity(uid: user.uid, authEmail: authEmail),
-      applicant: RegistrationApplicantInput(
-        name: name.trim(),
-        phone: normalizedPhone,
-        email: _nullableTrim(email),
         bloodGroup: _nullableTrim(bloodGroup),
         profession: _nullableTrim(profession),
         address: _nullableTrim(address),
