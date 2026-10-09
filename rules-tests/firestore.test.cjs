@@ -589,3 +589,70 @@ test('parent hide revokes existing client media reads without child rewrites; ma
     }
   }
 });
+
+
+test('new phone-based Firebase identity can create a pending request with optional profile email', async () => {
+  const phone = '01700000000';
+  const uid = 'new-phone-applicant';
+  const client = db(uid, { email: 'p01700000000@auth.rokterbadhon.internal', email_verified: false });
+  const ref = doc(client, 'registration_requests/' + uid);
+  await assertSucceeds(setDoc(ref, request({
+    auth_uid: uid,
+    phone,
+    email: null,
+    status: 'pending',
+  })));
+  await assertSucceeds(getDoc(ref));
+  await assertFails(getDoc(doc(client, 'users/person-own')));
+  await assertFails(setDoc(ref, request({ auth_uid: uid, phone, email: null })));
+});
+
+test('developer admin adds a directory-only committee member atomically, ordinary member cannot', async () => {
+  await seedBusiness();
+  await seed('users/person-own', user({ access_role: 'developer_admin' }));
+  const client = db();
+  const memberId = 'committee-added-01700000001';
+  const newUser = user({
+    name: 'Synthetic New Committee Member',
+    phone: '01700000001',
+    email: null,
+    profession: 'Teacher',
+    access_role: 'committee',
+    login_enabled: false,
+    created_by: 'person-own',
+    updated_by: 'person-own',
+    created_at: serverTimestamp(),
+    updated_at: serverTimestamp(),
+  });
+  const batch = writeBatch(client);
+  batch.set(doc(client, 'users/' + memberId), newUser);
+  batch.set(doc(client, 'user_directory/' + memberId), projection(newUser));
+  batch.set(doc(client, 'committee_assignments/active-added-01700000001'), {
+    user_id: memberId,
+    term_id: 'active',
+    position: 'Member',
+    active: true,
+    assigned_at: serverTimestamp(),
+    assigned_by: 'person-own',
+    ended_at: null,
+  });
+  await assertSucceeds(batch.commit());
+  assert.equal((await getDoc(doc(client, 'users/' + memberId))).data().login_enabled, false);
+  assert.equal((await getDoc(doc(client, 'committee_assignments/active-added-01700000001'))).data().active, true);
+
+  await seed('users/person-own', user({ access_role: 'member' }));
+  const ordinaryClient = db();
+  const ordinaryBatch = writeBatch(ordinaryClient);
+  ordinaryBatch.set(doc(ordinaryClient, 'users/forged-member'), newUser);
+  ordinaryBatch.set(doc(ordinaryClient, 'committee_assignments/forged-member'), {
+    user_id: 'forged-member',
+    term_id: 'active',
+    position: 'Member',
+    active: true,
+    assigned_at: serverTimestamp(),
+    assigned_by: 'person-own',
+    ended_at: null,
+  });
+  await assertFails(ordinaryBatch.commit());
+  await assertFails(getDoc(doc(ordinaryClient, 'users/forged-member')));
+});
