@@ -110,6 +110,7 @@ async function main() {
       pendingRegistrations: registrations,
       historicalAuth,
       requiresOwnerReview: !committee.safeToConsiderImport ||
+        committee.counts.existingPhoneAuthIdentities > 0 ||
         registrations.legacyEmailIdentity > 0 ||
         (historicalAuth.legacyUnlinkedWithoutRequest ?? 0) > 0,
       writesPerformed: 0,
