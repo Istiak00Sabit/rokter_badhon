@@ -6,6 +6,43 @@ for a **read-only preview** in the app before live Firebase import.
 The reviewed list contains 2 leaders, 31 executives, and 18 committee
 members. No committee account is created simply by opening the app.
 
+## Read-only production preflight (run first)
+
+The GitHub source and emulator tests cannot confirm deployed production data,
+rules, indexes or old accounts. Before importing real people, make an
+authorized Firestore backup and use read-only Firebase Admin credentials.
+Keep credentials off GitHub and never paste them into chat.
+
+Install Node.js 24 and the operator dependencies. Run this command from the
+repository root on a trusted machine:
+
+```powershell
+npm --prefix tools/operator ci
+node tools/operator/production_preflight.js --project-id rokterbadhon-b247b --confirm-project-id rokterbadhon-b247b --pending-limit 100 --auth-scan-limit 1000
+```
+
+This command makes **zero changes**. It produces a redacted count report:
+committee Users/directory/assignments/audits already present, collisions,
+pending registrations with old email-based Auth, and (within the selected
+scan limit) unlinked historical accounts. It never prints member names,
+phone numbers, user emails, passwords or authentication UIDs.
+
+A nonzero `requiresOwnerReview` or any import blocker requires review,
+not an override. `auth-scan-limit 0` skips the optional Auth scan.
+A successful preflight does not reserve records against concurrent changes;
+the import itself repeats its transactional conflict checks.
+
+The tool **does not** verify live Rules or indexes. With the authorized owner
+account, inspect Firebase Console → Firestore Database → Rules and Indexes.
+Compare the deployed Rules with `firestore.rules` and the composite
+indexes with `firestore.indexes.json`. Capture release timestamps and
+review differences before making any deployment. Emulator test success is
+not evidence that these files are already deployed.
+
+Legacy email-based Firebase Auth accounts must be reviewed by an operator;
+do not delete them, overwrite their identifiers or manufacture a new User
+to bypass the mismatch.
+
 ## Import the initial 51 people into Firebase
 
 Import **only after reviewing a backup and confirming the intended Firebase
