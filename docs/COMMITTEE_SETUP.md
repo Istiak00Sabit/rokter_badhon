@@ -27,6 +27,46 @@ pending registrations with old email-based Auth, and (within the selected
 scan limit) unlinked historical accounts. It never prints member names,
 phone numbers, user emails, passwords or authentication UIDs.
 
+### If the preflight reports auth/internal-error
+
+Firebase's Admin Authentication API may reject default end-user credentials
+created with plain `gcloud auth application-default login` (the Google
+Cloud SDK OAuth client). This is distinct from Firestore IAM.
+
+Start with a **Firestore-only** investigation (no Firebase Authentication API
+calls and absolutely no writes):
+
+```powershell
+git pull origin main
+node tools/operator/production_preflight.js --project-id rokterbadhon-b247b --confirm-project-id rokterbadhon-b247b --pending-limit 100 --auth-scan-limit 0 --firestore-only true
+```
+
+This intentionally reports `authLookupsComplete: false`,
+`safeToConsiderImport: false` and `requiresOwnerReview: true`.
+That is expected, not an import approval. It can still reveal existing
+committee Users, assignments, duplicate phones and pending-request counts.
+On failures the tool prints the read-only **stage** and sanitized code only,
+never the backend response body or member data.
+
+For a full Authentication read, use an **already approved, minimally
+privileged service account** that can read the necessary Firebase Auth and
+Firestore data. Node.js ADC supports service-account impersonation:
+
+```powershell
+gcloud auth login
+gcloud auth application-default login --impersonate-service-account=SERVICE_ACCOUNT_EMAIL
+node tools/operator/production_preflight.js --project-id rokterbadhon-b247b --confirm-project-id rokterbadhon-b247b --pending-limit 100 --auth-scan-limit 1000
+```
+
+The human operator must have Service Account Token Creator permission on
+that service account. Replace the placeholder with the email obtained from
+the authorized Cloud project owner; do not paste service-account key files,
+OAuth client secrets or refresh tokens into issues or chat.
+
+An alternative supported by Firebase is `gcloud auth application-default login --client-id-file=...` using **your own Desktop OAuth client**, not the
+default Cloud SDK client. Do not create new privileged service accounts or
+deploy new IAM permissions without the owner reviewing the access needs.
+
 A nonzero `requiresOwnerReview` or any import blocker requires review,
 not an override. `auth-scan-limit 0` skips the optional Auth scan.
 A successful preflight does not reserve records against concurrent changes;
