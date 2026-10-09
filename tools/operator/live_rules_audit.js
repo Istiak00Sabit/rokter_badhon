@@ -81,7 +81,8 @@ async function main() {
     writesPerformed: 0,
     deployPerformed: false,
     firebaseAuthUsersRead: false,
-    allVerified: false,
+    rulesAndCompositeIndexesMatch: false,
+    completeDeploymentVerification: false,
   };
   try {
     result.firestoreRules = await auditLiveRules({
@@ -97,11 +98,11 @@ async function main() {
   } catch (error) {
     result.compositeIndexes = { verified: false, error: codeFrom(error) };
   }
-  result.allVerified =
+  result.rulesAndCompositeIndexesMatch =
     result.firestoreRules.exactContentMatch === true &&
     result.compositeIndexes.exactCompositeMatch === true;
   console.log(JSON.stringify(result, null, 2));
-  if (!result.allVerified) process.exitCode = 2;
+  if (!result.rulesAndCompositeIndexesMatch) process.exitCode = 2;
 }
 
 main().catch(() => {
