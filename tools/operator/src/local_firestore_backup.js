@@ -330,7 +330,13 @@ export async function writeEncryptedFirestoreBackup({
     await rename(partial, destination);
     return { ...validated, file: destination };
   } catch (error) {
+    // On Windows a stream can still hold an open handle after destroy().
+    // Wait for close before trying to remove only the file we created.
+    const closed = out.closed
+      ? Promise.resolve()
+      : new Promise((done) => out.once('close', done));
     out.destroy();
+    await closed;
     // If 'wx' failed because a prior .partial file exists, never remove it.
     if (partialOpened) await rm(partial, { force: true }).catch(() => {});
     throw error;
