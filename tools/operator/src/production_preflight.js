@@ -50,6 +50,8 @@ function blockingItem(serial, code) {
  */
 export async function inspectCommitteeImport({
   projectId, db, auth, rows = loadOfficialCommitteeSource(),
+  skipAuth = false,
+  onStage = () => {},
 }) {
   if (projectId !== PROJECT_ID && !projectId?.startsWith('demo-')) {
     throw new AdmissionError('unsafe_target', 'Unknown target Firebase project.');
@@ -68,6 +70,7 @@ export async function inspectCommitteeImport({
     existingPhoneAuthIdentities: 0,
   };
 
+  onStage('committee.firestore');
   await db.runTransaction(async (transaction) => {
     const termRef = db.collection('committee_terms').doc(OFFICIAL_COMMITTEE_TERM_ID);
     const [term, activeTerms] = await Promise.all([
@@ -147,14 +150,20 @@ export async function inspectCommitteeImport({
     }
   });
 
-  for (const row of source) {
-    const internalEmail = internalAuthEmailForPhone(normalizePhone(row.phone));
-    try {
-      const record = await auth.getUserByEmail(internalEmail);
-      if (record) counts.existingPhoneAuthIdentities++;
-    } catch (error) {
-      if (error?.code !== 'auth/user-not-found') throw error;
+  if (!skipAuth) {
+    onStage('committee.firebase_auth');
+    for (const row of source) {
+      const internalEmail = internalAuthEmailForPhone(normalizePhone(row.phone));
+      try {
+        const record = await auth.getUserByEmail(internalEmail);
+        if (record) counts.existingPhoneAuthIdentities++;
+      } catch (error) {
+        if (error?.code !== 'auth/user-not-found') throw error;
+      }
     }
+  } else {
+    // Never imply that import is safe when Auth ownership is unverified.
+    counts.existingPhoneAuthIdentities = null;
   }
 
   return {
@@ -163,7 +172,9 @@ export async function inspectCommitteeImport({
     committeeTerm: OFFICIAL_COMMITTEE_TERM_ID,
     counts,
     blockers,
-    safeToConsiderImport: blockers.length === 0,
+    firestoreRecordsCompatible: blockers.length === 0,
+    authLookupsComplete: !skipAuth,
+    safeToConsiderImport: blockers.length === 0 && !skipAuth,
     // This remains a dry-run recommendation. Never infer a write approval.
     wouldCreateUsers: source.length - counts.existingUsers,
     wouldCreateAssignments: source.length - counts.existingAssignments,
