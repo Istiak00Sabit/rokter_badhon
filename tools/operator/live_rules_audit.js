@@ -7,6 +7,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   PROJECT_ID, auditLiveRules, auditLiveIndexes, makeCloudRead,
+  parseGcloudCompositeIndexesJson,
 } from './src/live_rules_audit.js';
 
 const execFileAsync = promisify(execFile);
@@ -43,6 +44,33 @@ async function getAccessToken() {
   }
 }
 
+async function listCompositeIndexesWithGcloud() {
+  // Official Google Cloud CLI lists the complete (default) database.
+  // No deploy/create/delete command, and no untrusted input in shell commands.
+  const cliArgs = [
+    'firestore', 'indexes', 'composite', 'list',
+    '--project=' + PROJECT_ID,
+    '--format=json', '--quiet',
+  ];
+  const executable = process.platform === 'win32' ? 'cmd.exe' : 'gcloud';
+  const args = process.platform === 'win32'
+    ? ['/d', '/s', '/c', 'gcloud ' + cliArgs.join(' ')]
+    : cliArgs;
+  let stdout;
+  try {
+    ({ stdout } = await execFileAsync(executable, args, {
+      encoding: 'utf8',
+      timeout: 90000,
+      maxBuffer: 12000000,
+      windowsHide: true,
+    }));
+  } catch (_) {
+    // gcloud subprocess error text could include account details.
+    throw new Error('gcloud composite index listing failed; check owner CLI login and rerun safely.');
+  }
+  return parseGcloudCompositeIndexesJson(stdout);
+}
+
 function codeFrom(error) {
   const message = String(error?.message ?? '');
   const allowed = [
@@ -57,7 +85,9 @@ function codeFrom(error) {
     'Malformed composite index',
     'Invalid index', 'Unexpected index', 'Invalid Google Cloud',
     'Repeated or invalid', 'Unusually large', 'Disallowed Rules',
-    'Invalid local or deployed',
+    'Invalid local or deployed', 'Invalid gcloud',
+    'gcloud did not return valid', 'gcloud composite index listing failed',
+    'No read-only composite',
   ];
   const match = allowed.find((prefix) => message.startsWith(prefix));
   if (match) return message.replace(/[\r\n]/g, ' ').slice(0, 150);
@@ -93,7 +123,8 @@ async function main() {
   }
   try {
     result.compositeIndexes = await auditLiveIndexes({
-      projectId: PROJECT_ID, localIndexes, read,
+      projectId: PROJECT_ID, localIndexes,
+      listCompositeIndexes: listCompositeIndexesWithGcloud,
     });
   } catch (error) {
     result.compositeIndexes = { verified: false, error: codeFrom(error) };
