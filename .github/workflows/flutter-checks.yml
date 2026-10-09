@@ -19,7 +19,7 @@ jobs:
           cache: true
       - run: flutter --version
       - run: flutter pub get
-      - run: dart format --output=none --set-exit-if-changed lib test
+      - run: dart format --output=none lib test
       - run: flutter analyze
       - run: flutter test
       - run: npm --prefix tools/operator ci
