@@ -65,7 +65,10 @@ void main() {
     ).readAsStringSync();
     final main = File('lib/main.dart').readAsStringSync();
 
-    expect(controller, contains("const Locale(AppTranslations.bangla).obs"));
+    expect(
+      controller,
+      contains(RegExp(r'const\s+Locale\(\s*AppTranslations\.bangla,\s*\)\.obs')),
+    );
     expect(controller, contains("stored == AppTranslations.english"));
     expect(controller, contains("setString(_preferenceKey, normalized)"));
     expect(
