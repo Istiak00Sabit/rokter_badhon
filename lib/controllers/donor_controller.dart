@@ -216,6 +216,7 @@ class DonorController extends GetxController {
       'error'.tr,
       (const {
                 'permission_denied',
+                'committee_assignment_required',
                 'invalid_input',
                 'network_unavailable',
                 'query_unavailable',
