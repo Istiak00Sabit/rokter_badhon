@@ -158,6 +158,7 @@ class _CreateBloodRequestScreenState extends State<CreateBloodRequestScreen> {
   }
 
   Future<void> submit() async {
+    if (widget.controller.isSubmitting.value) return;
     if (!formKey.currentState!.validate()) return;
     final ok = await widget.controller.create(
       BloodRequestInput(
