@@ -17,7 +17,7 @@ Updated: 2026-10-10. Target: Android APK on Firebase Spark (no Blaze upgrade, Cl
 | --- | --- | --- | --- |
 | 1. Scope and source-of-truth | Freeze schema, five access roles, existing screens and 51-person roster | **Source reviewed; product decisions frozen** | ARCHITECTURE, DATA_MODEL, CAPABILITY_MATRIX, JSON roster |
 | 2. Security Rules | Remove blanket developer_admin client override; deny direct security/audit and committee mutations; keep intended read + ordinary business paths | **Code fixed; emulator regression tests added** | `firestore.rules`, `rules-tests/firestore.test.cjs`, CI; production not published |
-| 3. Authentication and administrative bootstrap | Real verified developer_admin identity and safe recovery; Auth UID → auth_links → users mapping | **Production blocked** | owner-approved protected trusted operation and login on controlled device |
+| 3. Authentication and administrative bootstrap | Real verified developer_admin identity, safe recovery and trusted registration decisions; Auth UID → auth_links → users mapping | **Code gate added; owner-approved production execution blocked** | explicit project/action/UID confirmation tests, owner-approved protected trusted operation and real-device login |
 | 4. Registration | Form, phone, Ghatail Union/Village, exact pending request; **protected approval/rejection** and successful login | **Review UI is read-only** | one actual pending→approved→admitted flow and denied unauthenticated access |
 | 5. Dashboard | Donor/member/request counters, notices, month boundaries, error states | **Code exists; live tests pending** | matched Firestore data and resilient error/empty/offline states |
 | 6. Donors | Search, submission, leader approval, edits, archive with durable history | **Code and emulator tests exist; live tests pending** | real controlled submit→approve→search; rejected submission not listed |
@@ -31,6 +31,14 @@ Updated: 2026-10-10. Target: Android APK on Firebase Spark (no Blaze upgrade, Cl
 1. Removed overlapping broad `developer_admin` Firestore match clauses which formerly permitted direct arbitrary account/auth-link/audit mutation. Existing scoped Firestore Rules now authorize only specific admitted-role operations.
 2. Replaced tests that previously expected broad privileged success with negative security regressions, including denied cross-user reads, direct account security writes, audit history edits/deletes, and unauthorized committee writes. Kept atomic donor approval coverage.
 3. Replaced the misleading in-app committee-add action with an explicitly localized operator-only notice. No roster, role or Firebase production data was changed.
+
+## Stage 3 implementation — trusted production CLI safeguards
+
+- Explicitly scoped commands: `bootstrap-developer-admin`, `approve`, `reject`, `link-registration`. Other routine account, donor and editorial commands remain emulator-only (existing separately reviewed committee/legacy provisioning exceptions are unchanged).
+- Before Firebase Admin SDK initialization, production requests require: exact known project confirmation, `--allow-production true`, exact `--confirm-command`, explicit protected credential path, operation ID and a meaningful reason. Registration additionally requires two matching operator/applicant UIDs; linking requires a confirmed target User ID; bootstrap requires matching Auth UID and `--confirm-first-admin true`.
+- The underlying trusted module independently rechecks Firebase Auth, active operator User/link role, applicant/target identity, duplicate states and collision risks, then commits audited transactions. Production credentials never enter the app.
+- The mobile registration review stays read-only, labels the trusted boundary, and lets a reviewer copy the applicant UID.
+- No command has been executed against production. The owner must explicitly approve the reviewed real identity and account mutations before any operator uses this path. Admin provisioning can change a Firebase Auth email alias and account access, so it requires a separate identity review; a successful synthetic test is not authorization.
 
 ## Next concrete tasks
 
