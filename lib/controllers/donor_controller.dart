@@ -145,6 +145,8 @@ class DonorController extends GetxController {
       _showError('invalid_input');
     } on DonorServiceException catch (error) {
       _showError(error.code);
+    } catch (_) {
+      _showError('operation_failed');
     } finally {
       isLoading.value = false;
     }
@@ -189,6 +191,8 @@ class DonorController extends GetxController {
       _showError('invalid_input');
     } on DonorServiceException catch (error) {
       _showError(error.code);
+    } catch (_) {
+      _showError('operation_failed');
     } finally {
       isLoading.value = false;
     }
@@ -205,6 +209,9 @@ class DonorController extends GetxController {
     } on DonorServiceException catch (error) {
       donors.clear();
       errorCode.value = error.code;
+    } catch (_) {
+      donors.clear();
+      errorCode.value = 'operation_failed';
     } finally {
       isLoading.value = false;
     }
