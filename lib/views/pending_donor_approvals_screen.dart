@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -19,6 +20,12 @@ class _PendingDonorApprovalsScreenState
     extends State<PendingDonorApprovalsScreen> {
   final DonorService _service = DonorService();
   late Future<List<DonorSubmissionModel>> _pending;
+  List<DonorSubmissionModel> _items = const [];
+  DocumentSnapshot<Map<String, dynamic>>? _cursor;
+  bool _hasMore = false;
+  bool _loadingMore = false;
+  bool _actionInProgress = false;
+  String? _pageError;
 
   @override
   void initState() {
@@ -26,11 +33,49 @@ class _PendingDonorApprovalsScreenState
     _reload();
   }
 
-  void _reload() => _pending = _service.getPendingSubmissions();
+  void _reload() {
+    _items = const [];
+    _cursor = null;
+    _hasMore = false;
+    _pageError = null;
+    _pending = _firstPage();
+  }
 
-  String get _actorId => Get.find<AuthController>().currentUser.value!.id;
+  Future<List<DonorSubmissionModel>> _firstPage() async {
+    final page = await _service.getPendingSubmissionsPage();
+    _items = page.items;
+    _cursor = page.cursor;
+    _hasMore = page.hasMore;
+    return _items;
+  }
+
+  Future<void> _loadMore() async {
+    if (_loadingMore || !_hasMore || _cursor == null) return;
+    setState(() {
+      _loadingMore = true;
+      _pageError = null;
+    });
+    try {
+      final page = await _service.getPendingSubmissionsPage(after: _cursor);
+      if (!mounted) return;
+      setState(() {
+        _items = [..._items, ...page.items];
+        _cursor = page.cursor;
+        _hasMore = page.hasMore;
+      });
+    } on DonorServiceException catch (error) {
+      if (mounted) setState(() => _pageError = error.code);
+    } catch (_) {
+      if (mounted) setState(() => _pageError = 'operation_failed');
+    } finally {
+      if (mounted) setState(() => _loadingMore = false);
+    }
+  }
+
+  String? get _actorId => Get.find<AuthController>().currentUser.value?.id;
 
   Future<void> _approve(DonorSubmissionModel submission) async {
+    if (_actionInProgress) return;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -50,62 +95,94 @@ class _PendingDonorApprovalsScreenState
         ],
       ),
     );
-    if (confirmed != true) return;
+    if (confirmed != true || !mounted) return;
+    final actorId = _actorId;
+    if (actorId == null) {
+      _showError('session_unavailable');
+      return;
+    }
     await _run(
       () => _service.approveSubmission(
         submission: submission,
-        actorUserId: _actorId,
+        actorUserId: actorId,
       ),
     );
   }
 
   Future<void> _reject(DonorSubmissionModel submission) async {
-    final reason = TextEditingController();
-    final confirmed = await showDialog<bool>(
+    if (_actionInProgress) return;
+    String reasonText = '';
+    final reason = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text('reject_donor'.tr),
         content: TextField(
-          controller: reason,
+          onChanged: (value) => reasonText = value,
           autofocus: true,
           maxLines: 3,
           decoration: InputDecoration(labelText: 'rejection_reason'.tr),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => Navigator.pop(context),
             child: Text('cancel'.tr),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.pop(context, reasonText.trim()),
             child: Text('reject'.tr),
           ),
         ],
       ),
     );
-    if (confirmed != true || reason.text.trim().isEmpty) return;
+    if (reason == null || reason.isEmpty || !mounted) return;
+    final actorId = _actorId;
+    if (actorId == null) {
+      _showError('session_unavailable');
+      return;
+    }
     await _run(
       () => _service.rejectSubmission(
         submission: submission,
-        actorUserId: _actorId,
-        reason: reason.text,
+        actorUserId: actorId,
+        reason: reason,
       ),
     );
   }
 
+  void _showError(String code) {
+    if (!mounted) return;
+    final label = switch (code) {
+      'permission_denied' ||
+      'network_unavailable' ||
+      'query_unavailable' ||
+      'submission_missing' ||
+      'already_decided' ||
+      'session_unavailable' => code.tr,
+      _ => 'operation_failed'.tr,
+    };
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(label)),
+    );
+  }
+
   Future<void> _run(Future<void> Function() action) async {
+    if (_actionInProgress) return;
+    setState(() => _actionInProgress = true);
     try {
       await action();
       if (!mounted) return;
       setState(_reload);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('review_saved'.tr)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('review_saved'.tr)),
+      );
+    } on DonorServiceException catch (error) {
+      _showError(error.code);
+    } on DonorDataException {
+      _showError('malformed_data');
     } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('operation_failed'.tr)));
+      _showError('operation_failed');
+    } finally {
+      if (mounted) setState(() => _actionInProgress = false);
     }
   }
 
@@ -119,17 +196,53 @@ class _PendingDonorApprovalsScreenState
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
-          return Center(child: Text('donor_approvals_error'.tr));
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('donor_approvals_error'.tr),
+                const SizedBox(height: 8),
+                OutlinedButton(
+                  onPressed: () => setState(_reload),
+                  child: Text('retry'.tr),
+                ),
+              ],
+            ),
+          );
         }
-        final items = snapshot.data ?? const [];
+        final items = _items;
         if (items.isEmpty) return Center(child: Text('no_pending_donors'.tr));
         return RefreshIndicator(
-          onRefresh: () async => setState(_reload),
+          onRefresh: () async {
+            setState(_reload);
+            try {
+              await _pending;
+            } catch (_) {
+              // FutureBuilder surfaces the failed reload.
+            }
+          },
           child: ListView.separated(
             padding: const EdgeInsets.all(16),
-            itemCount: items.length,
+            itemCount: items.length + (_hasMore || _pageError != null ? 1 : 0),
             separatorBuilder: (_, _) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
+              if (index == items.length) {
+                return Center(
+                  child: Column(
+                    children: [
+                      if (_pageError != null)
+                        Text(_pageError!.tr),
+                      if (_loadingMore)
+                        const CircularProgressIndicator()
+                      else
+                        OutlinedButton(
+                          onPressed: _loadMore,
+                          child: Text(_pageError == null ? 'load_more'.tr : 'retry'.tr),
+                        ),
+                    ],
+                  ),
+                );
+              }
               final item = items[index];
               final donor = item.donor;
               final location =
@@ -185,13 +298,13 @@ class _PendingDonorApprovalsScreenState
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           OutlinedButton.icon(
-                            onPressed: () => _reject(item),
+                            onPressed: _actionInProgress ? null : () => _reject(item),
                             icon: const Icon(Icons.close),
                             label: Text('reject'.tr),
                           ),
                           const SizedBox(width: 8),
                           FilledButton.icon(
-                            onPressed: () => _approve(item),
+                            onPressed: _actionInProgress ? null : () => _approve(item),
                             icon: const Icon(Icons.check),
                             label: Text('approve'.tr),
                           ),
