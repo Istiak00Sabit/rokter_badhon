@@ -27,13 +27,10 @@ class CommitteeController extends GetxController {
       if (currentTerm == null) {
         currentRoster.value = await service.getBundledOfficialRoster();
       } else {
-        final liveRoster = await service.getCurrentRoster(currentTerm);
-        // A partially imported official term has no live assignments yet.
-        // Show the bundled list until the Firestore import finishes.
-        currentRoster.value =
-            currentTerm.id == '2025-2027' && liveRoster.members.isEmpty
-                ? await service.getBundledOfficialRoster()
-                : liveRoster;
+        // Once the server has an active committee term it is authoritative.
+        // Never silently replace an empty/partially configured live term
+        // with the 51 bundled profiles; those are *preview*, not synced data.
+        currentRoster.value = await service.getCurrentRoster(currentTerm);
       }
     } catch (_) {
       currentRoster.value = null;
