@@ -35,6 +35,7 @@ class _PagedDonations extends DonationService {
   final firstCursor = _Cursor();
   var firstReads = 0;
   var nextReads = 0;
+  var failFirst = false;
   var failNext = false;
 
   @override
@@ -45,6 +46,9 @@ class _PagedDonations extends DonationService {
     expect(pageSize, 30);
     if (after == null) {
       firstReads++;
+      if (failFirst) {
+        throw const DonationServiceException('permission_denied');
+      }
       return DonationPage(
         items: [_entry('1'), _entry('2')],
         cursor: firstCursor,
@@ -95,11 +99,20 @@ void main() {
     expect(controller.hasMore.value, true);
   });
 
-  test('unexpected read errors terminate first-page loading without fake empty success', () async {
-    final service = _PagedDonations();
+  test('permission-denied first page never masquerades as empty history', () async {
+    final service = _PagedDonations()..failFirst = true;
     final controller = DonationController(service: service);
 
     await controller.loadHistory();
+    expect(service.firstReads, 1);
+    expect(controller.errorCode.value, 'permission_denied');
+    expect(controller.donations, isEmpty);
+    expect(controller.isLoading.value, false);
+    expect(controller.hasMore.value, false);
+
+    service.failFirst = false;
+    await controller.loadHistory();
+    expect(service.firstReads, 2);
     expect(controller.errorCode.value, isEmpty);
     expect(controller.donations, hasLength(2));
   });
