@@ -3,7 +3,7 @@ const { before, after, beforeEach, test } = require('node:test');
 const assert = require('node:assert/strict');
 const { initializeTestEnvironment, assertSucceeds, assertFails } = require('@firebase/rules-unit-testing');
 const { doc, collection, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where,
-  writeBatch, serverTimestamp, Timestamp, deleteField, orderBy, getCountFromServer } = require('firebase/firestore');
+  writeBatch, serverTimestamp, Timestamp, deleteField, orderBy, getCountFromServer, limit, startAfterDocument } = require('firebase/firestore');
 
 const projectId = 'demo-rokter-badhon';
 let env;
@@ -566,6 +566,34 @@ test('ordinary member and non-current committee role cannot submit donors', asyn
   await assertFails(setDoc(doc(db(), 'donor_submissions/no-assignment'), donorSubmission({ committee_assignment_id: 'hidden' })));
 });
 
+test('pending donor reviewer can paginate but never list rejected submissions', async () => {
+  await seed('users/person-own', user({ access_role: 'leader' }));
+  for (let i = 0; i < 7; i++)
+    await seed(`donor_submissions/page-${i}`, donorSubmission({ submitted_at: stamp }));
+  await seed('donor_submissions/rejected-page', donorSubmission({
+    submitted_at: stamp, status: 'rejected',
+    rejected_by: 'person-own', rejected_at: stamp,
+    rejection_reason: 'Duplicate',
+  }));
+
+  const base = query(collection(db(), 'donor_submissions'),
+    where('status', '==', 'pending'), orderBy('submitted_at'));
+  const first = await assertSucceeds(getDocs(query(base, limit(3))));
+  const second = await assertSucceeds(getDocs(query(base,
+    startAfterDocument(first.docs[first.docs.length - 1]), limit(3))));
+  const third = await assertSucceeds(getDocs(query(base,
+    startAfterDocument(second.docs[second.docs.length - 1]), limit(3))));
+  const ids = [...first.docs, ...second.docs, ...third.docs].map(doc => doc.id);
+  assert.equal(ids.length, 7);
+  assert.equal(new Set(ids).size, 7);
+  assert.ok(ids.every(id => id.startsWith('page-')));
+
+  await assertFails(getDocs(query(collection(db(), 'donor_submissions'),
+    where('status', '==', 'rejected'), limit(2))));
+  await seed('users/person-own', user({ access_role: 'committee' }));
+  await assertFails(getDocs(query(base, limit(3))));
+});
+
 async function seedPendingSubmission(id = 'review') {
   await seed(`donor_submissions/${id}`, donorSubmission({ submitted_at: stamp }));
 }
@@ -599,6 +627,20 @@ test('one leader approval atomically creates the active donor and durable approv
   assert.equal(history.status, 'approved');
   assert.equal(history.approved_by, 'person-own');
   assert.equal(history.donor_id, 'review');
+});
+
+test('a donor submission cannot be approved or rejected a second time', async () => {
+  await seed('users/person-own', user({ access_role: 'leader' }));
+  await seedPendingSubmission('one-time');
+  await assertSucceeds(approveDonor(db(), 'one-time'));
+  await assertFails(approveDonor(db(), 'one-time'));
+  await assertFails(updateDoc(doc(db(), 'donor_submissions/one-time'), {
+    status: 'rejected', rejected_by: 'person-own',
+    rejected_at: serverTimestamp(), rejection_reason: 'Too late',
+  }));
+  const persisted = await getDoc(doc(db(), 'donor_submissions/one-time'));
+  assert.equal(persisted.data().status, 'approved');
+  assert.equal(persisted.data().donor_id, 'one-time');
 });
 
 test('developer_admin can approve a pending donor only through the same atomic guarded path', async () => {
