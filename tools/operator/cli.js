@@ -49,7 +49,7 @@ import {
   isProtectedProductionCommand,
 } from './src/protected_production_commands.js';
 import { LOCAL_TEST_ADMIN, seedLocalTestAdmin } from './src/seed_test_admin.js';
-import { seedOfficialCommittee } from './src/official_committee.js';
+import { assertOfficialCommitteeProductionIntent, seedOfficialCommittee } from './src/official_committee.js';
 import { provisionCommitteeAccounts } from './src/committee_provisioning.js';
 
 function parseArguments(values) {
@@ -108,6 +108,10 @@ async function main() {
       explicitCredentialPath: process.env.GOOGLE_APPLICATION_CREDENTIALS,
     });
   }
+  // Stop an unreviewed initial committee import before opening Firebase.
+  if (command === 'seed-official-committee' && explicitProduction) {
+    assertOfficialCommitteeProductionIntent(options);
+  }
   const isProductionMutation = [
     'provision-committee-accounts',
     'repair-legacy-developer-admin',
@@ -153,6 +157,7 @@ async function main() {
       serverTimestamp: dependencies.serverTimestamp,
       allowProduction: options['allow-production'] === 'true' &&
         options['confirm-project-id'] === projectId,
+      auditReason: explicitProduction ? options.reason : undefined,
     });
   } else if (command === 'provision-committee-accounts') {
     const sourceFile = options.file === undefined
