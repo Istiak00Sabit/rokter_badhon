@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rokter_badhon/models/auth_link_model.dart';
+import 'package:rokter_badhon/models/registration_request_model.dart';
 import 'package:rokter_badhon/models/auth_session.dart';
 import 'package:rokter_badhon/models/user_model.dart';
 
@@ -77,6 +78,66 @@ void main() {
     );
     expect(evaluate(), AuthSessionState.admitted);
     expect(evaluate(hadError: true), AuthSessionState.error);
+  });
+
+  test('unlinked applicant status never grants protected admission', () {
+    RegistrationRequestModel request(RegistrationRequestStatus status) {
+      final approved = status == RegistrationRequestStatus.approved;
+      final rejected = status == RegistrationRequestStatus.rejected;
+      return RegistrationRequestModel(
+        authUid: 'auth-uid',
+        name: 'Applicant',
+        phone: '01700000000',
+        email: null,
+        bloodGroup: 'A+',
+        profession: null,
+        address: null,
+        union: 'ঘাটাইল',
+        village: 'নরজনা',
+        status: status,
+        requestedAt: DateTime.utc(2026, 10, 10),
+        approvedBy: approved ? 'operator' : null,
+        approvedAt: approved ? DateTime.utc(2026, 10, 10) : null,
+        rejectedBy: rejected ? 'operator' : null,
+        rejectedAt: rejected ? DateTime.utc(2026, 10, 10) : null,
+        linkedUserId: approved ? 'user-id' : null,
+      );
+    }
+
+    expect(
+      UnlinkedRegistrationPolicy.evaluate(null),
+      AuthSessionState.unlinked,
+    );
+    expect(
+      UnlinkedRegistrationPolicy.evaluate(
+        request(RegistrationRequestStatus.pending),
+      ),
+      AuthSessionState.registrationPending,
+    );
+    expect(
+      UnlinkedRegistrationPolicy.evaluate(
+        request(RegistrationRequestStatus.rejected),
+      ),
+      AuthSessionState.registrationRejected,
+    );
+    // A terminal "approved" request without an auth link is an inconsistent
+    // privileged transaction, not permission to enter the dashboard.
+    expect(
+      UnlinkedRegistrationPolicy.evaluate(
+        request(RegistrationRequestStatus.approved),
+      ),
+      AuthSessionState.registrationApprovedUnlinked,
+    );
+    for (final state in [
+      AuthSessionState.registrationPending,
+      AuthSessionState.registrationRejected,
+      AuthSessionState.registrationApprovedUnlinked,
+    ]) {
+      expect(
+        AuthSessionResult(state).isAdmitted,
+        isFalse,
+      );
+    }
   });
 
   test('email verification is not an admission prerequisite', () {
