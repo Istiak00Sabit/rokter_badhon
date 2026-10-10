@@ -85,6 +85,30 @@ export function validateOfficialCommitteeSource(rows) {
   return Object.freeze(normalized);
 }
 
+/**
+ * This is an extra human-intent gate for the live CLI, NOT authorization.
+ * Must be called before initializing the Firebase Admin SDK. The target and
+ * credentials still go through assertSafeTarget and the reviewed operator.
+ */
+export function assertOfficialCommitteeProductionIntent(options) {
+  if (options['allow-production'] !== 'true') {
+    fail('production_confirmation_required', 'Explicit production mode is required.');
+  }
+  if (options['confirm-command'] !== 'seed-official-committee' ||
+      options['confirm-roster'] !== '51:2:31:18' ||
+      options['confirm-leaders'] !== '001,009' ||
+      options['acknowledge-no-login'] !== 'true') {
+    fail('production_confirmation_required',
+      'Confirm exact import command, 51:2:31:18 role totals, leader serials 001,009, and login-disabled accounts.');
+  }
+  const reason = options.reason;
+  if (typeof reason !== 'string' || reason.trim() !== reason ||
+      reason.length < 12) {
+    fail('production_confirmation_required', 'Provide an explicit audit reason (at least 12 characters).');
+  }
+  return reason;
+}
+
 export function loadOfficialCommitteeSource(
   sourcePath = new URL('../../../data/committee_2025_2027.json', import.meta.url),
 ) {
@@ -133,6 +157,7 @@ export async function seedOfficialCommittee({
   serverTimestamp,
   rows = loadOfficialCommitteeSource(),
   allowProduction = false,
+  auditReason = 'Trusted import from reviewed official committee JSON.',
 }) {
   const production = allowProduction && projectId === 'rokterbadhon-b247b';
   if (projectId !== 'demo-rokter-badhon' && !production) {
@@ -261,7 +286,7 @@ export async function seedOfficialCommittee({
             login_enabled: { after: false },
             committee_assignment_id: { after: state.assignmentId },
           },
-          reason: 'Trusted import from reviewed official committee JSON.',
+          reason: auditReason,
         });
       }
     }
