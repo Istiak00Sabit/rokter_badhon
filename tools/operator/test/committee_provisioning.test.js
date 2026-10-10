@@ -16,12 +16,16 @@ function tempFile(name) {
   return path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'rokter-provision-')), name);
 }
 
-test('committee source validates 51 users and role values without deriving role from position', () => {
+test('committee role values are independent of nonleader positions; approved leaders stay fixed', () => {
   const changed = structuredClone(source);
-  changed[0].position = 'ordinary member title';
+  // Only the two reviewed leaders have frozen position/name/role; another
+  // position label must not implicitly confer access_role=leader.
+  changed[1].position = 'ordinary member title';
   const rows = validateOfficialCommitteeSource(changed);
   assert.equal(rows.length, 51);
+  assert.equal(rows[1].access_role, 'executive');
   assert.equal(rows[0].access_role, 'leader');
+  assert.equal(rows[8].access_role, 'leader');
 });
 
 test('committee provisioning creates strict Auth, User, directory, link, assignment, and audit records', async () => {
