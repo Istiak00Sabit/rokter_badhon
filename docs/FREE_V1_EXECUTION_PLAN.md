@@ -18,7 +18,7 @@ Updated: 2026-10-10. Target: Android APK on Firebase Spark (no Blaze upgrade, Cl
 | 1. Scope and source-of-truth | Freeze schema, five access roles, existing screens and 51-person roster | **Source reviewed; product decisions frozen** | ARCHITECTURE, DATA_MODEL, CAPABILITY_MATRIX, JSON roster |
 | 2. Security Rules | Remove blanket developer_admin client override; deny direct security/audit and committee mutations; keep intended read + ordinary business paths | **Code fixed; emulator regression tests added** | `firestore.rules`, `rules-tests/firestore.test.cjs`, CI; production not published |
 | 3. Authentication and administrative bootstrap | Real verified developer_admin identity, safe recovery and trusted registration decisions; Auth UID → auth_links → users mapping | **Code gate added; owner-approved production execution blocked** | explicit project/action/UID confirmation tests, owner-approved protected trusted operation and real-device login |
-| 4. Registration | Form, phone, Ghatail Union/Village, exact pending request; **protected approval/rejection** and successful login | **Review UI is read-only** | one actual pending→approved→admitted flow and denied unauthenticated access |
+| 4. Registration | Form, phone, Ghatail Union/Village, exact pending request; protected decisions and login status feedback | **Code integration and tests added; live approval/login blocked** | synthetic pending/rejected/approved-unlinked→admitted tests, Firestore Rules tests, then owner-approved real admission on device |
 | 5. Dashboard | Donor/member/request counters, notices, month boundaries, error states | **Code exists; live tests pending** | matched Firestore data and resilient error/empty/offline states |
 | 6. Donors | Search, submission, leader approval, edits, archive with durable history | **Code and emulator tests exist; live tests pending** | real controlled submit→approve→search; rejected submission not listed |
 | 7. Committee | Authorized import of fixed official roster, account provisioning and history; safely managed future member adds | **Roster source ready; production import not done** | 51 unique profiles, 2/31/18 roles, zero unintended login grants |
@@ -40,13 +40,20 @@ Updated: 2026-10-10. Target: Android APK on Firebase Spark (no Blaze upgrade, Cl
 - The mobile registration review stays read-only, labels the trusted boundary, and lets a reviewer copy the applicant UID.
 - No command has been executed against production. The owner must explicitly approve the reviewed real identity and account mutations before any operator uses this path. Admin provisioning can change a Firebase Auth email alias and account access, so it requires a separate identity review; a successful synthetic test is not authorization.
 
+## Stage 4 implementation — applicant-facing registration integration
+
+- `AuthService.resolveSession()` now reads only the **authenticated unlinked applicant's own** registration request when the auth link does not exist. Strict parsing distinguishes pending, rejected, and approved-without-link states; none grants application admission or dashboard access.
+- Login provides Bangla/English messages for those states and a button leading to the existing request status/recovery screen. A registered applicant who is still signed in can sign out safely from that screen.
+- Added a pure registration→request→approved identity→admitted session integration test, plus a Firestore Emulator test proving pending/rejected/approved-but-unlinked requests cannot read protected data. The actual trusted operator transaction is covered separately in operator tests.
+- This work does not remotely approve a real applicant, deploy rules or bypass bootstrap: **production approval and real-device login remain owner-controlled acceptance gates**.
+
 ## Next concrete tasks
 
-1. Confirm final CI status after localization/UI patch.
-2. Verify client screen/service operations agree with the scoped Rules, prioritizing registration, dashboard and donor submission/approval.
-3. Design and test the **authorized Spark-safe production operator workflow** for registration approval/linked user and developer_admin bootstrap; current CLI intentionally rejects normal production approval. Do not weaken Rules to make approval buttons work.
-4. Before any production action, identify exactly what will be changed and obtain explicit owner permission.
-5. After approval, run controlled real-device end-to-end MVP acceptance testing, then advance to committee data and remaining modules.
+1. Confirm final Stage 4 CI status (Flutter tests, Rules emulator and Android APK).
+2. Finish validating the Dashboard + Donor services against allowed scoped Rules, and add regressions for any real data mismatch.
+3. Securely verify the selected production admin identity and existing Firebase Rules deployment before requesting **specific owner approval** for real bootstrap/registration decisions.
+4. Run controlled real-device registration→review→admitted-login→dashboard MVP acceptance testing, after explicit production approval.
+5. Only then advance to committee import and remaining organization features.
 
 ## Stop conditions
 
