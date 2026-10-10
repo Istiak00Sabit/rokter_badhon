@@ -20,7 +20,7 @@ Updated: 2026-10-10. Target: Android APK on Firebase Spark (no Blaze upgrade, Cl
 | 3. Authentication and administrative bootstrap | Real verified developer_admin identity, safe recovery and trusted registration decisions; Auth UID → auth_links → users mapping | **Code gate added; owner-approved production execution blocked** | explicit project/action/UID confirmation tests, owner-approved protected trusted operation and real-device login |
 | 4. Registration | Form, phone, Ghatail Union/Village, exact pending request; protected decisions and login status feedback | **Code integration and tests added; live approval/login blocked** | synthetic pending/rejected/approved-unlinked→admitted tests, Firestore Rules tests, then owner-approved real admission on device |
 | 5. Dashboard | Donor/member/request aggregation counts, notices, Dhaka month boundaries, role-aware/error states | **Code fixed; tests added; real-device pending** | Flutter tests + Rules aggregate-count emulator tests + Android build; owner-approved live data verification still needed |
-| 6. Donors | Search, submission, leader approval, edits, archive with durable history | **Code and emulator tests exist; live tests pending** | real controlled submit→approve→search; rejected submission not listed |
+| 6. Donors | Search, submission, reviewer approval/rejection, edits, safe archive workflow | **Approval UI, bounded queue and decision rules improved; full directory search/archival and live tests pending** | Emulator approval/role/pagination tests; later scalable donor search, authorized archive and controlled real-device flow |
 | 7. Committee | Authorized import of fixed official roster, account provisioning and history; safely managed future member adds | **Roster source ready; production import not done** | 51 unique profiles, 2/31/18 roles, zero unintended login grants |
 | 8. Remaining modules | Requests, donations, notices, events, ranklist, protected admin actions | **Code review and live tests pending** | each supported create/read/transition tested |
 | 9. Quality | Bangla/English, error/loading/offline, pagination, Rules tests, Flutter analyzer/widget tests, Android devices | **Ongoing** | automated CI + physical Android acceptance matrix |
@@ -57,13 +57,23 @@ Updated: 2026-10-10. Target: Android APK on Firebase Spark (no Blaze upgrade, Cl
 - Firestore Emulator regressions execute the exact count queries and verify filters, roles and unlinked-account denial. Unit tests validate controller states and month math.
 - **Production still unchanged:** these changes are not evidence that the deployed Firebase Rules match GitHub or that live records have been reconciled. Counts reflect only existing Firestore data, not the source committee roster until an authorized import occurs.
 
+## Stage 6 implementation — donor approval and protected directory
+
+- `DonorListScreen` is now a Stateful screen and triggers its initial Firestore donor query only once per screen opening; name/blood-group/search widget state is disposed with the screen. Explicit refresh and return from the Add/Edit screen still reload the list.
+- `DonorService.getPendingSubmissionsPage` requests status-scoped, ordered pages of 30 with a Firestore document cursor (and an extra record to detect more pages); `PendingDonorApprovalsScreen` has an explicit Load More control, a reload retry, and a busy guard to prevent duplicate review taps.
+- Review errors now distinguish stale/missing decisions, permissions and connection failures. Approval of a removed request checks existence before parsing. Unforeseen donor form/list errors no longer leave a blank success state.
+- `DonorSubmissionModel` validates decision invariants: Pending has no decision metadata, Approved has matching approver/timestamp/donor ID only, Rejected has rejector/timestamp/nonempty reason only.
+- Firestore Emulator coverage verifies bounded pending review pages, correct editorial vs committee access, atomic donor approval, and refusal of repeated approval/rejection. Strict model tests cover malformed terminal records.
+- **Unfinished deliberately:** the active donor directory's current name/phone substring search downloads all active records. Limiting it silently would cause donors to be missed in emergency searches; a correctly indexed/searchable and paginated solution remains to design and test. Phone-level duplicate prevention across two different submissions is also not transactionally enforced. Active donor archive/deactivation is not exposed to the Flutter client by Rules and requires an authorized audited workflow.
+- **Not production verified:** no actual donor submitted/approved and no Rules published to the live Firebase project. Automated emulator tests are not proof that current deployed Rules match source.
+
 ## Next concrete tasks
 
-1. Confirm final Stage 5 CI status including the Android debug APK.
-2. Stage 6: test Donor Submission → Leader Review → Atomic Approve/Reject → Active Search, covering all permission/duplicate/error states without any production writes.
-3. Securely verify the selected production admin identity and deployed Firebase Rules before requesting **specific owner approval** for real bootstrap/registration decisions.
-4. Run controlled real-device registration→review→login→dashboard→donor MVP testing after production approval.
-5. Advance to official committee import and remaining organization features only when the relevant acceptance gates are met.
+1. Confirm Stage 6 final Flutter/Firestore CI and Android debug APK.
+2. Complete scalable, accurate donor search (including phone/name and blood-group filters) without silently truncating emergency results; design a secure duplicate-detection policy and trusted archived-donor workflow.
+3. Review Stage 7's official committee roster against the 51 approved source entries; keep 2 leaders, 31 executive and 18 committee unchanged until owner-authorized import.
+4. Securely verify the selected production admin identity and deployed Firebase Rules before requesting **specific owner approval** for account/rule/committee production mutations.
+5. After approval, run real-device Registration → Review → Login → Dashboard → Donor Submit → Approve/Reject → Search tests. Do not claim production readiness from CI alone.
 
 ## Stop conditions
 
