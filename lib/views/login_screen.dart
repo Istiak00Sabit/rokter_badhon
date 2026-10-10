@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../constants/app_colors.dart';
 import '../controllers/auth_controller.dart';
+import '../models/auth_session.dart';
 import 'registration_screen.dart';
 import '../widgets/auth_language_switch.dart';
 
@@ -197,6 +198,26 @@ class LoginScreen extends StatelessWidget {
                             : const SizedBox(),
                       ),
 
+                      // An authenticated but unlinked applicant can safely
+                      // inspect their own request without entering the app.
+                      Obx(() {
+                        final state = authController.sessionState.value;
+                        final canViewStatus =
+                            state == AuthSessionState.registrationPending ||
+                            state == AuthSessionState.registrationRejected ||
+                            state == AuthSessionState.registrationApprovedUnlinked ||
+                            state == AuthSessionState.unlinked;
+                        if (!canViewStatus) return const SizedBox.shrink();
+                        return Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton.icon(
+                            onPressed: () =>
+                                Get.to(() => const RegistrationScreen()),
+                            icon: const Icon(Icons.fact_check_outlined),
+                            label: Text('registration_view_status'.tr),
+                          ),
+                        );
+                      }),
                       const SizedBox(height: 16),
 
                       // Login button
