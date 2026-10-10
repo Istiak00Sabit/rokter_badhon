@@ -47,12 +47,19 @@ class BloodRequestController extends GetxController {
       active.clear();
       terminal.clear();
       errorCode.value = error.code;
+    } catch (_) {
+      active.clear();
+      terminal.clear();
+      errorCode.value = 'operation_failed';
     } finally {
       isLoading.value = false;
     }
   }
 
   Future<bool> create(BloodRequestInput input) async {
+    // A second tap/request while the first Firestore write is in flight must
+    // never create an additional emergency request.
+    if (isSubmitting.value) return false;
     final actor = auth.currentUser.value;
     if (actor == null) {
       errorCode.value = 'session_unavailable';
@@ -69,6 +76,9 @@ class BloodRequestController extends GetxController {
       return false;
     } on BloodRequestServiceException catch (error) {
       errorCode.value = error.code;
+      return false;
+    } catch (_) {
+      errorCode.value = 'operation_failed';
       return false;
     } finally {
       isSubmitting.value = false;
