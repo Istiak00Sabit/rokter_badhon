@@ -43,7 +43,9 @@ class DonationController extends GetxController {
 
   Future<void> loadMore() async {
     if (isLoading.value || isLoadingMore.value ||
-        !hasMore.value || _cursor == null) return;
+        !hasMore.value || _cursor == null) {
+      return;
+    }
     isLoadingMore.value = true;
     pageErrorCode.value = '';
     try {
