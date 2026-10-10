@@ -19,7 +19,7 @@ Updated: 2026-10-10. Target: Android APK on Firebase Spark (no Blaze upgrade, Cl
 | 2. Security Rules | Remove blanket developer_admin client override; deny direct security/audit and committee mutations; keep intended read + ordinary business paths | **Code fixed; emulator regression tests added** | `firestore.rules`, `rules-tests/firestore.test.cjs`, CI; production not published |
 | 3. Authentication and administrative bootstrap | Real verified developer_admin identity, safe recovery and trusted registration decisions; Auth UID → auth_links → users mapping | **Code gate added; owner-approved production execution blocked** | explicit project/action/UID confirmation tests, owner-approved protected trusted operation and real-device login |
 | 4. Registration | Form, phone, Ghatail Union/Village, exact pending request; protected decisions and login status feedback | **Code integration and tests added; live approval/login blocked** | synthetic pending/rejected/approved-unlinked→admitted tests, Firestore Rules tests, then owner-approved real admission on device |
-| 5. Dashboard | Donor/member/request counters, notices, month boundaries, error states | **Code exists; live tests pending** | matched Firestore data and resilient error/empty/offline states |
+| 5. Dashboard | Donor/member/request aggregation counts, notices, Dhaka month boundaries, role-aware/error states | **Code fixed; tests added; real-device pending** | Flutter tests + Rules aggregate-count emulator tests + Android build; owner-approved live data verification still needed |
 | 6. Donors | Search, submission, leader approval, edits, archive with durable history | **Code and emulator tests exist; live tests pending** | real controlled submit→approve→search; rejected submission not listed |
 | 7. Committee | Authorized import of fixed official roster, account provisioning and history; safely managed future member adds | **Roster source ready; production import not done** | 51 unique profiles, 2/31/18 roles, zero unintended login grants |
 | 8. Remaining modules | Requests, donations, notices, events, ranklist, protected admin actions | **Code review and live tests pending** | each supported create/read/transition tested |
@@ -47,13 +47,23 @@ Updated: 2026-10-10. Target: Android APK on Firebase Spark (no Blaze upgrade, Cl
 - Added a pure registration→request→approved identity→admitted session integration test, plus a Firestore Emulator test proving pending/rejected/approved-but-unlinked requests cannot read protected data. The actual trusted operator transaction is covered separately in operator tests.
 - This work does not remotely approve a real applicant, deploy rules or bypass bootstrap: **production approval and real-device login remain owner-controlled acceptance gates**.
 
+## Stage 5 implementation — count queries and truthful display
+
+- Four summary counters (`donors.active`, `user_directory.active`, current Dhaka month `donations.donation_date`, `blood_requests.status=active`) now use Firestore `count().get()` aggregations rather than downloading every matching document. Latest published notices remain strictly filtered and limited to three.
+- A pure `DhakaMonthWindow` computes the UTC+06:00 month start and exclusive end, with tests for midnight boundaries, year rollover and leap-day behavior.
+- A `member` or `committee` cannot read donation history under the existing Rules. Previously the dashboard presented `0`; it now reports restricted access, without attempting the forbidden donation count.
+- A missing/disabled current User is not reported as zero donations and stale previous User names are cleared before refresh. Other independent dashboard sections can still show their own successes/errors.
+- User-facing dashboard errors are localized; raw Firebase/internal exception messages are not displayed in the dashboard cards.
+- Firestore Emulator regressions execute the exact count queries and verify filters, roles and unlinked-account denial. Unit tests validate controller states and month math.
+- **Production still unchanged:** these changes are not evidence that the deployed Firebase Rules match GitHub or that live records have been reconciled. Counts reflect only existing Firestore data, not the source committee roster until an authorized import occurs.
+
 ## Next concrete tasks
 
-1. Confirm final Stage 4 CI status (Flutter tests, Rules emulator and Android APK).
-2. Finish validating the Dashboard + Donor services against allowed scoped Rules, and add regressions for any real data mismatch.
-3. Securely verify the selected production admin identity and existing Firebase Rules deployment before requesting **specific owner approval** for real bootstrap/registration decisions.
-4. Run controlled real-device registration→review→admitted-login→dashboard MVP acceptance testing, after explicit production approval.
-5. Only then advance to committee import and remaining organization features.
+1. Confirm final Stage 5 CI status including the Android debug APK.
+2. Stage 6: test Donor Submission → Leader Review → Atomic Approve/Reject → Active Search, covering all permission/duplicate/error states without any production writes.
+3. Securely verify the selected production admin identity and deployed Firebase Rules before requesting **specific owner approval** for real bootstrap/registration decisions.
+4. Run controlled real-device registration→review→login→dashboard→donor MVP testing after production approval.
+5. Advance to official committee import and remaining organization features only when the relevant acceptance gates are met.
 
 ## Stop conditions
 
