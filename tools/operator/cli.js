@@ -44,6 +44,10 @@ import {
   updateEvent,
 } from './src/event.js';
 import { assertSafeTarget } from './src/safety.js';
+import {
+  assertProtectedProductionCommand,
+  isProtectedProductionCommand,
+} from './src/protected_production_commands.js';
 import { LOCAL_TEST_ADMIN, seedLocalTestAdmin } from './src/seed_test_admin.js';
 import { seedOfficialCommittee } from './src/official_committee.js';
 import { provisionCommitteeAccounts } from './src/committee_provisioning.js';
@@ -92,6 +96,18 @@ async function main() {
   const { command, options } = parseArguments(process.argv.slice(2));
   const projectId = options['project-id'];
   console.log(`Target Firebase project: ${projectId ?? '(missing)'}`);
+  const explicitProduction = options['allow-production'] === 'true';
+  // All non-explicit execution of ordinary operator commands remains demo-only.
+  // Only a small, reviewed subset may cross the production boundary.
+  const guardedProductionCommand =
+    explicitProduction && isProtectedProductionCommand(command);
+  if (guardedProductionCommand) {
+    assertProtectedProductionCommand({
+      command,
+      options,
+      explicitCredentialPath: process.env.GOOGLE_APPLICATION_CREDENTIALS,
+    });
+  }
   const isProductionMutation = [
     'provision-committee-accounts',
     'repair-legacy-developer-admin',
@@ -101,8 +117,8 @@ async function main() {
     projectId,
     firestoreEmulatorHost: process.env.FIRESTORE_EMULATOR_HOST,
     authEmulatorHost: process.env.FIREBASE_AUTH_EMULATOR_HOST,
-    mode: isProductionMutation ? 'provision' : 'emulator',
-    allowProduction: options['allow-production'] === 'true',
+    mode: isProductionMutation || guardedProductionCommand ? 'provision' : 'emulator',
+    allowProduction: explicitProduction,
     confirmedProjectId: options['confirm-project-id'],
   });
 
