@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -68,8 +69,27 @@ void main() {
     expect(find.text('approve'), findsNothing);
     expect(find.text('reject'), findsNothing);
 
+    String? copiedUid;
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async {
+        if (call.method == 'Clipboard.setData') {
+          final arguments = call.arguments as Map<Object?, Object?>;
+          copiedUid = arguments['text'] as String?;
+        }
+        return null;
+      },
+    );
+    addTearDown(() {
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      );
+    });
+
     await tester.tap(find.text('Synthetic Applicant'));
-    await tester.pump();
+    await tester.pumpAndSettle();
+    expect(copiedUid, 'synthetic-uid');
     expect(find.text('registration_uid_copied'), findsOneWidget);
   });
 
