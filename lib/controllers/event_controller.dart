@@ -41,6 +41,10 @@ class EventController extends GetxController {
       activeEvents.clear();
       hiddenEvents.clear();
       errorCode.value = error.code;
+    } catch (_) {
+      activeEvents.clear();
+      hiddenEvents.clear();
+      errorCode.value = 'operation_failed';
     } finally {
       isLoading.value = false;
     }
