@@ -4,6 +4,7 @@ import test from 'node:test';
 
 import {
   OFFICIAL_COMMITTEE_TERM_ID,
+  assertOfficialCommitteeProductionIntent,
   seedOfficialCommittee,
   validateOfficialCommitteeSource,
 } from '../src/official_committee.js';
@@ -55,6 +56,35 @@ test('owner-approved president and general secretary cannot be replaced, reorder
     change(modified);
     assert.throws(() => validateOfficialCommitteeSource(modified),
       (error) => ['invalid_source', 'invalid_role_mapping'].includes(error.code));
+  }
+});
+
+test('official live import requires all explicit human confirmations before Firebase', () => {
+  const valid = {
+    'allow-production': 'true',
+    'confirm-command': 'seed-official-committee',
+    'confirm-roster': '51:2:31:18',
+    'confirm-leaders': '001,009',
+    'acknowledge-no-login': 'true',
+    reason: 'Organization owner authorized a reviewed committee import',
+  };
+  assert.equal(
+    assertOfficialCommitteeProductionIntent(valid),
+    valid.reason,
+  );
+  for (const [key, unexpected] of [
+    ['allow-production', 'false'],
+    ['confirm-command', 'approve'],
+    ['confirm-roster', '51:3:30:18'],
+    ['confirm-leaders', '001,049'],
+    ['acknowledge-no-login', 'false'],
+    ['reason', 'short'],
+    ['reason', ' untrimmed reviewed import '],
+  ]) {
+    assert.throws(
+      () => assertOfficialCommitteeProductionIntent({ ...valid, [key]: unexpected }),
+      (error) => error.code === 'production_confirmation_required',
+    );
   }
 });
 
@@ -140,7 +170,9 @@ test('explicit trusted production import creates directory-only members safely',
     rows: source,
     allowProduction: true,
   };
-  const first = await seedOfficialCommittee(args);
+  const first = await seedOfficialCommittee({
+    ...args, auditReason: 'Owner reviewed 51 committee members and accepted no-login import',
+  });
   assert.equal(first.createdUsers, 51);
   assert.equal(first.createdAssignments, 51);
   const leader = db.documents.get('users/committee-2025-2027-001');
@@ -157,6 +189,10 @@ test('explicit trusted production import creates directory-only members safely',
   assert.equal(
     db.documents.get('audit_logs/official-committee-2025-2027-001').action,
     'committee.member_seed',
+  );
+  assert.equal(
+    db.documents.get('audit_logs/official-committee-2025-2027-001').reason,
+    'Owner reviewed 51 committee members and accepted no-login import',
   );
   const retry = await seedOfficialCommittee(args);
   assert.equal(retry.createdUsers, 0);
