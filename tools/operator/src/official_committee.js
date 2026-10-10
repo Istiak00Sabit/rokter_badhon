@@ -8,6 +8,11 @@ const SOURCE_FIELDS = new Set([
   'serial', 'position', 'name', 'phone', 'profession', 'blood_group', 'access_role',
 ]);
 const USER_ROLES = new Set(['leader', 'executive', 'committee']);
+const BLOOD_GROUPS = new Set(['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']);
+const FROZEN_LEADERS = new Map([
+  [1, { position: 'সভাপতি', name: 'মোঃ আনোয়ার হোসাইন' }],
+  [9, { position: 'সাধারণ সম্পাদক', name: 'মোঃ সৈকত হাসান' }],
+]);
 const EXPECTED_TOTALS = Object.freeze({ leader: 2, executive: 31, committee: 18 });
 
 function fail(code, message) {
@@ -43,7 +48,22 @@ export function validateOfficialCommitteeSource(rows) {
     const phone = requiredText(row.phone, `Committee row ${row.serial} phone`);
     const profession = requiredText(row.profession, `Committee row ${row.serial} profession`);
     const bloodGroup = requiredText(row.blood_group, `Committee row ${row.serial} blood_group`);
-    if (phones.has(phone)) fail('duplicate_identity', `Duplicate committee phone: ${phone}.`);
+    if (!/^01[3-9][0-9]{8}$/.test(phone)) {
+      fail('invalid_source', `Committee row ${row.serial} must use a valid Bangladeshi phone number.`);
+    }
+    if (!BLOOD_GROUPS.has(bloodGroup)) {
+      fail('invalid_source', `Committee row ${row.serial} uses an unsupported blood group.`);
+    }
+    // Protect the owner-approved two leaders from accidental role swaps.
+    const leader = FROZEN_LEADERS.get(row.serial);
+    if (leader) {
+      if (name !== leader.name || position !== leader.position || row.access_role !== 'leader') {
+        fail('invalid_role_mapping', `Approved leader at serial ${row.serial} must remain unchanged.`);
+      }
+    } else if (row.access_role === 'leader') {
+      fail('invalid_role_mapping', `Unexpected leader at serial ${row.serial}.`);
+    }
+    if (phones.has(phone)) fail('duplicate_identity', `Duplicate committee identity at serial ${row.serial}.`);
     phones.add(phone);
     if (!USER_ROLES.has(row.access_role)) {
       fail('invalid_role_mapping', `Committee row ${row.serial} has an invalid access_role.`);
@@ -142,11 +162,12 @@ export async function seedOfficialCommittee({
       const auditReference = production
         ? db.collection('audit_logs').doc('official-committee-2025-2027-' + String(row.serial).padStart(3, '0'))
         : null;
-      const [userSnapshot, directorySnapshot, assignmentSnapshot, phoneMatches, assignmentMatches] = await Promise.all([
+      const [userSnapshot, directorySnapshot, assignmentSnapshot, phoneMatches, directoryPhoneMatches, assignmentMatches] = await Promise.all([
         transaction.get(userReference),
         transaction.get(directoryReference),
         transaction.get(assignmentReference),
         transaction.get(db.collection('users').where('phone', '==', row.phone)),
+        transaction.get(db.collection('user_directory').where('phone', '==', row.phone)),
         transaction.get(db.collection('committee_assignments').where('user_id', '==', userId).where('term_id', '==', OFFICIAL_COMMITTEE_TERM_ID)),
       ]);
       const auditSnapshot = auditReference
@@ -161,7 +182,10 @@ export async function seedOfficialCommittee({
         fail('existing_conflict', 'An unrelated import audit record already exists.');
       }
       const foreignPhoneMatch = phoneMatches.docs.find((doc) => doc.id !== userId);
-      if (foreignPhoneMatch) fail('duplicate_identity', `Phone ${row.phone} already belongs to another User.`);
+      const foreignDirectoryMatch = directoryPhoneMatches.docs.find((doc) => doc.id !== userId);
+      if (foreignPhoneMatch || foreignDirectoryMatch) {
+        fail('duplicate_identity', `Committee identity at serial ${row.serial} conflicts with existing organization records.`);
+      }
       const foreignAssignment = assignmentMatches.docs.find((doc) => doc.id !== assignmentId);
       if (foreignAssignment) fail('duplicate_assignment', `User ${userId} already has another assignment for 2025-2027.`);
       if (!userSnapshot.exists && directorySnapshot.exists) fail('existing_conflict', `Orphan directory ${userId} conflicts with the preload.`);
