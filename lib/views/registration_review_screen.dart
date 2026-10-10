@@ -5,19 +5,32 @@ import '../constants/app_colors.dart';
 import '../controllers/administration_controller.dart';
 import '../localization/app_date_formatter.dart';
 
-class RegistrationReviewScreen extends StatelessWidget {
+class RegistrationReviewScreen extends StatefulWidget {
   const RegistrationReviewScreen({super.key});
+
+  @override
+  State<RegistrationReviewScreen> createState() =>
+      _RegistrationReviewScreenState();
+}
+
+class _RegistrationReviewScreenState extends State<RegistrationReviewScreen> {
+  late final AdministrationController controller;
+
+  @override
+  void initState() {
+    super.initState();
+    // Loading in build() caused repeated reads whenever the list was empty
+    // or a query had failed. Fetch once per screen opening; Retry is explicit.
+    controller = Get.isRegistered<AdministrationController>(
+      tag: 'registrations',
+    )
+        ? Get.find<AdministrationController>(tag: 'registrations')
+        : Get.put(AdministrationController(), tag: 'registrations');
+    controller.loadPending();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final controller = Get.put(
-      AdministrationController(),
-      tag: 'registrations',
-    );
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!controller.isLoading.value && controller.pending.isEmpty) {
-        controller.loadPending();
-      }
-    });
     return Scaffold(
       appBar: AppBar(
         title: Text('pending_registrations'.tr),
