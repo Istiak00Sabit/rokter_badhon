@@ -63,6 +63,11 @@ the audit. If the listing still fails, run the **read-only** diagnostic
 locally, but do not paste entire index metadata or any credentials into a
 public issue.
 
+For Google Cloud CLI user credentials, the read-only Rules API request now
+includes the project-specific `X-Goog-User-Project: rokterbadhon-b247b`
+quota-consumer header. Without it, Google may report `SERVICE_DISABLED` for
+a different consumer project. This does not enable an API or billing.
+
 If `firestoreRules.verified=false` with `HTTP 403`, the owner CLI account
 may lack a Firebase Rules read permission, the active CLI account may not be
 the owner, or the Firebase Rules API may be unavailable/disabled for the
