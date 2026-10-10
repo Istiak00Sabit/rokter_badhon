@@ -566,7 +566,7 @@ test('ordinary member and non-current committee role cannot submit donors', asyn
   await assertFails(setDoc(doc(db(), 'donor_submissions/no-assignment'), donorSubmission({ committee_assignment_id: 'hidden' })));
 });
 
-test('pending donor reviewer can paginate but never list rejected submissions', async () => {
+test('pending donor reviewer pages exclude rejected while editorial history stays readable', async () => {
   await seed('users/person-own', user({ access_role: 'leader' }));
   for (let i = 0; i < 7; i++)
     await seed(`donor_submissions/page-${i}`, donorSubmission({ submitted_at: stamp }));
@@ -588,8 +588,13 @@ test('pending donor reviewer can paginate but never list rejected submissions', 
   assert.equal(new Set(ids).size, 7);
   assert.ok(ids.every(id => id.startsWith('page-')));
 
-  await assertFails(getDocs(query(collection(db(), 'donor_submissions'),
-    where('status', '==', 'rejected'), limit(2))));
+  const rejectedHistory = await assertSucceeds(getDocs(
+    query(collection(db(), 'donor_submissions'),
+      where('status', '==', 'rejected'), limit(2)),
+  ));
+  assert.equal(rejectedHistory.docs.length, 1);
+  // Editorial roles may view historical decisions; regular committee
+  // members cannot scan any other submitter's review queue.
   await seed('users/person-own', user({ access_role: 'committee' }));
   await assertFails(getDocs(query(base, limit(3))));
 });
