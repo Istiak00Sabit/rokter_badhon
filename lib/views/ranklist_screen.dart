@@ -5,8 +5,31 @@ import '../constants/app_colors.dart';
 import '../constants/app_constants.dart';
 import '../models/donor_model.dart';
 
-class RanklistScreen extends StatelessWidget {
+class RanklistScreen extends StatefulWidget {
   const RanklistScreen({super.key});
+
+  @override
+  State<RanklistScreen> createState() => _RanklistScreenState();
+}
+
+class _RanklistScreenState extends State<RanklistScreen> {
+  late Future<List<DonorModel>> _ranklist;
+
+  @override
+  void initState() {
+    super.initState();
+    _ranklist = _loadRanklist();
+  }
+
+  Future<void> _refresh() async {
+    final future = _loadRanklist();
+    setState(() => _ranklist = future);
+    try {
+      await future;
+    } catch (_) {
+      // FutureBuilder displays errors, including offline/permission failures.
+    }
+  }
 
   Future<List<DonorModel>> _loadRanklist() async {
     final snapshot = await FirebaseFirestore.instance
@@ -31,7 +54,7 @@ class RanklistScreen extends StatelessWidget {
         centerTitle: true,
       ),
       body: FutureBuilder<List<DonorModel>>(
-        future: _loadRanklist(),
+        future: _ranklist,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
@@ -46,7 +69,7 @@ class RanklistScreen extends StatelessWidget {
                   Text('ranklist_error'.tr),
                   const SizedBox(height: 12),
                   OutlinedButton(
-                    onPressed: () => (context as Element).markNeedsBuild(),
+                    onPressed: _refresh,
                     child: Text('retry'.tr),
                   ),
                 ],
@@ -80,10 +103,7 @@ class RanklistScreen extends StatelessWidget {
           }
 
           return RefreshIndicator(
-            onRefresh: () async {
-              // Force rebuild
-              (context as Element).markNeedsBuild();
-            },
+            onRefresh: _refresh,
             color: AppColors.primary,
             child: ListView(
               padding: const EdgeInsets.all(16),
