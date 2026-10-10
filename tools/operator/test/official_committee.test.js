@@ -23,6 +23,41 @@ test('reviewed official source contains exactly 51 unique identities and frozen 
   assert.ok(rows.every((row) => row.access_role !== 'developer_admin'));
 });
 
+test('bundled app preview is byte-identical to approved official roster', () => {
+  const bundled = fs.readFileSync(
+    new URL('../../../assets/data/committee_2025_2027.json', import.meta.url),
+    'utf8',
+  );
+  const canonical = fs.readFileSync(
+    new URL('../../../data/committee_2025_2027.json', import.meta.url),
+    'utf8',
+  );
+  assert.equal(bundled, canonical);
+});
+
+test('owner-approved president and general secretary cannot be replaced, reordered or promoted', () => {
+  const leaders = source.filter(row => row.access_role === 'leader');
+  assert.deepEqual(leaders.map(row => ({
+    serial: row.serial, position: row.position, name: row.name,
+  })), [
+    { serial: 1, position: 'সভাপতি', name: 'মোঃ আনোয়ার হোসাইন' },
+    { serial: 9, position: 'সাধারণ সম্পাদক', name: 'মোঃ সৈকত হাসান' },
+  ]);
+  for (const change of [
+    rows => { rows[0].access_role = 'executive'; rows[1].access_role = 'leader'; },
+    rows => { rows[8].name = 'Unreviewed Name'; },
+    rows => { rows[8].position = 'সভাপতি'; },
+    rows => { rows[3].access_role = 'leader'; rows[8].access_role = 'executive'; },
+    rows => { rows[9].phone = '12345'; },
+    rows => { rows[9].blood_group = 'X+'; },
+  ]) {
+    const modified = structuredClone(source);
+    change(modified);
+    assert.throws(() => validateOfficialCommitteeSource(modified),
+      (error) => ['invalid_source', 'invalid_role_mapping'].includes(error.code));
+  }
+});
+
 test('emulator preload creates 51 Users and exact assignments without Auth identities and is idempotent', async () => {
   const db = new FakeFirestore();
   const first = await seedOfficialCommittee({
@@ -69,6 +104,22 @@ test('preload fails closed on duplicate identity, conflicting records, and non-d
   await assert.rejects(
     seedOfficialCommittee({ projectId: 'demo-rokter-badhon', db, serverTimestamp: () => SERVER_TIME, rows: source }),
     (error) => error.code === 'duplicate_identity',
+  );
+  // Even when the private Users collection has no conflicting phone, the
+  // directory may hold an existing entry created through an older workflow.
+  const directoryCollision = new FakeFirestore([['user_directory/unrelated', {
+    name: 'Synthetic Previous Member', phone: source[0].phone,
+  }]]);
+  await assert.rejects(
+    seedOfficialCommittee({
+      projectId: 'demo-rokter-badhon', db: directoryCollision,
+      serverTimestamp: () => SERVER_TIME, rows: source,
+    }),
+    (error) => error.code === 'duplicate_identity',
+  );
+  assert.equal(
+    [...directoryCollision.documents.keys()].filter(path => path.startsWith('committee_assignments/')).length,
+    0,
   );
   await assert.rejects(
     seedOfficialCommittee({ projectId: 'production-project', db: new FakeFirestore(), serverTimestamp: () => SERVER_TIME, rows: source }),
