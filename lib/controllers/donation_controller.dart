@@ -18,7 +18,7 @@ class DonationController extends GetxController {
   DocumentSnapshot<Map<String, dynamic>>? _cursor;
 
   Future<void> loadHistory() async {
-    if (isLoading.value) return;
+    if (isLoading.value || isLoadingMore.value) return;
     isLoading.value = true;
     errorCode.value = '';
     pageErrorCode.value = '';
