@@ -52,10 +52,34 @@ class _DonationHistoryScreenState extends State<DonationHistoryScreen> {
         child: ListView.separated(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(16),
-          itemCount: controller.donations.length,
+          itemCount: controller.donations.length +
+              (controller.hasMore.value || controller.pageErrorCode.value.isNotEmpty ? 1 : 0),
           separatorBuilder: (_, _) => const SizedBox(height: 10),
-          itemBuilder: (_, index) =>
-              _DonationCard(value: controller.donations[index]),
+          itemBuilder: (_, index) {
+            if (index == controller.donations.length) {
+              return Center(
+                child: Column(
+                  children: [
+                    if (controller.pageErrorCode.value.isNotEmpty)
+                      Text(_error(controller.pageErrorCode.value).tr),
+                    if (controller.isLoadingMore.value)
+                      const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: CircularProgressIndicator(),
+                      )
+                    else
+                      OutlinedButton(
+                        onPressed: controller.loadMore,
+                        child: Text(controller.pageErrorCode.value.isEmpty
+                            ? 'load_more'.tr
+                            : 'retry'.tr),
+                      ),
+                  ],
+                ),
+              );
+            }
+            return _DonationCard(value: controller.donations[index]);
+          },
         ),
       );
     }),
@@ -129,5 +153,6 @@ String _error(String code) => switch (code) {
   'permission_denied' => 'permission_denied',
   'network_unavailable' => 'network_unavailable',
   'malformed_data' => 'malformed_data',
+  'query_unavailable' => 'query_unavailable',
   _ => 'donation_error',
 };
