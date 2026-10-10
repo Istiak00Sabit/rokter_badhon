@@ -49,6 +49,68 @@ void main() {
       expect(service.calls, 5);
     },
   );
+
+  test('members never query restricted donation counts or mistake denial for zero', () async {
+    final service = _FakeDashboardService(failNotices: true);
+    final controller = DashboardController(
+      dashboardService: service,
+      currentUserLoader: () async => _executiveUser.copyWith(accessRole: 'member'),
+    );
+
+    await controller.loadDashboard();
+    expect(controller.thisMonthDonationsError.value?.code, 'not_authorized');
+    expect(controller.isThisMonthDonationsLoading.value, isFalse);
+    expect(service.calls, 4);
+    expect(controller.totalDonors.value, 8);
+    expect(controller.totalMembers.value, 12);
+    expect(controller.activeRequests.value, 2);
+    expect(controller.currentUser.value?.accessRole, 'member');
+  });
+
+  test('missing current User is never interpreted as zero donations', () async {
+    final service = _FakeDashboardService(failNotices: true);
+    final controller = DashboardController(
+      dashboardService: service,
+      currentUserLoader: () async => null,
+    );
+    await controller.loadDashboard();
+
+    expect(controller.currentUser.value, isNull);
+    expect(controller.thisMonthDonationsError.value?.code, 'session_unavailable');
+    expect(service.calls, 4);
+    expect(controller.isLoading.value, isFalse);
+  });
+
+  test('failed current User lookup keeps other sections independent', () async {
+    final service = _FakeDashboardService(failNotices: true);
+    final controller = DashboardController(
+      dashboardService: service,
+      currentUserLoader: () async => throw StateError('Synthetic session error'),
+    );
+    await controller.loadDashboard();
+
+    expect(controller.currentUser.value, isNull);
+    expect(controller.thisMonthDonationsError.value?.code, 'user_context_unavailable');
+    expect(controller.totalMembers.value, 12);
+    expect(controller.activeRequests.value, 2);
+    expect(service.calls, 4);
+  });
+
+  test('stale prior user profile is cleared if refresh cannot load it', () async {
+    final service = _FakeDashboardService(failNotices: true);
+    var hasSession = true;
+    final controller = DashboardController(
+      dashboardService: service,
+      currentUserLoader: () async => hasSession ? _executiveUser : null,
+    );
+    await controller.loadDashboard();
+    expect(controller.currentUser.value?.name, 'Executive');
+
+    hasSession = false;
+    await controller.loadDashboard();
+    expect(controller.currentUser.value, isNull);
+    expect(controller.thisMonthDonationsError.value?.code, 'session_unavailable');
+  });
 }
 
 final _executiveUser = UserModel(
