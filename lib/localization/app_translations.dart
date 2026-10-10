@@ -257,6 +257,13 @@ class AppTranslations extends Translations {
       'email_unverified': 'আপনার ইমেইল যাচাই করুন।',
       'account_unlinked':
           'এই অ্যাকাউন্টটি এখনো সংগঠনের ব্যবহারকারীর সাথে যুক্ত নয়।',
+      'registration_login_pending':
+          'আপনার নিবন্ধন আবেদন অপেক্ষমাণ আছে। অ্যাডমিনের অনুমোদনের পর লগইন করতে পারবেন।',
+      'registration_login_rejected':
+          'আপনার নিবন্ধন আবেদন প্রত্যাখ্যাত হয়েছে। কারণ জানতে সংগঠনের অ্যাডমিনের সঙ্গে যোগাযোগ করুন।',
+      'registration_login_link_missing':
+          'আবেদন অনুমোদিত, কিন্তু অ্যাকাউন্ট সংযোগ সম্পূর্ণ হয়নি। অ্যাডমিনের সহায়তা নিন।',
+      'registration_view_status': 'আমার আবেদনের অবস্থা দেখুন',
       'link_inactive': 'আপনার অ্যাকাউন্টের সংযোগ নিষ্ক্রিয়।',
       'user_missing': 'সংযুক্ত ব্যবহারকারীর প্রোফাইল পাওয়া যায়নি।',
       'user_inactive': 'আপনার অ্যাকাউন্ট নিষ্ক্রিয় করা হয়েছে।',
@@ -546,6 +553,10 @@ class AppTranslations extends Translations {
       'profile_update_error': 'The profile could not be updated safely.',
       'email_unverified': 'Verify your email address.',
       'account_unlinked': 'This account is not linked to an organization user.',
+      'registration_login_pending': 'Your application is pending review. You can sign in after an administrator approves it.',
+      'registration_login_rejected': 'Your application was rejected. Contact an organization administrator for the reason.',
+      'registration_login_link_missing': 'Your application was approved, but account linking is incomplete. Contact an administrator.',
+      'registration_view_status': 'View my application status',
       'link_inactive': 'Your account link is inactive.',
       'user_missing': 'The linked user profile was not found.',
       'user_inactive': 'Your account is inactive.',
