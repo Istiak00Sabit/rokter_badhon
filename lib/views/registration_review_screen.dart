@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
 import '../constants/app_colors.dart';
@@ -37,7 +38,21 @@ class _RegistrationReviewScreenState extends State<RegistrationReviewScreen> {
         backgroundColor: AppColors.primary,
         foregroundColor: AppColors.white,
       ),
-      body: Obx(() {
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.verified_user_outlined, size: 20),
+                const SizedBox(width: 8),
+                Expanded(child: Text('registration_operator_only'.tr)),
+              ],
+            ),
+          ),
+          Expanded(
+            child: Obx(() {
         if (controller.isLoading.value) {
           return const Center(
             child: CircularProgressIndicator(color: AppColors.primary),
@@ -65,6 +80,13 @@ class _RegistrationReviewScreenState extends State<RegistrationReviewScreen> {
               final item = controller.pending[index];
               return Card(
                 child: ListTile(
+                  onTap: () async {
+                    await Clipboard.setData(ClipboardData(text: item.authUid));
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('registration_uid_copied'.tr)),
+                    );
+                  },
                   leading: const Icon(
                     Icons.person_search,
                     color: AppColors.primary,
@@ -80,7 +102,10 @@ class _RegistrationReviewScreenState extends State<RegistrationReviewScreen> {
             },
           ),
         );
-      }),
+            }),
+          ),
+        ],
+      ),
     );
   }
 }
