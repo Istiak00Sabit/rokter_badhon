@@ -85,6 +85,29 @@ class DonorSubmissionModel {
     if (submittedAt is! Timestamp) {
       throw const DonorDataException('submitted_at must be a Timestamp.');
     }
+
+    final approvedBy = _nullable(map['approved_by'], 'approved_by');
+    final approvedAt = _nullableTimestamp(map['approved_at'], 'approved_at');
+    final rejectedBy = _nullable(map['rejected_by'], 'rejected_by');
+    final rejectedAt = _nullableTimestamp(map['rejected_at'], 'rejected_at');
+    final rejectionReason = _nullable(map['rejection_reason'], 'rejection_reason');
+    final donorId = _nullable(map['donor_id'], 'donor_id');
+
+    final validDecision = switch (status) {
+      'pending' => approvedBy == null && approvedAt == null &&
+          rejectedBy == null && rejectedAt == null &&
+          rejectionReason == null && donorId == null,
+      'approved' => approvedBy != null && approvedAt != null &&
+          donorId != null && rejectedBy == null && rejectedAt == null &&
+          rejectionReason == null,
+      'rejected' => rejectedBy != null && rejectedAt != null &&
+          rejectionReason != null && approvedBy == null &&
+          approvedAt == null && donorId == null,
+      _ => false,
+    };
+    if (!validDecision) {
+      throw const DonorDataException('Inconsistent donor review decision.');
+    }
     return DonorSubmissionModel(
       id: id,
       donor: DonorInput(
@@ -106,12 +129,12 @@ class DonorSubmissionModel {
       submittedBy: _text(map['submitted_by'], 'submitted_by'),
       submittedAt: submittedAt.toDate(),
       status: status,
-      approvedBy: _nullable(map['approved_by'], 'approved_by'),
-      approvedAt: _nullableTimestamp(map['approved_at'], 'approved_at'),
-      rejectedBy: _nullable(map['rejected_by'], 'rejected_by'),
-      rejectedAt: _nullableTimestamp(map['rejected_at'], 'rejected_at'),
-      rejectionReason: _nullable(map['rejection_reason'], 'rejection_reason'),
-      donorId: _nullable(map['donor_id'], 'donor_id'),
+      approvedBy: approvedBy,
+      approvedAt: approvedAt,
+      rejectedBy: rejectedBy,
+      rejectedAt: rejectedAt,
+      rejectionReason: rejectionReason,
+      donorId: donorId,
     );
   }
 }
