@@ -9,6 +9,8 @@ class _UnneededFirestore implements FirebaseFirestore {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+// Test-only structural fake for a Firestore cursor; no Firebase reads occur.
+// ignore: subtype_of_sealed_class
 class _Cursor implements DocumentSnapshot<Map<String, dynamic>> {
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
