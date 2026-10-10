@@ -10,7 +10,6 @@ import '../models/committee_media_model.dart';
 import '../models/committee_term_model.dart';
 import '../services/committee_service.dart';
 import 'member_list_screen.dart';
-import 'add_committee_member_screen.dart';
 
 class CommitteeScreen extends StatefulWidget {
   const CommitteeScreen({super.key});
@@ -89,17 +88,15 @@ class _CommitteeScreenState extends State<CommitteeScreen> {
               if (Get.isRegistered<AuthController>() &&
                   Get.find<AuthController>().currentUser.value?.accessRole ==
                       AppConstants.roleDeveloperAdmin) ...[
-                OutlinedButton.icon(
-                  onPressed: () async {
-                    final added = await Get.to<bool>(
-                      () => AddCommitteeMemberScreen(
-                        termId: roster?.term.id ?? '2025-2027',
-                      ),
-                    );
-                    if (added == true) await controller.loadCommittee();
-                  },
-                  icon: const Icon(Icons.person_add_alt_1),
-                  label: Text('add_committee_member'.tr),
+                // Sensitive committee/User creation requires independently
+                // authorized trusted execution. Never offer a Flutter form
+                // whose direct writes Firestore Rules must reject.
+                Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.lock_outline),
+                    title: Text('committee_operator_only_title'.tr),
+                    subtitle: Text('committee_operator_only_detail'.tr),
+                  ),
                 ),
                 const SizedBox(height: 16),
               ],
