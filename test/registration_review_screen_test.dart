@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:rokter_badhon/controllers/administration_controller.dart';
 import 'package:rokter_badhon/models/audit_log_model.dart';
 import 'package:rokter_badhon/models/registration_request_model.dart';
@@ -7,6 +8,11 @@ import 'package:rokter_badhon/services/administration_service.dart';
 import 'package:rokter_badhon/views/registration_review_screen.dart';
 
 void main() {
+  setUpAll(() async {
+    await initializeDateFormatting('bn');
+    await initializeDateFormatting('en');
+  });
+
   setUp(() {
     Get.testMode = true;
     Get.reset();
