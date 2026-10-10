@@ -160,8 +160,16 @@ From the repository root:
 
 ```powershell
 npm --prefix tools/operator install
-node tools/operator/cli.js seed-official-committee --project-id rokterbadhon-b247b --allow-production true --confirm-project-id rokterbadhon-b247b
+node tools/operator/cli.js seed-official-committee --project-id rokterbadhon-b247b --allow-production true --confirm-project-id rokterbadhon-b247b --confirm-command seed-official-committee --confirm-roster 51:2:31:18 --confirm-leaders 001,009 --acknowledge-no-login true --reason "Organization owner approved this exact 51-person directory-only import"
 ```
+
+The CLI now requires **separate, explicit confirmations** of the exact
+command, 51 total people, 2/31/18 role split, leader serials 001 and 009,
+and the fact that no login access is being granted. It also requires a
+meaningful audit reason before initializing Firebase. These checks supplement,
+but never replace, project-owner authorization, credentials and transactional
+conflict detection. **Never run the example command without the owner's
+specific approval and verified credentials.**
 
 This explicit production operation creates the active 2025–2027 term and
 51 strict `users`, `user_directory`, and `committee_assignments` records.
@@ -173,22 +181,30 @@ than overwritten. Re-running an exact successful import is idempotent.
 Without the import, the app labels the bundled list as an unsynced preview.
 Once the active term exists in Firestore, the UI reads the live server roster.
 
-## Add further members
+## Add or change committee members after the first import
 
-A user logged in with `developer_admin` can open **Committee →
-Add committee member** and enter a name, phone, position, blood group and
-profession. This flow creates a directory-only record (if no User exists) and
-a committee assignment in a Firestore transaction. It does not generate a
-password, change an existing User's role, or grant login.
+The mobile app currently displays the roster **read-only**. It does **not**
+show a working `Add committee member` or `Change member role` button:
+Firestore Rules deliberately reject direct client changes to `users`,
+`user_directory` and `committee_assignments`. A legacy internal
+`AddCommitteeMemberScreen` and its client-side service still exist in the
+repository but are **not a supported production workflow**.
 
-The service refuses duplicates for the same User and committee term.
-The app's UI role check is not an authorization boundary: the currently
-deployed Firestore rules must authorize this user through a valid
-`auth_links` record and an active `developer_admin` profile.
-The initial 51-person import must be completed before adding new members.
+Approved future member additions, assignment endings and role updates
+must instead be performed by a separately authorized trusted operator,
+with explicit identity/term checks and an audit trail. New User records,
+if appropriate, must not automatically grant Firebase Auth accounts,
+passwords or login access.
 
-Account authorization changes, future committee terms, and audit policy
-should be handled with the trusted operator workflow.
+The initial 51 members, their two confirmed leaders and the approved
+2025–2027 term must not be changed during this stage. A reviewed amendment
+to the official roster is a separate owner decision; it is not the same as
+opening the app or viewing the bundled preview.
+
+If no active Firestore term exists the app shows the **unsynced 51-person
+bundled preview**. If an active term already exists, even without any
+assignments, its **live data** is authoritative: missing members are
+not silently fabricated from the local JSON. Such gaps need operator review.
 
 ## Address dropdowns
 
