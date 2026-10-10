@@ -438,6 +438,45 @@ test('dashboard count aggregations honor the exact constrained access rules', as
     where('active', '==', true))));
 });
 
+test('donation history cursor pages remain role protected; active blood request read stays scoped', async () => {
+  await seedBusiness();
+  await seed('users/person-own', user({ access_role: 'executive' }));
+  const extra = {
+    donor_id: 'active', donor_name_snapshot: 'Synthetic Extra Donor',
+    blood_group_snapshot: 'A+', donation_date: Timestamp.fromMillis(1700000000001),
+    location: null, hospital: null, recipient_name: null,
+    recipient_contact: null, recorded_by: 'person-own',
+    created_at: stamp, updated_at: null,
+  };
+  await seed('donations/newer', extra);
+  const client = db();
+  const base = query(collection(client, 'donations'), orderBy('donation_date', 'desc'));
+  const first = await assertSucceeds(getDocs(query(base, limit(1))));
+  assert.equal(first.docs.length, 1);
+  assert.equal(first.docs[0].id, 'newer');
+  const second = await assertSucceeds(getDocs(query(base,
+    startAfter(first.docs[0]), limit(1))));
+  assert.equal(second.docs.length, 1);
+  assert.equal(second.docs[0].id, 'active');
+  const active = await assertSucceeds(getDocs(query(
+    collection(client, 'blood_requests'), where('status', '==', 'active'),
+    orderBy('created_at', 'desc'), limit(30),
+  )));
+  assert.equal(active.docs.length, 1);
+
+  await seed('users/person-own', user({ access_role: 'member' }));
+  await assertFails(getDocs(query(collection(db(), 'donations'),
+    orderBy('donation_date', 'desc'), limit(30))));
+  await assertSucceeds(getDocs(query(
+    collection(db(), 'blood_requests'), where('status', '==', 'active'),
+    orderBy('created_at', 'desc'), limit(30),
+  )));
+  await assertFails(getDocs(query(
+    collection(db(), 'blood_requests'), where('status', '==', 'fulfilled'),
+    orderBy('created_at', 'desc'), limit(30),
+  )));
+});
+
 const expectRead = (allowed, promise) => allowed ? assertSucceeds(promise) : assertFails(promise);
 for (const role of roles) {
   test(`${role}: business read audiences, parents and constrained queries`, async () => {
