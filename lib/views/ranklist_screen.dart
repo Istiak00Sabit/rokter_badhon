@@ -6,7 +6,10 @@ import '../constants/app_constants.dart';
 import '../models/donor_model.dart';
 
 class RanklistScreen extends StatefulWidget {
-  const RanklistScreen({super.key});
+  /// Optional loader supports deterministic widget tests without Firebase
+  /// network access. Production uses the scoped top-50 Firestore query.
+  final Future<List<DonorModel>> Function()? loadRanklist;
+  const RanklistScreen({super.key, this.loadRanklist});
 
   @override
   State<RanklistScreen> createState() => _RanklistScreenState();
@@ -32,6 +35,7 @@ class _RanklistScreenState extends State<RanklistScreen> {
   }
 
   Future<List<DonorModel>> _loadRanklist() async {
+    if (widget.loadRanklist != null) return widget.loadRanklist!();
     final snapshot = await FirebaseFirestore.instance
         .collection(AppConstants.donorsCollection)
         .where('active', isEqualTo: true)
