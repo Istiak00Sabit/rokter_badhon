@@ -94,9 +94,15 @@ class DashboardController extends GetxController {
                 message: user.error!.message,
               );
             }
-            return _canViewDonationHistory(user.user?.accessRole)
-                ? _dashboardService.getThisMonthDonations()
-                : 0;
+            if (user.user == null) {
+              throw const DashboardServiceException('session_unavailable');
+            }
+            if (!_canViewDonationHistory(user.user!.accessRole)) {
+              // A read denied by the user's role must never appear as a
+              // legitimate zero-donation month.
+              throw const DashboardServiceException('not_authorized');
+            }
+            return _dashboardService.getThisMonthDonations();
           },
           onSuccess: (value) => thisMonthDonations.value = value,
         ),
@@ -122,9 +128,18 @@ class DashboardController extends GetxController {
 
   Future<({UserModel? user, DashboardSectionError? error})>
   _loadCurrentUser() async {
+    // Refresh must not retain an earlier user's name or permissions.
+    currentUser.value = null;
     try {
       final user = await _currentUserLoader();
       currentUser.value = user;
+      if (user == null || !user.active || !user.loginEnabled ||
+          !user.hasRecognizedAccessRole) {
+        return (
+          user: null,
+          error: const DashboardSectionError('session_unavailable', null),
+        );
+      }
       return (user: user, error: null);
     } catch (error, stackTrace) {
       debugPrint(
@@ -132,7 +147,7 @@ class DashboardController extends GetxController {
       );
       return (
         user: null,
-        error: DashboardSectionError('user_context_unavailable', '$error'),
+        error: const DashboardSectionError('user_context_unavailable', null),
       );
     }
   }
