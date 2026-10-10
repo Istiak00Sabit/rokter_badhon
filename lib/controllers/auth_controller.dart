@@ -130,6 +130,12 @@ class AuthController extends GetxController {
         return 'login_failed'.tr;
       case AuthSessionState.unlinked:
         return 'account_unlinked'.tr;
+      case AuthSessionState.registrationPending:
+        return 'registration_login_pending'.tr;
+      case AuthSessionState.registrationRejected:
+        return 'registration_login_rejected'.tr;
+      case AuthSessionState.registrationApprovedUnlinked:
+        return 'registration_login_link_missing'.tr;
       case AuthSessionState.linkInactive:
         return 'link_inactive'.tr;
       case AuthSessionState.userMissing:
