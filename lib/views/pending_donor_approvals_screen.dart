@@ -6,6 +6,7 @@ import '../constants/app_colors.dart';
 import '../controllers/auth_controller.dart';
 import '../localization/app_date_formatter.dart';
 import '../models/donor_submission_model.dart';
+import '../models/donor_model.dart';
 import '../services/donor_service.dart';
 
 class PendingDonorApprovalsScreen extends StatefulWidget {
