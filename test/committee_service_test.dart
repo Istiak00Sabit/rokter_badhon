@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:rokter_badhon/controllers/committee_controller.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rokter_badhon/models/committee_assignment_model.dart';
 import 'package:rokter_badhon/models/committee_term_model.dart';
@@ -71,6 +72,22 @@ CommitteeMediaModel media(
 }, id);
 
 void main() {
+  test('bundled committee preview is used only before a live term exists', () {
+    expect(CommitteeController.needsBundledPreview(null), isTrue);
+    expect(
+      CommitteeController.needsBundledPreview(
+        term('2025-2027', startYear: 2025, endYear: 2027, active: true),
+      ),
+      isFalse,
+    );
+    expect(
+      CommitteeController.needsBundledPreview(
+        term('2027-2029', startYear: 2027, endYear: 2029, active: true),
+      ),
+      isFalse,
+    );
+  });
+
   test('current-term selection accepts zero or one active term only', () {
     final current = term(
       'current',
