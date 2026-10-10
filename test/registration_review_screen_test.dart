@@ -40,6 +40,33 @@ void main() {
     expect(service.calls, 2);
   });
 
+  testWidgets('pending request is review-only and its UID can be copied', (
+    tester,
+  ) async {
+    final service = _FakeRegistrationService(hasPending: true);
+    Get.put(
+      AdministrationController(service: service),
+      tag: 'registrations',
+    );
+
+    await tester.pumpWidget(
+      const GetMaterialApp(home: RegistrationReviewScreen()),
+    );
+    await tester.pumpAndSettle();
+
+    expect(service.calls, 1);
+    expect(find.text('registration_operator_only'), findsOneWidget);
+    expect(find.text('Synthetic Applicant'), findsOneWidget);
+    // No direct approve or reject controls: privileged changes require
+    // operator authentication and an audited trusted transaction.
+    expect(find.text('approve'), findsNothing);
+    expect(find.text('reject'), findsNothing);
+
+    await tester.tap(find.text('Synthetic Applicant'));
+    await tester.pump();
+    expect(find.text('registration_uid_copied'), findsOneWidget);
+  });
+
   testWidgets('query failures do not cause automatic retry loops', (
     tester,
   ) async {
@@ -67,9 +94,10 @@ void main() {
 }
 
 class _FakeRegistrationService implements AdministrationService {
-  _FakeRegistrationService({this.denyReads = false});
+  _FakeRegistrationService({this.denyReads = false, this.hasPending = false});
 
   final bool denyReads;
+  final bool hasPending;
   int calls = 0;
 
   @override
@@ -77,6 +105,28 @@ class _FakeRegistrationService implements AdministrationService {
     calls++;
     if (denyReads) {
       throw const AdministrationServiceException('permission_denied');
+    }
+    if (hasPending) {
+      return [
+        RegistrationRequestModel(
+          authUid: 'synthetic-uid',
+          name: 'Synthetic Applicant',
+          phone: '01700000000',
+          email: null,
+          bloodGroup: 'O+',
+          profession: null,
+          address: null,
+          union: 'ঘাটাইল',
+          village: 'নরজনা',
+          status: RegistrationRequestStatus.pending,
+          requestedAt: DateTime.utc(2026, 10, 10),
+          approvedBy: null,
+          approvedAt: null,
+          rejectedBy: null,
+          rejectedAt: null,
+          linkedUserId: null,
+        ),
+      ];
     }
     return const <RegistrationRequestModel>[];
   }
