@@ -1,4 +1,5 @@
 import 'auth_link_model.dart';
+import 'registration_request_model.dart';
 import 'user_model.dart';
 
 enum AuthSessionState {
@@ -7,6 +8,9 @@ enum AuthSessionState {
   // state because Firebase email verification is not an application gate.
   emailUnverified,
   unlinked,
+  registrationPending,
+  registrationRejected,
+  registrationApprovedUnlinked,
   linkInactive,
   userMissing,
   userInactive,
@@ -49,6 +53,22 @@ class AuthSessionPolicy {
     if (!user.loginEnabled) return AuthSessionState.loginDisabled;
     if (!user.hasRecognizedAccessRole) return AuthSessionState.invalidRole;
     return AuthSessionState.admitted;
+  }
+}
+
+/// Used only after confirming that no auth_links/{uid} document exists.
+/// The request never grants access to any protected organization collection.
+class UnlinkedRegistrationPolicy {
+  const UnlinkedRegistrationPolicy._();
+
+  static AuthSessionState evaluate(RegistrationRequestModel? request) {
+    return switch (request?.status) {
+      null => AuthSessionState.unlinked,
+      RegistrationRequestStatus.pending => AuthSessionState.registrationPending,
+      RegistrationRequestStatus.rejected => AuthSessionState.registrationRejected,
+      RegistrationRequestStatus.approved =>
+        AuthSessionState.registrationApprovedUnlinked,
+    };
   }
 }
 
