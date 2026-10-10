@@ -3,7 +3,7 @@ const { before, after, beforeEach, test } = require('node:test');
 const assert = require('node:assert/strict');
 const { initializeTestEnvironment, assertSucceeds, assertFails } = require('@firebase/rules-unit-testing');
 const { doc, collection, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where,
-  writeBatch, serverTimestamp, Timestamp, deleteField, orderBy, getCountFromServer, limit, startAfterDocument } = require('firebase/firestore');
+  writeBatch, serverTimestamp, Timestamp, deleteField, orderBy, getCountFromServer, limit, startAfter } = require('firebase/firestore');
 
 const projectId = 'demo-rokter-badhon';
 let env;
@@ -580,9 +580,9 @@ test('pending donor reviewer can paginate but never list rejected submissions', 
     where('status', '==', 'pending'), orderBy('submitted_at'));
   const first = await assertSucceeds(getDocs(query(base, limit(3))));
   const second = await assertSucceeds(getDocs(query(base,
-    startAfterDocument(first.docs[first.docs.length - 1]), limit(3))));
+    startAfter(first.docs[first.docs.length - 1]), limit(3))));
   const third = await assertSucceeds(getDocs(query(base,
-    startAfterDocument(second.docs[second.docs.length - 1]), limit(3))));
+    startAfter(second.docs[second.docs.length - 1]), limit(3))));
   const ids = [...first.docs, ...second.docs, ...third.docs].map(doc => doc.id);
   assert.equal(ids.length, 7);
   assert.equal(new Set(ids).size, 7);
