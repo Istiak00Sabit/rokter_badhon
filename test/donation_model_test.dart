@@ -70,8 +70,10 @@ void main() {
     expect(history, contains("orderBy('donation_date', descending: true)"));
     expect(history, isNot(contains('.add(')));
     expect(dashboard, contains("'donation_date'"));
-    expect(dashboard, contains('Timestamp.fromDate(firstDayUtc)'));
-    expect(dashboard, contains('Timestamp.fromDate(nextMonthUtc)'));
+    expect(dashboard, contains('DhakaMonthWindow.containing(_utcNow())'));
+    expect(dashboard, contains('Timestamp.fromDate(month.startUtc)'));
+    expect(dashboard, contains('Timestamp.fromDate(month.endUtc)'));
+    expect(dashboard, contains('query.count().get()'));
     expect(dashboard, isNot(contains("where('date'")));
     expect(dashboard, isNot(contains('toIso8601String')));
   });
