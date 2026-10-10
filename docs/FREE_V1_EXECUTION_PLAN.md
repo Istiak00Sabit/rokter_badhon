@@ -22,7 +22,7 @@ Updated: 2026-10-10. Target: Android APK on Firebase Spark (no Blaze upgrade, Cl
 | 5. Dashboard | Donor/member/request aggregation counts, notices, Dhaka month boundaries, role-aware/error states | **Code fixed; tests added; real-device pending** | Flutter tests + Rules aggregate-count emulator tests + Android build; owner-approved live data verification still needed |
 | 6. Donors | Search, submission, reviewer approval/rejection, edits, safe archive workflow | **Approval UI, bounded queue and decision rules improved; full directory search/archival and live tests pending** | Emulator approval/role/pagination tests; later scalable donor search, authorized archive and controlled real-device flow |
 | 7. Committee | Preserve approved 51-person source and preview, guard trusted import, view authoritative live term safely | **Code and safety tests improved; production import not authorized or performed** | identical JSON previews, two frozen leaders, directory collision tests, no-login import confirmations and CI; real import and device review pending |
-| 8. Remaining modules | Requests, donations, notices, events, ranklist, protected admin actions | **Code review and live tests pending** | each supported create/read/transition tested |
+| 8. Remaining modules | Blood Requests, Donations, Notices, Events, Ranklist and protected admin actions | **First integration fixes and tests added; remaining module workflows/live tests pending** | ranklist retry tests, bounded donation history, double-request-submit guard, role-based emulator reads and Android CI; remaining history/publishing workflows and device tests |
 | 9. Quality | Bangla/English, error/loading/offline, pagination, Rules tests, Flutter analyzer/widget tests, Android devices | **Ongoing** | automated CI + physical Android acceptance matrix |
 | 10. Release | Owner-approved Rules, signed Android APK, install/retest and instructions | **Not complete** | release signed APK and owner/device verification |
 
@@ -77,13 +77,23 @@ Updated: 2026-10-10. Target: Android APK on Firebase Spark (no Blaze upgrade, Cl
 - Committee management documentation no longer claims that the removed in-app Add Member button works. Sensitive member/role changes remain separately authorized operator operations. No production operation was performed.
 - **Acceptance gates still open:** verify deployed Firestore Rules and real accounts, approve an operator and intended 51-member import, inspect the result and run Android device tests. Source CI/emulator success alone does not establish production readiness.
 
+## Stage 8 implementation — blood requests, donation history and ranklist
+
+- Ranklist is now a stateful screen with **one cached initial query**. Retry and pull-to-refresh await a real new Firestore request instead of calling `Element.markNeedsBuild`, which previously reloaded on arbitrary rebuild. Its leaderboard remains explicitly top 50 active donors, not a claim about every donor. Widget regressions cover single load and retry.
+- Donation History now loads ordered Firestore pages of **30 records** (plus one lookahead), preserves a document cursor, and displays Load More / retry. A failed later page preserves already visible history, and unauthorized reads do not masquerade as a genuine zero-record history. Paging controller tests and Rules emulator authorization tests have been added.
+- Emergency Blood Request creation now blocks a second in-flight submit in the controller and form. Network, session, malformed data and unknown errors are surfaced through the existing safe error UI. A synthetic concurrent write test asserts only one Firestore creation can run at once.
+- Notices and Events remain read-only client features, with authorized edit/publish/visibility operations delegated to the independently guarded operator system. Their controllers now catch unexpected plugin failures, clear stale content, and allow retry rather than leaving a spinner.
+- Security emulator tests exercise bounded `donations` queries with Firestore document cursor and confirm only authorized history roles can read, while an admitted ordinary member can read active but not fulfilled Blood Requests.
+- **Outstanding:** Blood Requests, Notices, Events and media still use unbounded list reads; their scalable pagination must retain access to all valid records rather than silently truncating them. Full request fulfil/cancel, event/notice publishing and donation-recording workflows remain trusted operator commands, not buttons that claim to work in the Flutter client. Release-grade live tests remain blocked by production bootstrap/rules approval.
+- **No production write:** Firebase Rules, real requests/donations, Auth identities, committee roster, and project billing were not changed.
+
 ## Next concrete tasks
 
-1. Verify Stage 7 CI success (Node operator/Firestore Rules tests, Flutter analysis/tests, APK build) on the final code commit.
-2. Stage 8: inspect Blood Requests, Donations, Notices, Events and Ranklist for complete read/write and permission/error-state behavior; fix and regress issues without production writes.
+1. Verify final Stage 8 CI success (Backend/Firestore Rules tests, Flutter analyze/tests and Android debug APK build).
+2. Finish remaining bounded, complete Blood Request / Notice / Event queries and privileged status transitions without widening Firestore Rules or silently hiding records.
 3. Return to Stage 6's remaining accurate paginated donor search, duplicate detection and trusted archive; do not silently truncate emergency search results.
-4. Review the live Firebase project, deployed Rules and trusted identity **before requesting specific owner approval** for Account/Rules/Committee production mutations. Do not import the 51-person roster or create accounts in CI.
-5. After approval, perform real-device Registration → Review → Login → Dashboard → Donor Submit → Approve/Reject → Search and Committee roster acceptance tests.
+4. Before production changes, obtain explicit owner review/approval for deployed Rules, trusted admin identity and any 51-member import. Never assume a source CI run changes Firebase.
+5. Stage 9 quality and physical-device MVP tests; then signed Stage 10 release only after acceptance gates are met.
 
 ## Stop conditions
 
