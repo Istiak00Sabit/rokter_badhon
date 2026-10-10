@@ -43,6 +43,10 @@ class NoticeController extends GetxController {
       published.clear();
       unpublished.clear();
       errorCode.value = error.code;
+    } catch (_) {
+      published.clear();
+      unpublished.clear();
+      errorCode.value = 'operation_failed';
     } finally {
       isLoading.value = false;
     }
