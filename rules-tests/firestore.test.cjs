@@ -402,6 +402,8 @@ async function seedBusiness() {
 
 test('dashboard count aggregations honor the exact constrained access rules', async () => {
   await seedBusiness();
+  // Donation history is authorized only for developer_admin, leader and executive.
+  await seed('users/person-own', user({ access_role: 'executive' }));
   const client = db();
   const count = async q => (await assertSucceeds(getCountFromServer(q))).data().count;
   assert.equal(await count(query(collection(client, 'donors'),
