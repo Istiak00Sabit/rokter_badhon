@@ -21,7 +21,7 @@ Updated: 2026-10-10. Target: Android APK on Firebase Spark (no Blaze upgrade, Cl
 | 4. Registration | Form, phone, Ghatail Union/Village, exact pending request; protected decisions and login status feedback | **Code integration and tests added; live approval/login blocked** | synthetic pending/rejected/approved-unlinked→admitted tests, Firestore Rules tests, then owner-approved real admission on device |
 | 5. Dashboard | Donor/member/request aggregation counts, notices, Dhaka month boundaries, role-aware/error states | **Code fixed; tests added; real-device pending** | Flutter tests + Rules aggregate-count emulator tests + Android build; owner-approved live data verification still needed |
 | 6. Donors | Search, submission, reviewer approval/rejection, edits, safe archive workflow | **Approval UI, bounded queue and decision rules improved; full directory search/archival and live tests pending** | Emulator approval/role/pagination tests; later scalable donor search, authorized archive and controlled real-device flow |
-| 7. Committee | Authorized import of fixed official roster, account provisioning and history; safely managed future member adds | **Roster source ready; production import not done** | 51 unique profiles, 2/31/18 roles, zero unintended login grants |
+| 7. Committee | Preserve approved 51-person source and preview, guard trusted import, view authoritative live term safely | **Code and safety tests improved; production import not authorized or performed** | identical JSON previews, two frozen leaders, directory collision tests, no-login import confirmations and CI; real import and device review pending |
 | 8. Remaining modules | Requests, donations, notices, events, ranklist, protected admin actions | **Code review and live tests pending** | each supported create/read/transition tested |
 | 9. Quality | Bangla/English, error/loading/offline, pagination, Rules tests, Flutter analyzer/widget tests, Android devices | **Ongoing** | automated CI + physical Android acceptance matrix |
 | 10. Release | Owner-approved Rules, signed Android APK, install/retest and instructions | **Not complete** | release signed APK and owner/device verification |
@@ -67,13 +67,23 @@ Updated: 2026-10-10. Target: Android APK on Firebase Spark (no Blaze upgrade, Cl
 - **Unfinished deliberately:** the active donor directory's current name/phone substring search downloads all active records. Limiting it silently would cause donors to be missed in emergency searches; a correctly indexed/searchable and paginated solution remains to design and test. Phone-level duplicate prevention across two different submissions is also not transactionally enforced. Active donor archive/deactivation is not exposed to the Flutter client by Rules and requires an authorized audited workflow.
 - **Not production verified:** no actual donor submitted/approved and no Rules published to the live Firebase project. Automated emulator tests are not proof that current deployed Rules match source.
 
+## Stage 7 implementation — committee integrity and trusted import safety
+
+- The canonical official source and in-app bundled preview are byte-identical and contain 51 unique committee phones, two frozen leader assignments at serials 001 and 009, 31 executives, and 18 committee members. Automated Node tests assert both file parity and unchanged president/general-secretary identities.
+- Source validation now rejects invalid Bangladeshi phone numbers, unsupported blood groups and any changed/reordered/promoted leader, even when overall role totals still match. Validation errors avoid printing member phone numbers.
+- The transactional initial import now rejects a conflicting phone number in either `users` **or** `user_directory` before writing anything, not just in `users`. A synthetic collision regression confirms no committee assignments are created.
+- A production import launched through the operator CLI requires explicit `--confirm-command seed-official-committee`, `--confirm-roster 51:2:31:18`, `--confirm-leaders 001,009`, `--acknowledge-no-login true`, and a meaningful `--reason`, in addition to the already required production project confirmation. It records the provided reason in new audit entries. The guard runs **before Firebase initialization**.
+- If no active Firestore committee term exists, Flutter displays the clearly labeled unsynced 51-person bundled preview. Once a live term exists, the live roster is authoritative even if empty; the app no longer silently replaces it with bundled profiles. A Flutter regression tests this preview selection.
+- Committee management documentation no longer claims that the removed in-app Add Member button works. Sensitive member/role changes remain separately authorized operator operations. No production operation was performed.
+- **Acceptance gates still open:** verify deployed Firestore Rules and real accounts, approve an operator and intended 51-member import, inspect the result and run Android device tests. Source CI/emulator success alone does not establish production readiness.
+
 ## Next concrete tasks
 
-1. Confirm Stage 6 final Flutter/Firestore CI and Android debug APK.
-2. Complete scalable, accurate donor search (including phone/name and blood-group filters) without silently truncating emergency results; design a secure duplicate-detection policy and trusted archived-donor workflow.
-3. Review Stage 7's official committee roster against the 51 approved source entries; keep 2 leaders, 31 executive and 18 committee unchanged until owner-authorized import.
-4. Securely verify the selected production admin identity and deployed Firebase Rules before requesting **specific owner approval** for account/rule/committee production mutations.
-5. After approval, run real-device Registration → Review → Login → Dashboard → Donor Submit → Approve/Reject → Search tests. Do not claim production readiness from CI alone.
+1. Verify Stage 7 CI success (Node operator/Firestore Rules tests, Flutter analysis/tests, APK build) on the final code commit.
+2. Stage 8: inspect Blood Requests, Donations, Notices, Events and Ranklist for complete read/write and permission/error-state behavior; fix and regress issues without production writes.
+3. Return to Stage 6's remaining accurate paginated donor search, duplicate detection and trusted archive; do not silently truncate emergency search results.
+4. Review the live Firebase project, deployed Rules and trusted identity **before requesting specific owner approval** for Account/Rules/Committee production mutations. Do not import the 51-person roster or create accounts in CI.
+5. After approval, perform real-device Registration → Review → Login → Dashboard → Donor Submit → Approve/Reject → Search and Committee roster acceptance tests.
 
 ## Stop conditions
 
