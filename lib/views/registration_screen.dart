@@ -7,6 +7,7 @@ import '../data/ghatail_village_data.dart';
 import '../services/auth_identity.dart';
 import '../models/registration_request_model.dart';
 import '../services/auth_services.dart';
+import '../controllers/auth_controller.dart';
 import '../widgets/auth_language_switch.dart';
 
 class RegistrationScreen extends StatefulWidget {
@@ -309,6 +310,19 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               OutlinedButton(
                 onPressed: _loading ? null : _refreshStatus,
                 child: Text('refresh_status'.tr),
+              ),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: _loading
+                    ? null
+                    : () async {
+                        final controller = Get.isRegistered<AuthController>()
+                            ? Get.find<AuthController>()
+                            : Get.put(AuthController());
+                        await controller.logout();
+                      },
+                icon: const Icon(Icons.logout_outlined),
+                label: Text('logout'.tr),
               ),
             ],
             if (_loading)
