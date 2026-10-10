@@ -3,7 +3,7 @@ const { before, after, beforeEach, test } = require('node:test');
 const assert = require('node:assert/strict');
 const { initializeTestEnvironment, assertSucceeds, assertFails } = require('@firebase/rules-unit-testing');
 const { doc, collection, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where,
-  writeBatch, serverTimestamp, Timestamp, deleteField, orderBy } = require('firebase/firestore');
+  writeBatch, serverTimestamp, Timestamp, deleteField, orderBy, getCountFromServer } = require('firebase/firestore');
 
 const projectId = 'demo-rokter-badhon';
 let env;
@@ -399,6 +399,43 @@ async function seedBusiness() {
     await b.commit();
   });
 }
+
+test('dashboard count aggregations honor the exact constrained access rules', async () => {
+  await seedBusiness();
+  const client = db();
+  const count = async q => (await assertSucceeds(getCountFromServer(q))).data().count;
+  assert.equal(await count(query(collection(client, 'donors'),
+    where('active', '==', true))), 1);
+  assert.equal(await count(query(collection(client, 'user_directory'),
+    where('active', '==', true))), 2);
+  assert.equal(await count(query(collection(client, 'blood_requests'),
+    where('status', '==', 'active'))), 1);
+  assert.equal(await count(query(collection(client, 'donations'),
+    where('donation_date', '>=', Timestamp.fromMillis(1698796800000)),
+    where('donation_date', '<', Timestamp.fromMillis(1701388800000)))), 1);
+
+  await assertFails(getCountFromServer(collection(client, 'donors')));
+  await assertFails(getCountFromServer(query(collection(client, 'donors'),
+    where('active', '==', false))));
+  await assertFails(getCountFromServer(collection(client, 'user_directory')));
+  await assertFails(getCountFromServer(collection(client, 'blood_requests')));
+
+  await seed('users/person-own', user({ access_role: 'member' }));
+  const member = db();
+  assert.equal(await count(query(collection(member, 'donors'),
+    where('active', '==', true))), 1);
+  await assertFails(getCountFromServer(query(collection(member, 'donations'),
+    where('donation_date', '>=', Timestamp.fromMillis(1698796800000)),
+    where('donation_date', '<', Timestamp.fromMillis(1701388800000)))));
+
+  // No registration request status may grant the dashboard aggregates.
+  const unlinked = db('applicant');
+  await assertFails(getCountFromServer(query(collection(unlinked, 'donors'),
+    where('active', '==', true))));
+  await assertFails(getCountFromServer(query(collection(unlinked, 'user_directory'),
+    where('active', '==', true))));
+});
+
 const expectRead = (allowed, promise) => allowed ? assertSucceeds(promise) : assertFails(promise);
 for (const role of roles) {
   test(`${role}: business read audiences, parents and constrained queries`, async () => {
