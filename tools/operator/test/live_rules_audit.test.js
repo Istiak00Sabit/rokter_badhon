@@ -82,6 +82,7 @@ test('GET-only network wrapper allows only expected Firebase Rules APIs', async 
   assert.equal(requests.length, 2);
   assert.ok(requests.every((x) => x.opts.method === 'GET'));
   assert.ok(requests.every((x) => x.opts.redirect === 'error'));
+  assert.ok(requests.every((x) => x.opts.headers['X-Goog-User-Project'] === PROJECT_ID));
   assert.ok(requests.every((x) => !x.opts.body));
   assert.ok(!JSON.stringify(requests.map((x) => x.url)).includes('synthetic-redacted'));
   await assert.rejects(read('https://firebaserules.googleapis.com/v1/projects/another/release'));
