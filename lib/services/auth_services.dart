@@ -212,7 +212,21 @@ class AuthService {
           .get();
       final linkData = linkDocument.data();
       if (!linkDocument.exists || linkData == null) {
-        return const AuthSessionResult(AuthSessionState.unlinked);
+        // The requester can read their own request only while unlinked.
+        // Distinguish pending/rejected applications from absent requests,
+        // without treating any request as a login authorization.
+        final requestDocument = await _firestore
+            .collection('registration_requests')
+            .doc(refreshedUser.uid)
+            .get();
+        if (!requestDocument.exists || requestDocument.data() == null) {
+          return const AuthSessionResult(AuthSessionState.unlinked);
+        }
+        final request = RegistrationRequestModel.fromMap(
+          requestDocument.data()!,
+          requestDocument.id,
+        );
+        return AuthSessionResult(UnlinkedRegistrationPolicy.evaluate(request));
       }
 
       final link = AuthLinkModel.fromMap(linkData, refreshedUser.uid);
