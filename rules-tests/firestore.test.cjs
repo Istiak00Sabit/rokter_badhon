@@ -230,6 +230,40 @@ test('revocation prevents subsequent profile batch and protected reads', async (
   await assertFails(batchProfile({ name: 'Changed' }, { name: 'Changed' }, c));
   await assertFails(getDoc(doc(c, 'users/person-own')));
 });
+test('own registration status is readable while unlinked but cannot grant dashboard access', async () => {
+  const applicant = db('applicant');
+  const ownRequest = doc(applicant, 'registration_requests/applicant');
+  await assertSucceeds(setDoc(ownRequest, request()));
+  assert.equal((await getDoc(ownRequest)).data().status, 'pending');
+
+  // Registration alone must never permit donors, member directory or
+  // protected dashboard queries. Reject/approve are trusted writes only.
+  await assertFails(getDocs(query(collection(applicant, 'donors'), where('active', '==', true))));
+  await assertFails(getDocs(query(collection(applicant, 'user_directory'), where('active', '==', true))));
+  await assertFails(updateDoc(ownRequest, { status: 'approved' }));
+
+  await seed('registration_requests/applicant', request({
+    status: 'rejected',
+    requested_at: stamp,
+    rejected_by: 'person-own',
+    rejected_at: stamp,
+  }));
+  assert.equal((await getDoc(ownRequest)).data().status, 'rejected');
+  await assertFails(getDoc(doc(applicant, 'users/person-own')));
+
+  // Even a corrupt/incompletely linked approved request never admits users.
+  await seed('registration_requests/applicant', request({
+    status: 'approved',
+    requested_at: stamp,
+    approved_by: 'person-own',
+    approved_at: stamp,
+    linked_user_id: 'person-applicant',
+  }));
+  assert.equal((await getDoc(ownRequest)).data().status, 'approved');
+  await assertFails(getDoc(doc(applicant, 'users/person-applicant')));
+  await assertFails(getDocs(query(collection(applicant, 'blood_requests'), where('status', '==', 'active'))));
+});
+
 test('registration-to-admission emulator flow fails closed after live revocation', async () => {
   const applicant = db('applicant');
   await assertSucceeds(setDoc(doc(applicant, 'registration_requests/applicant'), request()));
