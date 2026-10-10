@@ -150,16 +150,20 @@ class DashboardScreen extends StatelessWidget {
                           ),
                           // This month donations card
                           GestureDetector(
-                            onTap: () => Get.snackbar(
-                              'donation_information'.tr,
-                              'month_donation_count'.trParams({
-                                'count':
-                                    '${controller.thisMonthDonations.value}',
-                              }),
-                              snackPosition: SnackPosition.BOTTOM,
-                              backgroundColor: AppColors.primary,
-                              colorText: AppColors.white,
-                            ),
+                            onTap: () {
+                              final error = controller.thisMonthDonationsError.value;
+                              Get.snackbar(
+                                'donation_information'.tr,
+                                error == null
+                                    ? 'month_donation_count'.trParams({
+                                        'count': '${controller.thisMonthDonations.value}',
+                                      })
+                                    : _dashboardErrorLabel(error),
+                                snackPosition: SnackPosition.BOTTOM,
+                                backgroundColor: AppColors.primary,
+                                colorText: AppColors.white,
+                              );
+                            },
                             child: Obx(
                               () => _buildStatCard(
                                 title: 'month_donations'.tr,
@@ -443,9 +447,9 @@ class DashboardScreen extends StatelessWidget {
               ),
               if (error != null)
                 Tooltip(
-                  message: error.message ?? error.code,
+                  message: _dashboardErrorLabel(error),
                   child: Text(
-                    error.code,
+                    _dashboardErrorLabel(error),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
@@ -468,7 +472,7 @@ class DashboardScreen extends StatelessWidget {
 
   Widget _buildSectionError(DashboardSectionError error) {
     return Tooltip(
-      message: error.message ?? error.code,
+      message: _dashboardErrorLabel(error),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(16),
@@ -483,7 +487,7 @@ class DashboardScreen extends StatelessWidget {
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                error.code,
+                _dashboardErrorLabel(error),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(color: AppColors.textDark),
@@ -602,3 +606,15 @@ bool _canReviewDonors(String? role) =>
     role == 'developer_admin' || role == 'leader';
 
 bool _canCreateDonor(String? role) => role != null && role != 'member';
+
+String _dashboardErrorLabel(DashboardSectionError error) => switch (error.code) {
+  'not_authorized' => 'dashboard_restricted'.tr,
+  'permission-denied' || 'permission_denied' => 'dashboard_access_denied'.tr,
+  'unavailable' || 'network-request-failed' || 'network_unavailable' =>
+    'dashboard_network_error'.tr,
+  'session_unavailable' || 'user_context_unavailable' =>
+    'dashboard_session_error'.tr,
+  'failed-precondition' || 'index_required' => 'dashboard_query_error'.tr,
+  'malformed_data' || 'invalid_aggregation' => 'dashboard_data_error'.tr,
+  _ => 'dashboard_section_error'.tr,
+};
