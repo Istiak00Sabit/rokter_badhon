@@ -26,7 +26,9 @@ class _RanklistScreenState extends State<RanklistScreen> {
 
   Future<void> _refresh() async {
     final future = _loadRanklist();
-    setState(() => _ranklist = future);
+    setState(() {
+      _ranklist = future;
+    });
     try {
       await future;
     } catch (_) {
