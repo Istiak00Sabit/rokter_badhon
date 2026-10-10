@@ -161,7 +161,7 @@ export function makeCloudRead({ getAccessToken, fetchImpl = fetch }) {
       response = await fetchImpl(url, {
         method: 'GET',
         redirect: 'error',
-        headers: { Authorization: 'Bearer ' + token, Accept: 'application/json' },
+        headers: { Authorization: 'Bearer ' + token, Accept: 'application/json', 'X-Goog-User-Project': PROJECT_ID },
         signal: AbortSignal.timeout(30000),
       });
     } catch (_) {
