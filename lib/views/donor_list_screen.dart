@@ -7,21 +7,41 @@ import '../models/donor_model.dart';
 import '../localization/app_date_formatter.dart';
 import 'add_donor_screen.dart';
 
-class DonorListScreen extends StatelessWidget {
+class DonorListScreen extends StatefulWidget {
   const DonorListScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final DonorController controller = Get.put(DonorController());
-    final RxString searchQuery = ''.obs;
-    final RxString selectedFilter = 'all'.obs;
-    final searchController = TextEditingController();
+  State<DonorListScreen> createState() => _DonorListScreenState();
+}
 
-    // Load donors when screen opens
+class _DonorListScreenState extends State<DonorListScreen> {
+  late final DonorController controller;
+  final RxString searchQuery = ''.obs;
+  final RxString selectedFilter = 'all'.obs;
+  final searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    controller = Get.isRegistered<DonorController>()
+        ? Get.find<DonorController>()
+        : Get.put(DonorController());
+    // A build/rebuild must never start new Firestore reads.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      controller.loadDonors();
+      if (mounted) controller.loadDonors();
     });
+  }
 
+  @override
+  void dispose() {
+    searchController.dispose();
+    searchQuery.close();
+    selectedFilter.close();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final List<String> filters = ['all', ...AppConstants.bloodGroups];
 
     return Scaffold(
