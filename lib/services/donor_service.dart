@@ -9,6 +9,20 @@ class DonorServiceException implements Exception {
   const DonorServiceException(this.code);
 }
 
+/// A cursor-based page of pending applications. The cursor comes from the
+/// last returned document, never from a client-provided document ID.
+class PendingDonorPage {
+  final List<DonorSubmissionModel> items;
+  final DocumentSnapshot<Map<String, dynamic>>? cursor;
+  final bool hasMore;
+
+  const PendingDonorPage({
+    required this.items,
+    required this.cursor,
+    required this.hasMore,
+  });
+}
+
 class DonorService {
   final FirebaseFirestore _firestore;
 
@@ -67,23 +81,41 @@ class DonorService {
     }
   }
 
-  Future<List<DonorSubmissionModel>> getPendingSubmissions() async {
+  /// Fetch a bounded page rather than all applications in one read.
+  /// The [after] snapshot is from the previous ordered page.
+  Future<PendingDonorPage> getPendingSubmissionsPage({
+    DocumentSnapshot<Map<String, dynamic>>? after,
+    int pageSize = 30,
+  }) async {
+    if (pageSize < 1 || pageSize > 100) {
+      throw const DonorServiceException('invalid_limit');
+    }
     try {
-      final snapshot = await _firestore
+      Query<Map<String, dynamic>> query = _firestore
           .collection(AppConstants.donorSubmissionsCollection)
           .where('status', isEqualTo: 'pending')
-          .orderBy('submitted_at')
-          .get();
-      return List.unmodifiable(
-        snapshot.docs.map(
-          (doc) => DonorSubmissionModel.fromMap(doc.data(), doc.id),
+          .orderBy('submitted_at');
+      if (after != null) query = query.startAfterDocument(after);
+      // One extra document establishes whether a next page exists.
+      final snapshot = await query.limit(pageSize + 1).get();
+      final docs = snapshot.docs.take(pageSize).toList(growable: false);
+      return PendingDonorPage(
+        items: List.unmodifiable(
+          docs.map((doc) => DonorSubmissionModel.fromMap(doc.data(), doc.id)),
         ),
+        cursor: docs.isEmpty ? null : docs.last,
+        hasMore: snapshot.docs.length > pageSize,
       );
     } on DonorDataException {
       rethrow;
     } on FirebaseException catch (error) {
       throw DonorServiceException(_safeCode(error.code));
     }
+  }
+
+  // Kept for non-paginated callers; explicit limit prevents unbounded reads.
+  Future<List<DonorSubmissionModel>> getPendingSubmissions() async {
+    return (await getPendingSubmissionsPage()).items;
   }
 
   Future<void> approveSubmission({
@@ -100,10 +132,11 @@ class DonorService {
     try {
       await _firestore.runTransaction((transaction) async {
         final current = await transaction.get(submissionRef);
-        final parsed = DonorSubmissionModel.fromMap(
-          current.data()!,
-          current.id,
-        );
+        final data = current.data();
+        if (!current.exists || data == null) {
+          throw const DonorServiceException('submission_missing');
+        }
+        final parsed = DonorSubmissionModel.fromMap(data, current.id);
         if (parsed.status != 'pending') {
           throw const DonorServiceException('already_decided');
         }
