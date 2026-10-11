@@ -158,7 +158,8 @@ class _PendingDonorApprovalsScreenState
       'query_unavailable' ||
       'submission_missing' ||
       'already_decided' ||
-      'session_unavailable' => code.tr,
+      'session_unavailable' ||
+      'duplicate_donor' => code.tr,
       _ => 'operation_failed'.tr,
     };
     ScaffoldMessenger.of(context).showSnackBar(
