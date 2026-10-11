@@ -85,7 +85,7 @@ void main() {
       expect(source, contains('query.limit(pageSize + 1)'));
       expect(source, contains('startAfterDocument(after)'));
       expect(source, contains("where('phone', isEqualTo: phone.trim())"));
-      expect(source, contains('assertNoActivePhoneConflict(submission.donor.phone)'));
+      expect(source, contains('await assertNoActivePhoneConflict(phone)'));
       expect(source, contains('await transaction.get(donorRef)'));
       expect(source, isNot(contains('transaction.delete(donorRef)')));
       expect(source, contains("'last_donated_at': null"));
