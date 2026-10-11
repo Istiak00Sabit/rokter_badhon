@@ -63,6 +63,13 @@ class _EventListScreenState extends State<EventListScreen> {
                 includeHiddenMedia: controller.canReviewHidden,
               ),
             ),
+            if (controller.activeHasMore.value ||
+                controller.activePageErrorCode.value.isNotEmpty)
+              _EventPageControl(
+                loading: controller.isLoadingMoreActive.value,
+                error: controller.activePageErrorCode.value,
+                onLoad: controller.loadMoreActive,
+              ),
             if (controller.canReviewHidden &&
                 controller.hiddenEvents.isNotEmpty) ...[
               Padding(
@@ -83,10 +90,47 @@ class _EventListScreenState extends State<EventListScreen> {
                 ),
               ),
             ],
+            if (controller.canReviewHidden &&
+                (controller.hiddenHasMore.value ||
+                 controller.hiddenPageErrorCode.value.isNotEmpty))
+              _EventPageControl(
+                loading: controller.isLoadingMoreHidden.value,
+                error: controller.hiddenPageErrorCode.value,
+                onLoad: controller.loadMoreHidden,
+              ),
           ],
         ),
       );
     }),
+  );
+}
+
+class _EventPageControl extends StatelessWidget {
+  final bool loading;
+  final String error;
+  final Future<void> Function() onLoad;
+
+  const _EventPageControl({
+    required this.loading,
+    required this.error,
+    required this.onLoad,
+  });
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 12),
+    child: Column(
+      children: [
+        if (error.isNotEmpty) Text(_error(error).tr),
+        if (loading)
+          const CircularProgressIndicator()
+        else
+          OutlinedButton(
+            onPressed: onLoad,
+            child: Text(error.isNotEmpty ? 'retry'.tr : 'load_more'.tr),
+          ),
+      ],
+    ),
   );
 }
 
