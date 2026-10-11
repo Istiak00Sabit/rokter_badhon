@@ -158,6 +158,7 @@ class _EventGalleryPagerState extends State<_EventGalleryPager> {
   bool hasMoreHidden = false;
   bool loading = false;
   bool failed = false;
+  int _generation = 0;
 
   @override
   void initState() {
@@ -172,6 +173,7 @@ class _EventGalleryPagerState extends State<_EventGalleryPager> {
   }
 
   void _reset() {
+    _generation++;
     media = List<EventMediaModel>.of(widget.detail.gallery);
     activeCursor = widget.detail.activeCursor;
     hiddenCursor = widget.detail.hiddenCursor;
@@ -186,6 +188,7 @@ class _EventGalleryPagerState extends State<_EventGalleryPager> {
 
   Future<void> _loadMore() async {
     if (loading || !hasMore) return;
+    final requestGeneration = _generation;
     setState(() {
       loading = true;
       failed = false;
@@ -210,7 +213,7 @@ class _EventGalleryPagerState extends State<_EventGalleryPager> {
           (hasMoreHidden && hiddenPage == null)) {
         throw StateError('Missing gallery cursor');
       }
-      if (!mounted) return;
+      if (!mounted || requestGeneration != _generation) return;
       setState(() {
         final byId = <String, EventMediaModel>{
           for (final item in media) item.id: item,
@@ -232,9 +235,13 @@ class _EventGalleryPagerState extends State<_EventGalleryPager> {
         }
       });
     } catch (_) {
-      if (mounted) setState(() => failed = true);
+      if (mounted && requestGeneration == _generation) {
+        setState(() => failed = true);
+      }
     } finally {
-      if (mounted) setState(() => loading = false);
+      if (mounted && requestGeneration == _generation) {
+        setState(() => loading = false);
+      }
     }
   }
 
