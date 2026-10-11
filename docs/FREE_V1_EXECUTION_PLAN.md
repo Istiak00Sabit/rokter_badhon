@@ -143,11 +143,22 @@ Updated: 2026-10-10. Target: Android APK on Firebase Spark (no Blaze upgrade, Cl
 - **Unresolved critical release gate:** the Flutter approval transaction is still allowed without a canonical `donor_phone_keys` reservation. Concurrent approvals of different submissions can therefore duplicate a phone, and the legacy database has not been backfilled. Do not enable a production uniqueness guarantee or switch approvals to the new locking model until an owner-reviewed migration, updated Firestore transaction + Rules, concurrency tests, and production deployment are expressly authorized.
 - No production Firebase data, official committee roster, roles, indexes or Rules were deployed or mutated. Physical Android-device end-to-end acceptance is still required. Verify Batch 6 final CI before marking automated verification complete.
 
+## Stage 9 Batch 7 — atomic donor phone reservation (source, emulator)
+
+- GitHub Actions Batch 6 CI for commit `7455fa8f` fully passed, including Flutter/backend/Rules tests and debug APK.
+- Donor approvals now require deterministic `donor_phone_keys/{01XXXXXXXXX}` creation **in the same Firestore transaction** as donor creation and submission approval. Two distinct submissions targeting the same canonical phone cannot both reserve the same document.
+- New donor submissions normalize +880, local and Bangla-digit numbers to one canonical BD phone. Legacy pending applications with noncanonical phones may still be **rejected** but not automatically approved.
+- Firestore Rules constrain the key to the same donor/submission and reviewer, deny modification/deletion, and require `system_config/donor_phone_registry` to be `{ready: true, schema_version: 1}`. When missing/not ready, approval deliberately fails closed, even if a previous client bypasses the new application code.
+- Approved donor phone editing is locked. Archive does not delete historical reservations, preserving identity even for inactive profiles. Explicit localized errors explain migration-required, registry-unready and locked identity states.
+- Emulator tests cover approval and forged writes, readiness missing/false, legacy rejection, two competing approvals, key immutability and role boundaries. Dart regressions check canonicalization, invalid numbers, and the transaction contract.
+- See `docs/DONOR_PHONE_CUTOVER.md` for the necessary owner-controlled full-history audit, cleanup, protected migration/backfill, Rules/index rollout and readiness process. **No production registry activation, historical backfill, Rules deployment, phone-key mutation, Android device E2E or Release acceptance was performed.**
+- Batch 7 CI for its final source commit must pass; this remains a **production rollout blocker** until full historical backfill, read-back integrity and owner-approved physical-device verification.
+
 ## Next concrete tasks
 
 1. Review the new Stage 9 documentation/test CI result, then perform the listed emulator-configured Android-phone MVP checks and record redacted evidence.
 2. Review Batch 6 indexed donor search CI and complete remaining secure operator-only publishing transitions without weakening Rules.
-3. Owner-review the donor phone-key migration and transaction-safe approval cutover (including concurrency and Rules tests); do not claim globally indexed middle-substring matching.
+3. Obtain explicit owner review/approval for full historical donor phone migration/backfill, verify every reserved key, then gate production readiness; concurrency protection is now source-implemented but not production-active.
 4. Obtain explicit owner review/approval for live Rules, admin identity and any 51-member import; source CI never changes Firebase.
 5. Complete Stage 9 physical-device acceptance before treating the signed Stage 10 release as ready.
 
