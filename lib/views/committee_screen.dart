@@ -314,6 +314,7 @@ class _CommitteeGalleryState extends State<_CommitteeGallery> {
   bool hasMore = false;
   bool loading = false;
   bool failed = false;
+  int _generation = 0;
 
   @override
   void initState() {
@@ -328,6 +329,7 @@ class _CommitteeGalleryState extends State<_CommitteeGallery> {
   }
 
   void _reset() {
+    _generation++;
     media = List<CommitteeMediaModel>.of(widget.roster.gallery);
     cursor = widget.roster.galleryCursor;
     hasMore = widget.roster.galleryHasMore && !widget.roster.isBundledPreview;
@@ -337,6 +339,7 @@ class _CommitteeGalleryState extends State<_CommitteeGallery> {
 
   Future<void> _loadMore() async {
     if (loading || !hasMore) return;
+    final requestGeneration = _generation;
     setState(() {
       loading = true;
       failed = false;
@@ -350,7 +353,7 @@ class _CommitteeGalleryState extends State<_CommitteeGallery> {
         widget.roster.term.id,
         after: oldCursor,
       );
-      if (!mounted) return;
+      if (!mounted || requestGeneration != _generation) return;
       setState(() {
         final byId = <String, CommitteeMediaModel>{
           for (final item in media) item.id: item,
@@ -364,9 +367,13 @@ class _CommitteeGalleryState extends State<_CommitteeGallery> {
         hasMore = page.hasMore;
       });
     } catch (_) {
-      if (mounted) setState(() => failed = true);
+      if (mounted && requestGeneration == _generation) {
+        setState(() => failed = true);
+      }
     } finally {
-      if (mounted) setState(() => loading = false);
+      if (mounted && requestGeneration == _generation) {
+        setState(() => loading = false);
+      }
     }
   }
 
