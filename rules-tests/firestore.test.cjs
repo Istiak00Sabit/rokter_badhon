@@ -349,11 +349,11 @@ test('legacy and unknown collections/subcollections denied even to developer_adm
 
 // Phase 1B: synthetic business fixtures, sharing the unchanged Phase 1A gate.
 const roles = ['developer_admin','leader','executive','committee','member'];
-const donor = (extra = {}) => ({ name: 'Synthetic Donor', phone: '00000000000', blood_group: 'A+',
+const donor = (extra = {}) => ({ name: 'Synthetic Donor', phone: '01700000000', blood_group: 'A+',
   gender: null, photo_url: null, village: null, union: null, upazila: 'Synthetic', district: 'Synthetic',
   profession: null, linked_user_id: null, active: true, last_donated_at: null, total_donations: 0,
   created_at: serverTimestamp(), created_by: 'person-own', ...metadata(), ...extra });
-const donorPayload = (extra = {}) => ({ name: 'Synthetic Donor', phone: '00000000000', blood_group: 'A+',
+const donorPayload = (extra = {}) => ({ name: 'Synthetic Donor', phone: '01700000000', blood_group: 'A+',
   gender: null, photo_url: null, village: null, union: null, upazila: 'Synthetic', district: 'Synthetic',
   profession: null, ...extra });
 const donorSubmission = (extra = {}) => ({ donor_payload: donorPayload(), committee_assignment_id: 'active',
@@ -840,16 +840,24 @@ test('pending donor reviewer pages exclude rejected while editorial history stay
 });
 
 async function seedPendingSubmission(id = 'review') {
+  await seed('system_config/donor_phone_registry',
+    { ready: true, schema_version: 1 });
   await seed(`donor_submissions/${id}`, donorSubmission({ submitted_at: stamp }));
 }
 
-async function approveDonor(client, id = 'review', donorChanges = {}, decisionChanges = {}) {
+async function approveDonor(client, id = 'review', donorChanges = {}, decisionChanges = {}, opts = {}) {
   const batch = writeBatch(client);
   batch.set(doc(client, `donors/${id}`), donor({ ...donorChanges }));
   batch.update(doc(client, `donor_submissions/${id}`), {
     status: 'approved', approved_by: 'person-own', approved_at: serverTimestamp(), donor_id: id,
     ...decisionChanges,
   });
+  if (!opts.skipKey) {
+    batch.set(doc(client, 'donor_phone_keys/01700000000'), {
+      phone: '01700000000', donor_id: id,
+      reserved_at: serverTimestamp(), reserved_by: 'person-own',
+    });
+  }
   return batch.commit();
 }
 
@@ -872,6 +880,8 @@ test('one leader approval atomically creates the active donor and durable approv
   assert.equal(history.status, 'approved');
   assert.equal(history.approved_by, 'person-own');
   assert.equal(history.donor_id, 'review');
+  const reservation = await getDoc(doc(db(), 'donor_phone_keys/01700000000'));
+  assert.equal(reservation.data().donor_id, 'review');
 });
 
 test('a donor submission cannot be approved or rejected a second time', async () => {
@@ -896,6 +906,65 @@ test('developer_admin can approve a pending donor only through the same atomic g
   assert.equal(accepted.active, true);
   assert.equal(accepted.created_by, 'person-own');
   await assertFails(deleteDoc(doc(db(), 'donors/admin-approval')));
+});
+
+test('phone registry missing or not ready blocks approval and phone reservation', async () => {
+  await seed('users/person-own', user({ access_role: 'leader' }));
+  await seedPendingSubmission('unready');
+  await seed('system_config/donor_phone_registry', { ready: false, schema_version: 1 });
+  await assertFails(approveDonor(db(), 'unready'));
+  await seed('system_config/donor_phone_registry', { ready: true, schema_version: 0 });
+  await assertFails(approveDonor(db(), 'unready'));
+  await env.withSecurityRulesDisabled(c =>
+    deleteDoc(doc(c.firestore(), 'system_config/donor_phone_registry')));
+  await assertFails(approveDonor(db(), 'unready'));
+  await assertFails(getDoc(doc(db(), 'donors/unready')));
+});
+
+test('approval without a matching immutable phone key is rejected', async () => {
+  await seed('users/person-own', user({ access_role: 'leader' }));
+  await seedPendingSubmission('no-key');
+  await assertFails(approveDonor(db(), 'no-key', {}, {}, { skipKey: true }));
+  await assertFails(getDoc(doc(db(), 'donors/no-key')));
+  await assertFails(setDoc(doc(db(), 'donor_phone_keys/01700000000'), {
+    phone: '01700000000', donor_id: 'no-key',
+    reserved_at: serverTimestamp(), reserved_by: 'person-own',
+  }));
+});
+
+test('two distinct concurrent approvals for same phone allow only one reservation', async () => {
+  await seed('users/person-own', user({ access_role: 'leader' }));
+  await seedPendingSubmission('race-a');
+  await seedPendingSubmission('race-b');
+  const first = db();
+  const second = db();
+  const results = await Promise.allSettled([
+    approveDonor(first, 'race-a'),
+    approveDonor(second, 'race-b'),
+  ]);
+  assert.equal(results.filter(r => r.status === 'fulfilled').length, 1);
+  assert.equal(results.filter(r => r.status === 'rejected').length, 1);
+  const winner = results[0].status === 'fulfilled' ? 'race-a' : 'race-b';
+  const loser = winner === 'race-a' ? 'race-b' : 'race-a';
+  const key = await getDoc(doc(db(), 'donor_phone_keys/01700000000'));
+  assert.equal(key.data().donor_id, winner);
+  assert.equal((await getDoc(doc(db(), `donor_submissions/${winner}`))).data().status, 'approved');
+  assert.equal((await getDoc(doc(db(), `donor_submissions/${loser}`))).data().status, 'pending');
+  await assertFails(getDoc(doc(db(), `donors/${loser}`)));
+  await assertFails(deleteDoc(doc(db(), 'donor_phone_keys/01700000000')));
+  await assertFails(updateDoc(doc(db(), 'donor_phone_keys/01700000000'), { donor_id: loser }));
+});
+
+test('phone changes and forged registry readiness remain forbidden to client', async () => {
+  await seedBusiness();
+  await seed('users/person-own', user({ access_role: 'leader' }));
+  await assertFails(updateDoc(doc(db(), 'donors/active'), {
+    phone: '01712345678', ...metadata(),
+  }));
+  await assertFails(setDoc(doc(db(), 'system_config/donor_phone_registry'),
+    { ready: true, schema_version: 1 }));
+  await assertFails(deleteDoc(doc(db(), 'system_config/donor_phone_registry')));
+  await assertFails(getDocs(collection(db(), 'donor_phone_keys')));
 });
 
 test('leader rejection remains reviewable and never creates an active donor', async () => {
