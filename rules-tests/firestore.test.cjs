@@ -3,7 +3,7 @@ const { before, after, beforeEach, test } = require('node:test');
 const assert = require('node:assert/strict');
 const { initializeTestEnvironment, assertSucceeds, assertFails } = require('@firebase/rules-unit-testing');
 const { doc, collection, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where,
-  writeBatch, serverTimestamp, Timestamp, deleteField, orderBy, getCountFromServer, limit, startAfter, documentId } = require('firebase/firestore');
+  writeBatch, serverTimestamp, Timestamp, deleteField, orderBy, getCountFromServer, limit, startAfter, startAt, endAt, documentId } = require('firebase/firestore');
 
 const projectId = 'demo-rokter-badhon';
 let env;
@@ -643,6 +643,39 @@ test('donor directory cursor, blood-group and active phone lookup remain accessi
   assert.deepEqual(byPhone.docs.map(d => d.id), ['a-first']);
   await assertFails(getDocs(query(collection(c, 'donors'),
     where('phone', '==', '01711111111'), limit(2))));
+});
+
+test('indexed donor lookup searches complete name prefixes and exact phones, never inactive donors', async () => {
+  await seedBusiness();
+  await seed('users/person-own', user({ access_role: 'member' }));
+  for (const [id, name, phone, active] of [
+    ['prefix-a', 'Rahim A', '01712345678', true],
+    ['prefix-b', 'Rahim B', '01712345679', true],
+    ['different', 'Karim', '01712345670', true],
+    ['inactive-prefix', 'Rahim Secret', '01712345677', false],
+  ]) {
+    await seed(`donors/${id}`, donor({
+      name, phone, blood_group: 'O+', active,
+      created_at: stamp, updated_at: stamp,
+    }));
+  }
+  const c = db();
+  const prefix = query(collection(c, 'donors'),
+    where('active', '==', true), where('blood_group', '==', 'O+'),
+    orderBy('name'), startAt('Rahim'), endAt('Rahim\\uf8ff'));
+  const first = await assertSucceeds(getDocs(query(prefix, limit(1))));
+  assert.equal(first.docs[0].id, 'prefix-a');
+  const second = await assertSucceeds(getDocs(query(prefix,
+    startAfter(first.docs[0]), limit(2))));
+  assert.deepEqual(second.docs.map(x => x.id), ['prefix-b']);
+  const phone = await assertSucceeds(getDocs(query(
+    collection(c, 'donors'), where('active', '==', true),
+    where('blood_group', '==', 'O+'),
+    where('phone', '==', '01712345678'), orderBy('name'), limit(2),
+  )));
+  assert.deepEqual(phone.docs.map(x => x.id), ['prefix-a']);
+  await assertFails(getDocs(query(collection(c, 'donors'),
+    where('phone', '==', '01712345677'), orderBy('name'), limit(2))));
 });
 
 const expectRead = (allowed, promise) => allowed ? assertSucceeds(promise) : assertFails(promise);
