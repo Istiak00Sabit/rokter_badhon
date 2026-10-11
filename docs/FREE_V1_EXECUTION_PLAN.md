@@ -132,11 +132,22 @@ Updated: 2026-10-10. Target: Android APK on Firebase Spark (no Blaze upgrade, Cl
 - New Flutter controller tests cover retry without duplicates, blood-group switch and stale request protection. Firestore Emulator tests cover ordered pages, server-side group filtering and the exact active phone check without expanding Rules.
 - This is source-only work: no Committee roster edits, production Firebase writes, Rules/Index deployment, or Android physical-device acceptance have been performed. Check the final Batch 5 CI before marking automated verification successful.
 
+## Stage 9 Batch 6 — indexed lookup and donor identity release safeguards
+
+- Batch 5 GitHub Actions CI passed for `aeffc06e` (run `38114550592`), including Flutter/backend/Rules checks and Android debug APK build.
+- Donor Directory now offers an explicit **server-side indexed lookup**: exact normalized `01XXXXXXXXX` phone (`+880` / `880` accepted) OR a **case-sensitive stored-name prefix**, both with active-only status, optional blood-group filter, 30-record pages and cursor retry. Editing the text without submitting still previews loaded-page substrings; arbitrary middle-name substrings are **not** globally indexed. Readable UI hints distinguish these scopes.
+- Source composite indexes were added for active phone+name lookups, with and without blood-group filter; these indexes are **not yet deployed to production**. Failed-precondition/index errors are not silently swallowed.
+- Emulator rules regressions check indexed query scopes against inactive donors. Dart regression tests validate normalization of complete phones and reject numeric partials. Bangla/English texts were added.
+- The trusted `deactivate-donor` CLI now requires `--confirm-donor-id` matching `--donor-id` and a trimmed reason of at least ten characters. It still uses the existing audited transaction; no direct client delete or phone-key release is permitted. It remains emulator-only.
+- Added a read-only `audit-donor-phones` operator command and `donor_phone_plan.js` for reviewing **all historical active and inactive** donor phones in bounded pages, including Bangladesh/Bangla digit normalization, malformed numbers and cross-format collisions. Unit tests reject a truncated audit as complete. This command only runs against the local Firebase emulator and **does not migrate or reserve identities**.
+- **Unresolved critical release gate:** the Flutter approval transaction is still allowed without a canonical `donor_phone_keys` reservation. Concurrent approvals of different submissions can therefore duplicate a phone, and the legacy database has not been backfilled. Do not enable a production uniqueness guarantee or switch approvals to the new locking model until an owner-reviewed migration, updated Firestore transaction + Rules, concurrency tests, and production deployment are expressly authorized.
+- No production Firebase data, official committee roster, roles, indexes or Rules were deployed or mutated. Physical Android-device end-to-end acceptance is still required. Verify Batch 6 final CI before marking automated verification complete.
+
 ## Next concrete tasks
 
 1. Review the new Stage 9 documentation/test CI result, then perform the listed emulator-configured Android-phone MVP checks and record redacted evidence.
-2. Verify Stage 9 Batch 4 media pagination CI, then finish remaining donor search/duplicate/archive gaps and secure operator-only editorial transitions without weakening Rules.
-3. Close remaining global donor substring-search and fully atomic phone-key uniqueness gates; retain trusted, audited archive (emulator-only until separate production authorization).
+2. Review Batch 6 indexed donor search CI and complete remaining secure operator-only publishing transitions without weakening Rules.
+3. Owner-review the donor phone-key migration and transaction-safe approval cutover (including concurrency and Rules tests); do not claim globally indexed middle-substring matching.
 4. Obtain explicit owner review/approval for live Rules, admin identity and any 51-member import; source CI never changes Firebase.
 5. Complete Stage 9 physical-device acceptance before treating the signed Stage 10 release as ready.
 
