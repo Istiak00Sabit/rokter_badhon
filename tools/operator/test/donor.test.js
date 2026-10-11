@@ -22,7 +22,8 @@ function args(role = 'developer_admin', donorChanges = {}, entries = []) {
     ]),
     auth: new FakeAuth([['operator-uid', { uid: 'operator-uid', emailVerified: true, disabled: false }]]),
     serverTimestamp: () => SERVER_TIME,
-    operatorUid: 'operator-uid', donorId: 'donor-id', operationId: 'operation-id',
+    operatorUid: 'operator-uid', donorId: 'donor-id',
+    confirmDonorId: 'donor-id', operationId: 'operation-id',
     reason: 'Reviewed donor archive.',
   };
 }
