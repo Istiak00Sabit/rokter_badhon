@@ -16,7 +16,9 @@ class _UnusedFirestore implements FirebaseFirestore {
 
 class _TestAuth implements AuthController {
   @override
-  final Rx<UserModel?> currentUser = Rx<UserModel?>(UserModel(
+  final Rx<UserModel?> currentUser;
+  _TestAuth({String role = 'member'})
+    : currentUser = Rx<UserModel?>(UserModel(
     id: 'synthetic-user',
     name: 'Synthetic Member',
     phone: '01700000000',
@@ -25,7 +27,7 @@ class _TestAuth implements AuthController {
     profession: null,
     address: null,
     photoUrl: null,
-    accessRole: 'member',
+    accessRole: role,
     active: true,
     loginEnabled: true,
     preferredLanguage: null,
@@ -129,6 +131,49 @@ class _PagedRequestService extends BloodRequestService {
   }
 }
 
+class _TerminalPagedRequestService extends BloodRequestService {
+  _TerminalPagedRequestService() : super(firestore: _UnusedFirestore());
+
+  bool failCancelledOnce = true;
+  int fulfilledNextCalls = 0;
+  int cancelledNextCalls = 0;
+
+  @override
+  Future<BloodRequestPage> getByStatusPage(
+    String status, {
+    DocumentSnapshot<Map<String, dynamic>>? after,
+    int pageSize = 30,
+  }) async {
+    if (status == 'active') {
+      return const BloodRequestPage(
+        items: <BloodRequestModel>[], cursor: null, hasMore: false,
+      );
+    }
+    if (after == null) {
+      final firstId = status == 'fulfilled' ? 'fulfilled-new' : 'cancelled-new';
+      return BloodRequestPage(
+        items: [_request(firstId, status, status == 'fulfilled' ? 40 : 30)],
+        cursor: _FakeCursor(firstId), hasMore: true,
+      );
+    }
+    if (status == 'fulfilled') {
+      fulfilledNextCalls++;
+    } else if (status == 'cancelled') {
+      cancelledNextCalls++;
+      if (failCancelledOnce) {
+        failCancelledOnce = false;
+        throw const BloodRequestServiceException('network_unavailable');
+      }
+    } else {
+      throw StateError('Unexpected request status');
+    }
+    return BloodRequestPage(
+      items: [_request('$status-old', status, status == 'fulfilled' ? 20 : 10)],
+      cursor: _FakeCursor('$status-old'), hasMore: false,
+    );
+  }
+}
+
 void main() {
   const input = BloodRequestInput(
     bloodGroup: 'O+',
@@ -196,6 +241,31 @@ void main() {
         ['request-new', 'request-old']);
     expect(controller.activeHasMore.value, isFalse);
     expect(service.calls, ['active', 'active', 'active']);
+  });
+
+  test('terminal batch retry never advances one status cursor after another fails', () async {
+    final service = _TerminalPagedRequestService();
+    final controller = BloodRequestController(
+      service: service, auth: _TestAuth(role: 'leader'),
+    );
+    await controller.load();
+    expect(controller.terminal.map((value) => value.id),
+        ['fulfilled-new', 'cancelled-new']);
+    expect(controller.terminalHasMore.value, isTrue);
+
+    await controller.loadMoreTerminal();
+    expect(controller.terminalPageErrorCode.value, 'network_unavailable');
+    expect(controller.terminal.map((value) => value.id),
+        ['fulfilled-new', 'cancelled-new']);
+    expect(controller.terminalHasMore.value, isTrue);
+
+    await controller.loadMoreTerminal();
+    expect(controller.terminalPageErrorCode.value, isEmpty);
+    expect(controller.terminal.map((value) => value.id),
+        ['fulfilled-new', 'cancelled-new', 'fulfilled-old', 'cancelled-old']);
+    expect(controller.terminalHasMore.value, isFalse);
+    expect(service.fulfilledNextCalls, 2);
+    expect(service.cancelledNextCalls, 2);
   });
 
 }
