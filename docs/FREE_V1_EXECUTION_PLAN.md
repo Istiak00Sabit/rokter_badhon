@@ -154,6 +154,15 @@ Updated: 2026-10-10. Target: Android APK on Firebase Spark (no Blaze upgrade, Cl
 - See `docs/DONOR_PHONE_CUTOVER.md` for the necessary owner-controlled full-history audit, cleanup, protected migration/backfill, Rules/index rollout and readiness process. **No production registry activation, historical backfill, Rules deployment, phone-key mutation, Android device E2E or Release acceptance was performed.**
 - Batch 7 CI for its final source commit must pass; this remains a **production rollout blocker** until full historical backfill, read-back integrity and owner-approved physical-device verification.
 
+## Stage 9 Batch 8 — production readiness without production mutation
+
+- The final Stage 9 Batch 7 GitHub Actions run `38130603648` completed successfully, including **Flutter analyze/tests, backend/operator tests, Firestore Rules tests, Android debug APK and artifact upload**.
+- Added `verifyDonorPhoneRegistry` and the emulator-only `audit-donor-registry` CLI command. It checks **all historical active and archived donor identities** against `donor_phone_keys`, detects missing/orphan/mismatched/noncanonical/duplicate entries and invalid readiness schema, and prints **counts only** (no private phones or donor IDs). A partial page scan is an error, never a green result. The older `audit-donor-phones` CLI output is now similarly redacted.
+- Added an explicit, **empty-database-only** `seed-empty-demo-donor-registry` fixture, hard-restricted to `demo-rokter-badhon` with both emulators connected. It allows local physical-phone approval tests but **refuses any existing donor or phone key history** and never migrates/deletes history or touches production. `tools/run_local_phone.ps1` invokes it before installing the locally configured debug APK.
+- Unit tests cover donor/key mismatches, archived phone ownership, legacy formats, privacy-safe reports, bounded scan failures, repeatable demo setup, non-demo target denial and unknown existing registry rejection.
+- New `docs/STAGE9_ANDROID_ACCEPTANCE_MATRIX.md` captures required Android hardware tests as **UNTESTED** (not silently passed) and maintains a complete NO-GO production blocker list.
+- Batch 8 latest GitHub CI is required before marking the source and emulator-side work successful. **No real phone was tested, no live Firebase data read/backfill/write/deployed, no production Rules/indexes/registry activated, no committee import and no signed release created**. Spark Free Plan and 51-person Committee remain unchanged.
+
 ## Next concrete tasks
 
 1. Review the new Stage 9 documentation/test CI result, then perform the listed emulator-configured Android-phone MVP checks and record redacted evidence.
