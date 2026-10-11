@@ -34,7 +34,7 @@ class _BloodRequestScreenState extends State<BloodRequestScreen> {
     floatingActionButton: FloatingActionButton.extended(
       onPressed: () async {
         await Get.to(() => CreateBloodRequestScreen(controller: controller));
-        controller.load();
+        // Successful submission already refreshes the list in create().
       },
       backgroundColor: AppColors.primary,
       foregroundColor: AppColors.white,
@@ -63,6 +63,13 @@ class _BloodRequestScreenState extends State<BloodRequestScreen> {
               _Empty(text: 'no_active_requests'.tr)
             else
               ...controller.active.map((value) => _RequestCard(value: value)),
+            if (controller.activeHasMore.value ||
+                controller.activePageErrorCode.value.isNotEmpty)
+              _RequestPageControl(
+                isLoading: controller.isLoadingMoreActive.value,
+                error: controller.activePageErrorCode.value,
+                onLoad: controller.loadMoreActive,
+              ),
             if (controller.canViewTerminal &&
                 controller.terminal.isNotEmpty) ...[
               Padding(
@@ -77,10 +84,47 @@ class _BloodRequestScreenState extends State<BloodRequestScreen> {
               ),
               ...controller.terminal.map((value) => _RequestCard(value: value)),
             ],
+            if (controller.canViewTerminal &&
+                (controller.terminalHasMore.value ||
+                 controller.terminalPageErrorCode.value.isNotEmpty))
+              _RequestPageControl(
+                isLoading: controller.isLoadingMoreTerminal.value,
+                error: controller.terminalPageErrorCode.value,
+                onLoad: controller.loadMoreTerminal,
+              ),
           ],
         ),
       );
     }),
+  );
+}
+
+class _RequestPageControl extends StatelessWidget {
+  final bool isLoading;
+  final String error;
+  final Future<void> Function() onLoad;
+
+  const _RequestPageControl({
+    required this.isLoading,
+    required this.error,
+    required this.onLoad,
+  });
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 12),
+    child: Column(
+      children: [
+        if (error.isNotEmpty) Text(_error(error).tr),
+        if (isLoading)
+          const CircularProgressIndicator()
+        else
+          OutlinedButton(
+            onPressed: onLoad,
+            child: Text(error.isNotEmpty ? 'retry'.tr : 'load_more'.tr),
+          ),
+      ],
+    ),
   );
 }
 
