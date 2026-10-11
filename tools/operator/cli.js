@@ -22,6 +22,7 @@ import { AdmissionError } from './src/policy.js';
 import { rolloverCommitteeTerm } from './src/committee_term.js';
 import { deactivateDonor } from './src/donor.js';
 import { auditDonorPhoneIdentities, auditDonorPhoneRegistry } from './src/donor_phone_plan.js';
+import { seedEmptyDemoDonorRegistry } from './src/demo_donor_registry.js';
 import { correctDonation, recordDonation } from './src/donation.js';
 import { cancelBloodRequest, editBloodRequest, fulfillBloodRequest } from './src/blood_request.js';
 import { archiveNotice, createNotice, editNotice, publishNotice } from './src/notice.js';
@@ -339,6 +340,13 @@ async function main() {
     });
   } else if (command === 'audit-donor-phones') {
     result = await auditDonorPhoneIdentities({ db: dependencies.db });
+  } else if (command === 'seed-empty-demo-donor-registry') {
+    result = await seedEmptyDemoDonorRegistry({
+      db: dependencies.db,
+      projectId,
+      firestoreEmulatorHost: process.env.FIRESTORE_EMULATOR_HOST,
+      authEmulatorHost: process.env.FIREBASE_AUTH_EMULATOR_HOST,
+    });
   } else if (command === 'audit-donor-registry') {
     result = await auditDonorPhoneRegistry({ db: dependencies.db });
   } else if (command === 'deactivate-donor') {
