@@ -59,6 +59,21 @@ test('lower roles, inactive donor, malformed donor, and reused operation deny wi
   await rejectsCode(deactivateDonor(args('leader', {}, [['audit_logs/operation-id', { action: 'other' }]])), 'operation_reused');
 });
 
+test('donor archive requires matching explicit ID confirmation and an audit reason', async () => {
+  const wrongId = args();
+  wrongId.confirmDonorId = 'unrelated-donor';
+  await rejectsCode(deactivateDonor(wrongId), 'confirmation_required');
+  assert.equal(wrongId.db.documents.get('donors/donor-id').active, true);
+  assert.equal(wrongId.db.documents.has('audit_logs/operation-id'), false);
+
+  for (const reason of ['', 'too short', ' space padded reason ']) {
+    const input = args();
+    input.reason = reason;
+    await rejectsCode(deactivateDonor(input), 'invalid_argument');
+    assert.equal(input.db.documents.get('donors/donor-id').active, true);
+  }
+});
+
 test('donor schema is exact and contains no legacy aliases', () => {
   assert.equal(donorSchemaFields.size, 18);
   for (const field of ['photo', 'upazilla', 'last_donated']) assert.equal(donorSchemaFields.has(field), false);
