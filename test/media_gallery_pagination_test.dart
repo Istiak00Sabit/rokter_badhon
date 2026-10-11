@@ -150,12 +150,17 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Image first'), findsOneWidget);
     expect(find.text('load_more'), findsOneWidget);
+    // The event detail list can place Load More below the 600px test viewport.
+    await tester.drag(find.byType(ListView).first, const Offset(0, -250));
+    await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('load_more'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('load_more'));
     await tester.pumpAndSettle();
     expect(find.text('Image first'), findsOneWidget);
     expect(find.text('retry'), findsOneWidget);
     await tester.ensureVisible(find.text('retry'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('retry'));
     await tester.pumpAndSettle();
     expect(find.text('Image first'), findsOneWidget);
@@ -201,6 +206,7 @@ void main() {
     expect(find.text('retry'), findsOneWidget);
     expect(find.text('Image first'), findsOneWidget);
     await tester.ensureVisible(find.text('retry'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('retry'));
     await tester.pumpAndSettle();
     expect(find.text('Image second'), findsOneWidget);
