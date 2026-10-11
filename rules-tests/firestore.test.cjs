@@ -740,7 +740,8 @@ for (const role of roles) {
     }
     // New donors require an atomic approved submission; never a standalone add.
     await assertFails(setDoc(doc(c, 'donors/new'), donor()));
-    await expectRead(history, updateDoc(doc(c, 'donors/active'), { phone: '00000000001', ...metadata() }));
+    await expectRead(history, updateDoc(doc(c, 'donors/active'), { name: 'Authorized Edit', ...metadata() }));
+    await assertFails(updateDoc(doc(c, 'donors/active'), { phone: '01712345678', ...metadata() }));
     await assertFails(updateDoc(doc(c, 'donors/hidden'), { phone: '00000000001', ...metadata() }));
     for (const extra of [{ active: false }, { total_donations: 1 }, { last_donated_at: stamp },
       { linked_user_id: 'person-own' }, { created_by: 'person-other' }, { created_at: serverTimestamp() },
@@ -778,7 +779,11 @@ test('leader cannot fabricate donors directly; existing donor edits remain const
   for (const field of ['name','phone','blood_group','gender','photo_url','village','union','upazila','district','profession']) {
     await assertFails(updateDoc(ref, { [field]: [], ...metadata() }));
     await assertFails(updateDoc(ref, { [field]: deleteField(), ...metadata() }));
-    await assertSucceeds(updateDoc(ref, { [field]: field === 'photo_url' ? null : 'Changed', ...metadata() }));
+    if (field === 'phone') {
+      await assertFails(updateDoc(ref, { phone: '01712345678', ...metadata() }));
+    } else {
+      await assertSucceeds(updateDoc(ref, { [field]: field === 'photo_url' ? null : 'Changed', ...metadata() }));
+    }
   }
   await assertFails(setDoc(ref, donor())); // Replacing creation timestamps is not a profile edit.
   await seed('donors/legacy-invalid', donor({ phone: 42, created_at: stamp, updated_at: stamp }));
