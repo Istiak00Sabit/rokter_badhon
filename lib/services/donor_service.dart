@@ -23,6 +23,20 @@ class PendingDonorPage {
   });
 }
 
+/// A bounded active donor directory page. Only scanned/loaded records are
+/// searchable locally until the user requests remaining pages.
+class ActiveDonorPage {
+  final List<DonorModel> items;
+  final DocumentSnapshot<Map<String, dynamic>>? cursor;
+  final bool hasMore;
+
+  const ActiveDonorPage({
+    required this.items,
+    required this.cursor,
+    required this.hasMore,
+  });
+}
+
 class DonorService {
   final FirebaseFirestore _firestore;
 
@@ -211,39 +225,57 @@ class DonorService {
     }
   }
 
-  Future<List<DonorModel>> getAllDonors() => _queryActiveDonors();
-
-  Future<List<DonorModel>> getDonorsByBloodGroup(String bloodGroup) {
-    if (bloodGroup.trim().isEmpty) {
-      throw const DonorDataException('blood_group is required.');
+  Future<ActiveDonorPage> getActiveDonorsPage({
+    String? bloodGroup,
+    DocumentSnapshot<Map<String, dynamic>>? after,
+    int pageSize = 30,
+  }) async {
+    if (pageSize < 1 || pageSize > 100) {
+      throw const DonorServiceException('invalid_limit');
     }
-    return _queryActiveDonors(bloodGroup: bloodGroup);
-  }
-
-  Future<List<DonorModel>> _queryActiveDonors({String? bloodGroup}) async {
-    Query<Map<String, dynamic>> query = _firestore
-        .collection(AppConstants.donorsCollection)
-        .where('active', isEqualTo: true);
-    if (bloodGroup != null) {
-      query = query.where('blood_group', isEqualTo: bloodGroup);
+    if (bloodGroup != null &&
+        !AppConstants.bloodGroups.contains(bloodGroup)) {
+      throw const DonorDataException('Unknown blood group filter.');
     }
     try {
-      final snapshot = bloodGroup == null
-          ? await query.orderBy('name').get()
-          : await query.get();
-      final donors = snapshot.docs
-          .map((doc) => DonorModel.fromMap(doc.data(), doc.id))
-          .toList();
+      Query<Map<String, dynamic>> query = _firestore
+          .collection(AppConstants.donorsCollection)
+          .where('active', isEqualTo: true);
       if (bloodGroup != null) {
-        donors.sort((left, right) => left.name.compareTo(right.name));
+        query = query.where('blood_group', isEqualTo: bloodGroup);
       }
-      return List.unmodifiable(donors);
+      query = query.orderBy('name');
+      if (after != null) query = query.startAfterDocument(after);
+      final snapshot = await query.limit(pageSize + 1).get();
+      final docs = snapshot.docs.take(pageSize).toList(growable: false);
+      final values = docs
+          .map((doc) => DonorModel.fromMap(doc.data(), doc.id))
+          .toList(growable: false);
+      if (values.any((item) =>
+          !item.active ||
+          (bloodGroup != null && item.bloodGroup != bloodGroup))) {
+        throw const DonorDataException(
+          'Donor query returned an unapproved record.',
+        );
+      }
+      return ActiveDonorPage(
+        items: List<DonorModel>.unmodifiable(values),
+        cursor: docs.isEmpty ? null : docs.last,
+        hasMore: snapshot.docs.length > pageSize,
+      );
     } on DonorDataException {
       rethrow;
     } on FirebaseException catch (error) {
       throw DonorServiceException(_safeCode(error.code));
     }
   }
+
+  /// Compatibility API: one bounded page, not a full-directory search.
+  Future<List<DonorModel>> getAllDonors() async =>
+      (await getActiveDonorsPage()).items;
+
+  Future<List<DonorModel>> getDonorsByBloodGroup(String bloodGroup) async =>
+      (await getActiveDonorsPage(bloodGroup: bloodGroup)).items;
 
   static String _safeCode(String code) => switch (code) {
     'permission-denied' => 'permission_denied',
