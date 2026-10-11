@@ -108,7 +108,7 @@ Auth identities):
 ```powershell
 $env:FIRESTORE_EMULATOR_HOST='127.0.0.1:8080'
 $env:FIREBASE_AUTH_EMULATOR_HOST='127.0.0.1:9099'
-node tools/operator/cli.js seed-official-committee --project-id demo-rokterbadhon
+node tools/operator/cli.js seed-official-committee --project-id demo-rokter-badhon
 ```
 
 To exercise the complete committee Auth provisioning flow locally instead,
