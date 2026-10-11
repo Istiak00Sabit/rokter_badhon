@@ -309,6 +309,24 @@ class DonorService {
     }
   }
 
+  /// Canonicalize a *complete* Bangladeshi phone; null means name search.
+  /// Invalid partial/other numeric queries fail instead of returning false
+  /// negatives from a misleading "whole directory" search.
+  static String? normalizeSearchPhone(String search) {
+    final term = search.trim();
+    if (!RegExp(r'^[+0-9\s-]+$').hasMatch(term)) return null;
+    final compact = term.replaceAll(RegExp(r'[\s-]'), '');
+    final phone = compact.startsWith('+880')
+        ? '0' + compact.substring(4)
+        : compact.startsWith('880')
+            ? '0' + compact.substring(3)
+            : compact;
+    if (!RegExp(r'^01[3-9][0-9]{8}$').hasMatch(phone)) {
+      throw const DonorDataException('Use a complete BD mobile phone number.');
+    }
+    return phone;
+  }
+
   /// Exact normalized BD-phone lookup or case-sensitive name-prefix lookup.
   /// Indexed across the complete chosen active directory, with cursor paging.
   /// Does NOT pretend to support arbitrary substring or fuzzy matching.
@@ -328,19 +346,7 @@ class DonorService {
     if (bloodGroup != null && !AppConstants.bloodGroups.contains(bloodGroup)) {
       throw const DonorDataException('Unknown blood group filter.');
     }
-    final looksLikePhone = RegExp(r'^[+0-9\s-]+$').hasMatch(term);
-    String? phone;
-    if (looksLikePhone) {
-      final compact = term.replaceAll(RegExp(r'[\s-]'), '');
-      phone = compact.startsWith('+880')
-          ? '0' + compact.substring(4)
-          : compact.startsWith('880')
-              ? '0' + compact.substring(3)
-              : compact;
-      if (!RegExp(r'^01[3-9][0-9]{8}$').hasMatch(phone)) {
-        throw const DonorDataException('Use a complete BD mobile phone number.');
-      }
-    }
+    final phone = normalizeSearchPhone(term);
     try {
       Query<Map<String, dynamic>> query = _firestore
           .collection(AppConstants.donorsCollection)
