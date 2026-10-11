@@ -105,10 +105,19 @@ Updated: 2026-10-10. Target: Android APK on Firebase Spark (no Blaze upgrade, Cl
 - Code changes are committed on `main`. This is **not** evidence of physical-device validation or real Firebase deployment. CI for this batch must be evaluated against its final commit before marking it passed.
 - Remaining Stage 9 work includes bounded Notice/Event/media lists, donor search/archive gaps and real Android-phone acceptance.
 
+## Stage 9 Batch 3 — bounded Notice and Event lists
+
+- Notice published/draft/archived lists now use 30-record pages and one lookahead with Firestore snapshot cursors. Ordinary admitted users fetch **published only**; only developer_admin/leader may fetch draft/archived. Multiple review statuses commit cursor updates together so a failed second status cannot drop records from Retry.
+- Event lists now paginate **active** and independently **hidden** events with separate cursors. Only developer_admin/leader fetch hidden events. The existing status filters, event-date ordering and source composite indexes remain unchanged.
+- Notice/Event screens display Load More and retryable later-page errors while preserving records already shown. Duplicate IDs from an overlapping page are ignored; first-page errors remain distinct from genuinely empty lists.
+- Flutter controller regression tests cover member/reviewer access, multi-status failure recovery, and active/hidden cursor behavior. Firestore Rules emulator tests check two-page status-scoped queries for published, draft, active and hidden states.
+- **Still outstanding:** Event and Committee media/gallery reads are not yet paginated. Trusted event/notice publishing remains outside the Flutter client. Device/production acceptance, deployment and official committee import remain owner-controlled and unperformed by this batch.
+- CI for the final batch commit must pass before marking code verification complete.
+
 ## Next concrete tasks
 
 1. Review the new Stage 9 documentation/test CI result, then perform the listed emulator-configured Android-phone MVP checks and record redacted evidence.
-2. Finish bounded, complete Notice / Event / media queries and trusted status transitions without widening Firestore Rules or silently hiding records; Blood Request status paging is code-complete pending CI/device acceptance.
+2. Confirm Stage 9 Batch 3 CI, finish bounded Event/Committee media galleries and operator-only editorial transitions without weakening Firestore Rules; Blood Request, Notice and Event list paging are coded pending device acceptance.
 3. Return to Stage 6's accurate paginated donor search, duplicate detection and trusted archive; do not silently truncate emergency search results.
 4. Obtain explicit owner review/approval for live Rules, admin identity and any 51-member import; source CI never changes Firebase.
 5. Complete Stage 9 physical-device acceptance before treating the signed Stage 10 release as ready.
