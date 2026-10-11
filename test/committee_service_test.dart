@@ -203,6 +203,10 @@ void main() {
       expect(source, contains(".where('active', isEqualTo: false)"));
       expect(source, contains(".where('term_id', isEqualTo: termId)"));
       expect(source, contains(".collection(mediaCollection)"));
+      expect(source, contains('startAfterDocument(after)'));
+      expect(source, contains('query.limit(pageSize + 1)'));
+      expect(source, contains('galleryCursor: galleryPage.cursor'));
+      expect(source, contains('galleryHasMore: galleryPage.hasMore'));
       expect(source, contains(".orderBy('sort_order')"));
       expect(source, contains('FieldPath.documentId'));
       expect(source, isNot(contains(".collection('users')")));
