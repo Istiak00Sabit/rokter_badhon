@@ -1,68 +1,267 @@
 {
   "indexes": [
-    { "collectionGroup": "committee_terms", "queryScope": "COLLECTION", "fields": [
-      { "fieldPath": "active", "order": "ASCENDING" },
-      { "fieldPath": "end_year", "order": "DESCENDING" }
-    ] },
-    { "collectionGroup": "committee_assignments", "queryScope": "COLLECTION", "fields": [
-      { "fieldPath": "term_id", "order": "ASCENDING" },
-      { "fieldPath": "active", "order": "ASCENDING" }
-    ] },
-    { "collectionGroup": "committee_assignments", "queryScope": "COLLECTION", "fields": [
-      { "fieldPath": "user_id", "order": "ASCENDING" },
-      { "fieldPath": "active", "order": "ASCENDING" }
-    ] },
-    { "collectionGroup": "committee_assignments", "queryScope": "COLLECTION", "fields": [
-      { "fieldPath": "user_id", "order": "ASCENDING" },
-      { "fieldPath": "term_id", "order": "ASCENDING" }
-    ] },
-    { "collectionGroup": "committee_media", "queryScope": "COLLECTION", "fields": [
-      { "fieldPath": "term_id", "order": "ASCENDING" },
-      { "fieldPath": "active", "order": "ASCENDING" },
-      { "fieldPath": "sort_order", "order": "ASCENDING" }
-    ] },
-    { "collectionGroup": "events", "queryScope": "COLLECTION", "fields": [
-      { "fieldPath": "active", "order": "ASCENDING" },
-      { "fieldPath": "event_date", "order": "DESCENDING" }
-    ] },
-    { "collectionGroup": "event_media", "queryScope": "COLLECTION", "fields": [
-      { "fieldPath": "event_id", "order": "ASCENDING" },
-      { "fieldPath": "active", "order": "ASCENDING" },
-      { "fieldPath": "sort_order", "order": "ASCENDING" }
-    ] },
-    { "collectionGroup": "donors", "queryScope": "COLLECTION", "fields": [
-      { "fieldPath": "active", "order": "ASCENDING" },
-      { "fieldPath": "name", "order": "ASCENDING" }
-    ] },
-    { "collectionGroup": "donors", "queryScope": "COLLECTION", "fields": [
-      { "fieldPath": "active", "order": "ASCENDING" },
-      { "fieldPath": "blood_group", "order": "ASCENDING" },
-      { "fieldPath": "name", "order": "ASCENDING" }
-    ] },
-    { "collectionGroup": "donors", "queryScope": "COLLECTION", "fields": [
-      { "fieldPath": "active", "order": "ASCENDING" },
-      { "fieldPath": "phone", "order": "ASCENDING" }
-    ] },
-    { "collectionGroup": "donor_submissions", "queryScope": "COLLECTION", "fields": [
-      { "fieldPath": "status", "order": "ASCENDING" },
-      { "fieldPath": "submitted_at", "order": "ASCENDING" }
-    ] },
-    { "collectionGroup": "donors", "queryScope": "COLLECTION", "fields": [
-      { "fieldPath": "active", "order": "ASCENDING" },
-      { "fieldPath": "total_donations", "order": "DESCENDING" }
-    ] },
-    { "collectionGroup": "blood_requests", "queryScope": "COLLECTION", "fields": [
-      { "fieldPath": "status", "order": "ASCENDING" },
-      { "fieldPath": "created_at", "order": "DESCENDING" }
-    ] },
-    { "collectionGroup": "notices", "queryScope": "COLLECTION", "fields": [
-      { "fieldPath": "status", "order": "ASCENDING" },
-      { "fieldPath": "created_at", "order": "DESCENDING" }
-    ] },
-    { "collectionGroup": "registration_requests", "queryScope": "COLLECTION", "fields": [
-      { "fieldPath": "status", "order": "ASCENDING" },
-      { "fieldPath": "requested_at", "order": "DESCENDING" }
-    ] }
+    {
+      "collectionGroup": "committee_terms",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "active",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "end_year",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "committee_assignments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "term_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "active",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "committee_assignments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "user_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "active",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "committee_assignments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "user_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "term_id",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "committee_media",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "term_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "active",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "sort_order",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "events",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "active",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "event_date",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "event_media",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "event_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "active",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "sort_order",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "donors",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "active",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "name",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "donors",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "active",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "blood_group",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "name",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "donors",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "active",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "phone",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "donor_submissions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "submitted_at",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "donors",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "active",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "total_donations",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "blood_requests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "created_at",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "notices",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "created_at",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "registration_requests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "requested_at",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "donors",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "active",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "phone",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "name",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "donors",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "active",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "blood_group",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "phone",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "name",
+          "order": "ASCENDING"
+        }
+      ]
+    }
   ],
   "fieldOverrides": []
 }
