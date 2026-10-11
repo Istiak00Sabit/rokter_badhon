@@ -340,6 +340,7 @@ async function main() {
     result = await deactivateDonor({
       ...dependencies,
       donorId: options['donor-id'],
+      confirmDonorId: options['confirm-donor-id'],
     });
   } else if (command === 'record-donation') {
     result = await recordDonation({
