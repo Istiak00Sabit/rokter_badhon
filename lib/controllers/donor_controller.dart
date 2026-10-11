@@ -291,6 +291,7 @@ class DonorController extends GetxController {
                 'network_unavailable',
                 'query_unavailable',
                 'malformed_data',
+                'duplicate_donor',
               }.contains(code)
               ? code
               : 'operation_failed')
