@@ -81,6 +81,13 @@ void main() {
       final source = File('lib/services/donor_service.dart').readAsStringSync();
       expect(source, contains(".where('active', isEqualTo: true)"));
       expect(source, contains(".orderBy('name')"));
+      expect(source, contains('getActiveDonorsPage('));
+      expect(source, contains('query.limit(pageSize + 1)'));
+      expect(source, contains('startAfterDocument(after)'));
+      expect(source, contains("where('phone', isEqualTo: phone.trim())"));
+      expect(source, contains('assertNoActivePhoneConflict(submission.donor.phone)'));
+      expect(source, contains('await transaction.get(donorRef)'));
+      expect(source, isNot(contains('transaction.delete(donorRef)')));
       expect(source, contains("'last_donated_at': null"));
       expect(source, contains("'total_donations': 0"));
       expect(source, contains('FieldValue.serverTimestamp()'));
