@@ -31,6 +31,8 @@ class _DonorListScreenState extends State<DonorListScreen> {
     selectedFilter.value = controller.directoryBloodGroup.value.isEmpty
         ? 'all'
         : controller.directoryBloodGroup.value;
+    searchController.text = controller.indexedSearchTerm.value;
+    searchQuery.value = controller.indexedSearchTerm.value;
     // A build/rebuild must never start new Firestore reads.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) controller.loadDonors();
