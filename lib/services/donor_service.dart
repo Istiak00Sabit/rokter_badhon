@@ -43,6 +43,34 @@ class DonorService {
   DonorService({FirebaseFirestore? firestore})
     : _firestore = firestore ?? FirebaseFirestore.instance;
 
+  /// Detect already-active records with the same exact stored phone.
+  /// This is a safety preflight, NOT a transactional uniqueness constraint
+  /// across distinct simultaneous submissions. A trusted phone-identity index
+  /// and migration are required before promising global uniqueness.
+  Future<void> assertNoActivePhoneConflict(
+    String phone, {
+    String? excludingDonorId,
+  }) async {
+    if (phone.trim().isEmpty) {
+      throw const DonorDataException('phone must be non-empty.');
+    }
+    try {
+      final snapshot = await _firestore
+          .collection(AppConstants.donorsCollection)
+          .where('active', isEqualTo: true)
+          .where('phone', isEqualTo: phone.trim())
+          .limit(2)
+          .get();
+      if (snapshot.docs.any((doc) => doc.id != excludingDonorId)) {
+        throw const DonorServiceException('duplicate_donor');
+      }
+    } on DonorServiceException {
+      rethrow;
+    } on FirebaseException catch (error) {
+      throw DonorServiceException(_safeCode(error.code));
+    }
+  }
+
   Future<String> submitDonor({
     required DonorInput input,
     required String actorUserId,
@@ -59,6 +87,8 @@ class DonorService {
     }
 
     try {
+      final fields = input.profileFields();
+      await assertNoActivePhoneConflict(fields['phone'] as String);
       String? assignmentId;
       if (actorRole != AppConstants.roleDeveloperAdmin) {
         final assignments = await _firestore
@@ -77,7 +107,7 @@ class DonorService {
           .collection(AppConstants.donorSubmissionsCollection)
           .doc();
       await reference.set({
-        'donor_payload': input.profileFields(),
+        'donor_payload': fields,
         'committee_assignment_id': assignmentId,
         'submitted_by': actorUserId,
         'submitted_at': FieldValue.serverTimestamp(),
@@ -144,8 +174,13 @@ class DonorService {
         .collection(AppConstants.donorsCollection)
         .doc(submission.id);
     try {
+      await assertNoActivePhoneConflict(submission.donor.phone);
       await _firestore.runTransaction((transaction) async {
         final current = await transaction.get(submissionRef);
+        final existingDonor = await transaction.get(donorRef);
+        if (existingDonor.exists) {
+          throw const DonorServiceException('duplicate_donor');
+        }
         final data = current.data();
         if (!current.exists || data == null) {
           throw const DonorServiceException('submission_missing');
@@ -212,11 +247,15 @@ class DonorService {
     _validateId(donorId, 'donor');
     _validateId(actorUserId, 'actor');
     try {
+      final fields = input.profileFields();
+      await assertNoActivePhoneConflict(
+        fields['phone'] as String, excludingDonorId: donorId,
+      );
       await _firestore
           .collection(AppConstants.donorsCollection)
           .doc(donorId)
           .update({
-            ...input.profileFields(),
+            ...fields,
             'updated_at': FieldValue.serverTimestamp(),
             'updated_by': actorUserId,
           });
