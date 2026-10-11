@@ -99,6 +99,7 @@ class _DonorListScreenState extends State<DonorListScreen> {
                 TextField(
                   controller: searchController,
                   onChanged: (val) => searchQuery.value = val.trim(),
+                  onSubmitted: controller.searchDirectory,
                   decoration: InputDecoration(
                     hintText: 'search_donors'.tr,
                     prefixIcon: const Icon(
@@ -106,20 +107,12 @@ class _DonorListScreenState extends State<DonorListScreen> {
                       color: AppColors.primary,
                       size: 20,
                     ),
-                    suffixIcon: Obx(
-                      () => searchQuery.value.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(
-                                Icons.clear,
-                                color: AppColors.textGrey,
-                                size: 18,
-                              ),
-                              onPressed: () {
-                                searchController.clear();
-                                searchQuery.value = '';
-                              },
-                            )
-                          : const SizedBox(),
+                    suffixIcon: IconButton(
+                      tooltip: 'donor_indexed_search'.tr,
+                      icon: const Icon(Icons.manage_search,
+                          color: AppColors.primary),
+                      onPressed: () =>
+                          controller.searchDirectory(searchController.text),
                     ),
                     filled: true,
                     fillColor: AppColors.background,
@@ -133,6 +126,29 @@ class _DonorListScreenState extends State<DonorListScreen> {
                     ),
                   ),
                 ),
+                const SizedBox(height: 5),
+                Obx(() => Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        controller.indexedSearchTerm.value.isEmpty
+                            ? 'donor_indexed_search_hint'.tr
+                            : 'donor_indexed_search_active'.tr,
+                        style: const TextStyle(
+                          fontSize: 12, color: AppColors.textGrey),
+                      ),
+                    ),
+                    if (controller.indexedSearchTerm.value.isNotEmpty)
+                      TextButton(
+                        onPressed: () {
+                          searchController.clear();
+                          searchQuery.value = '';
+                          controller.searchDirectory('');
+                        },
+                        child: Text('clear_search'.tr),
+                      ),
+                  ],
+                )),
                 const SizedBox(height: 10),
 
                 // Blood group filter chips
@@ -222,17 +238,18 @@ class _DonorListScreenState extends State<DonorListScreen> {
                 );
               }
 
-              // Apply search + filter
+              // The exact indexed result must not be accidentally removed
+              // by local substring filtering (+880 versus 01 or case differences).
+              final serverSearchIsCurrent =
+                  controller.indexedSearchTerm.value.isNotEmpty &&
+                  searchQuery.value == controller.indexedSearchTerm.value;
               final filtered = controller.donors.where((donor) {
-                final matchesSearch =
-                    searchQuery.value.isEmpty ||
+                if (serverSearchIsCurrent) return true;
+                return searchQuery.value.isEmpty ||
                     donor.name.toLowerCase().contains(
                       searchQuery.value.toLowerCase(),
                     ) ||
                     donor.phone.contains(searchQuery.value);
-                // The blood group is filtered on Firestore. Search is a
-                // substring over loaded pages, not a complete global search.
-                return matchesSearch;
               }).toList();
 
               if (filtered.isEmpty &&
