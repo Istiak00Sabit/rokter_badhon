@@ -496,6 +496,74 @@ test('donation history cursor pages remain role protected; active blood request 
   assert.equal(memberNext.docs[0].id, 'active');
 });
 
+test('bounded notices and events pagination keeps role-scoped historical pages', async () => {
+  await seedBusiness();
+  await seed('events/active-new', {
+    title: 'Synthetic New Event', description: null, event_type: 'meeting',
+    event_date: Timestamp.fromMillis(1700000000001), location: null,
+    cover_image_url: null, active: true, created_at: stamp,
+    created_by: 'person-own', updated_at: null, updated_by: null,
+  });
+  await seed('events/hidden-new', {
+    title: 'Synthetic Hidden Event', description: null, event_type: 'meeting',
+    event_date: Timestamp.fromMillis(1700000000001), location: null,
+    cover_image_url: null, active: false, created_at: stamp,
+    created_by: 'person-own', updated_at: null, updated_by: null,
+  });
+  await seed('notices/published-new', {
+    title: 'New Published Notice', body: 'Synthetic Body', important: false,
+    status: 'published', created_by: 'person-own',
+    created_at: Timestamp.fromMillis(1700000000001),
+    updated_by: null, updated_at: null,
+  });
+  await seed('notices/draft-new', {
+    title: 'New Draft Notice', body: 'Synthetic Body', important: false,
+    status: 'draft', created_by: 'person-own',
+    created_at: Timestamp.fromMillis(1700000000001),
+    updated_by: null, updated_at: null,
+  });
+
+  for (const role of ['member', 'leader']) {
+    await seed('users/person-own', user({ access_role: role }));
+    const c = db();
+    const published = query(collection(c, 'notices'),
+      where('status', '==', 'published'), orderBy('created_at', 'desc'));
+    const firstNotice = await assertSucceeds(getDocs(query(published, limit(1))));
+    assert.equal(firstNotice.docs[0].id, 'published-new');
+    const nextNotice = await assertSucceeds(getDocs(query(published,
+      startAfter(firstNotice.docs[0]), limit(1))));
+    assert.equal(nextNotice.docs[0].id, 'published');
+
+    const active = query(collection(c, 'events'),
+      where('active', '==', true), orderBy('event_date', 'desc'));
+    const firstEvent = await assertSucceeds(getDocs(query(active, limit(1))));
+    assert.equal(firstEvent.docs[0].id, 'active-new');
+    const nextEvent = await assertSucceeds(getDocs(query(active,
+      startAfter(firstEvent.docs[0]), limit(1))));
+    assert.equal(nextEvent.docs[0].id, 'active');
+
+    const drafts = query(collection(c, 'notices'),
+      where('status', '==', 'draft'), orderBy('created_at', 'desc'));
+    const hidden = query(collection(c, 'events'),
+      where('active', '==', false), orderBy('event_date', 'desc'));
+    if (role === 'leader') {
+      const firstDraft = await assertSucceeds(getDocs(query(drafts, limit(1))));
+      assert.equal(firstDraft.docs[0].id, 'draft-new');
+      const nextDraft = await assertSucceeds(getDocs(query(drafts,
+        startAfter(firstDraft.docs[0]), limit(1))));
+      assert.equal(nextDraft.docs[0].id, 'draft');
+      const firstHidden = await assertSucceeds(getDocs(query(hidden, limit(1))));
+      assert.equal(firstHidden.docs[0].id, 'hidden-new');
+      const nextHidden = await assertSucceeds(getDocs(query(hidden,
+        startAfter(firstHidden.docs[0]), limit(1))));
+      assert.equal(nextHidden.docs[0].id, 'hidden');
+    } else {
+      await assertFails(getDocs(query(drafts, limit(1))));
+      await assertFails(getDocs(query(hidden, limit(1))));
+    }
+  }
+});
+
 const expectRead = (allowed, promise) => allowed ? assertSucceeds(promise) : assertFails(promise);
 for (const role of roles) {
   test(`${role}: business read audiences, parents and constrained queries`, async () => {
