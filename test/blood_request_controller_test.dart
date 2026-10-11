@@ -54,10 +54,78 @@ class _RequestService extends BloodRequestService {
   }
 
   @override
-  Future<List<BloodRequestModel>> getByStatus(String status) async {
+  Future<BloodRequestPage> getByStatusPage(
+    String status, {
+    DocumentSnapshot<Map<String, dynamic>>? after,
+    int pageSize = 30,
+  }) async {
     expect(status, 'active');
+    expect(after, isNull);
     loadCalls++;
-    return const <BloodRequestModel>[];
+    return const BloodRequestPage(
+      items: <BloodRequestModel>[], cursor: null, hasMore: false,
+    );
+  }
+}
+
+class _FakeCursor implements DocumentSnapshot<Map<String, dynamic>> {
+  @override
+  final String id;
+  _FakeCursor(this.id);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+BloodRequestModel _request(String id, String status, int minute) {
+  final date = DateTime.utc(2026, 10, 10, 0, minute);
+  return BloodRequestModel(
+    id: id,
+    bloodGroup: 'O+',
+    patientName: null,
+    hospital: 'Synthetic Hospital',
+    location: 'Ghatail',
+    contactName: 'Test Person',
+    contactPhone: '01700000000',
+    requiredAt: null,
+    status: status,
+    createdBy: 'synthetic-user',
+    createdAt: date,
+    fulfilledBy: status == 'fulfilled' ? 'synthetic-leader' : null,
+    fulfilledAt: status == 'fulfilled' ? date : null,
+  );
+}
+
+class _PagedRequestService extends BloodRequestService {
+  _PagedRequestService() : super(firestore: _UnusedFirestore());
+
+  bool failActivePageOnce = true;
+  final calls = <String>[];
+
+  @override
+  Future<BloodRequestPage> getByStatusPage(
+    String status, {
+    DocumentSnapshot<Map<String, dynamic>>? after,
+    int pageSize = 30,
+  }) async {
+    calls.add(status);
+    if (status != 'active') {
+      throw StateError('Member must not fetch terminal requests.');
+    }
+    if (after == null) {
+      return BloodRequestPage(
+        items: [_request('request-new', 'active', 30)],
+        cursor: _FakeCursor('request-new'), hasMore: true,
+      );
+    }
+    if (failActivePageOnce) {
+      failActivePageOnce = false;
+      throw const BloodRequestServiceException('network_unavailable');
+    }
+    return BloodRequestPage(
+      items: [_request('request-old', 'active', 10)],
+      cursor: _FakeCursor('request-old'), hasMore: false,
+    );
   }
 }
 
@@ -107,4 +175,27 @@ void main() {
     expect(controller.isSubmitting.value, false);
     expect(controller.errorCode.value, 'network_unavailable');
   });
+  test('active page failure preserves visible items and retry reads next cursor', () async {
+    final service = _PagedRequestService();
+    final controller = BloodRequestController(
+      service: service, auth: _TestAuth(),
+    );
+    await controller.load();
+    expect(controller.active.map((value) => value.id), ['request-new']);
+    expect(controller.activeHasMore.value, isTrue);
+    expect(controller.terminal, isEmpty);
+
+    await controller.loadMoreActive();
+    expect(controller.activePageErrorCode.value, 'network_unavailable');
+    expect(controller.active.map((value) => value.id), ['request-new']);
+    expect(controller.activeHasMore.value, isTrue);
+
+    await controller.loadMoreActive();
+    expect(controller.activePageErrorCode.value, isEmpty);
+    expect(controller.active.map((value) => value.id),
+        ['request-new', 'request-old']);
+    expect(controller.activeHasMore.value, isFalse);
+    expect(service.calls, ['active', 'active', 'active']);
+  });
+
 }
