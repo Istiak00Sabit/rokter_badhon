@@ -126,7 +126,7 @@ service cloud.firestore {
           (d.keys().hasAll(['name','phone','blood_group','gender','photo_url','village','union','upazila','district','profession'])
             && d.keys().hasOnly(['name','phone','blood_group','gender','photo_url','village','union','upazila','district','profession']))
         )
-        && d.name is string && d.name.size() > 0 && d.phone is string && d.phone.size() > 0
+        && d.name is string && d.name.size() > 0 && d.phone is string && d.phone.matches('01[3-9][0-9]{8}')
         && d.blood_group is string && d.blood_group.size() > 0
         && nullableString(d.gender) && nullableString(d.village) && nullableString(d.union)
         && d.upazila is string && d.upazila.size() > 0 && d.district is string && d.district.size() > 0
@@ -153,6 +153,37 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/committee_terms/$(
           get(/databases/$(database)/documents/committee_assignments/$(s.committee_assignment_id)).data.term_id)).data.active == true;
     }
+    // Registry stays false/missing until owner-reviewed historical backfill.
+    function donorPhoneKeyPath(phone) {
+      return /databases/$(database)/documents/donor_phone_keys/$(phone);
+    }
+    function donorRegistryReady() {
+      return exists(/databases/$(database)/documents/system_config/donor_phone_registry)
+        && get(/databases/$(database)/documents/system_config/donor_phone_registry).data.ready == true
+        && get(/databases/$(database)/documents/system_config/donor_phone_registry).data.schema_version == 1;
+    }
+    function validPhoneKey(k, phone) {
+      return phone.matches('01[3-9][0-9]{8}')
+        && k.keys().hasAll(['phone','donor_id','reserved_at','reserved_by'])
+        && k.keys().hasOnly(['phone','donor_id','reserved_at','reserved_by'])
+        && k.phone == phone && validId(k.donor_id)
+        && k.reserved_at == request.time && k.reserved_by == ownId();
+    }
+    match /system_config/{id} {
+      allow get: if id == 'donor_phone_registry' && admitted() && editorial();
+    }
+    match /donor_phone_keys/{phone} {
+      // Individual checks support transactional uniqueness; enumeration
+      // and client-side changes/deletions remain forbidden.
+      allow get: if admitted() && editorial() && phone.matches('01[3-9][0-9]{8}');
+      allow create: if admitted() && editorial() && donorRegistryReady()
+        && validPhoneKey(request.resource.data, phone)
+        && !exists(/databases/$(database)/documents/donors/$(request.resource.data.donor_id))
+        && getAfter(/databases/$(database)/documents/donors/$(request.resource.data.donor_id)).data.phone == phone
+        && getAfter(/databases/$(database)/documents/donors/$(request.resource.data.donor_id)).data.updated_by == ownId()
+        && getAfter(/databases/$(database)/documents/donor_submissions/$(request.resource.data.donor_id)).data.status == 'approved'
+        && getAfter(/databases/$(database)/documents/donor_submissions/$(request.resource.data.donor_id)).data.approved_by == ownId();
+    }
     function donorMatchesSubmission(d, s, id) {
       return d.name == s.donor_payload.name && d.phone == s.donor_payload.phone
         && d.blood_group == s.donor_payload.blood_group && d.gender == s.donor_payload.gender
@@ -164,7 +195,10 @@ service cloud.firestore {
         && d.total_donations == 0 && d.created_at == request.time && d.updated_at == request.time
         && d.created_by == s.submitted_by && d.updated_by == ownId()
         && s.status == 'approved' && s.approved_by == ownId() && s.approved_at == request.time
-        && s.donor_id == id && s.rejected_by == null && s.rejected_at == null && s.rejection_reason == null;
+        && s.donor_id == id && s.rejected_by == null && s.rejected_at == null && s.rejection_reason == null
+        && donorRegistryReady() && d.phone.matches('01[3-9][0-9]{8}')
+        && getAfter(donorPhoneKeyPath(d.phone)).data.donor_id == id
+        && getAfter(donorPhoneKeyPath(d.phone)).data.phone == d.phone;
     }
     match /committee_terms/{id} {
       allow read: if admitted();
@@ -193,9 +227,10 @@ service cloud.firestore {
           getAfter(/databases/$(database)/documents/donor_submissions/$(id)).data, id);
       allow update: if admitted() && history() && resource.data.active == true
         && validDonor(resource.data) && validDonor(request.resource.data)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','phone','blood_group',
+        && request.resource.data.phone == resource.data.phone
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','blood_group',
           'gender','photo_url','village','union','upazila','district','profession','updated_at','updated_by'])
-        && request.resource.data.diff(resource.data).affectedKeys().hasAny(['name','phone','blood_group',
+        && request.resource.data.diff(resource.data).affectedKeys().hasAny(['name','blood_group',
           'gender','photo_url','village','union','upazila','district','profession'])
         && request.resource.data.updated_at == request.time && request.resource.data.updated_by == ownId();
     }
@@ -223,7 +258,9 @@ service cloud.firestore {
             && request.resource.data.rejection_reason == null
             && getAfter(/databases/$(database)/documents/donors/$(id)).data.active == true
             && getAfter(/databases/$(database)/documents/donors/$(id)).data.created_at == request.time
-            && getAfter(/databases/$(database)/documents/donors/$(id)).data.created_by == resource.data.submitted_by)
+            && getAfter(/databases/$(database)/documents/donors/$(id)).data.created_by == resource.data.submitted_by
+            && donorRegistryReady()
+            && getAfter(donorPhoneKeyPath(resource.data.donor_payload.phone)).data.donor_id == id)
           ||
           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','rejected_by','rejected_at','rejection_reason'])
             && request.resource.data.status == 'rejected' && request.resource.data.rejected_by == ownId()
