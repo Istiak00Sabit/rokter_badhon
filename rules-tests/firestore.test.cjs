@@ -908,6 +908,26 @@ test('developer_admin can approve a pending donor only through the same atomic g
   await assertFails(deleteDoc(doc(db(), 'donors/admin-approval')));
 });
 
+test('legacy noncanonical pending request can be rejected but cannot be approved', async () => {
+  await seed('users/person-own', user({ access_role: 'leader' }));
+  await seedPendingSubmission('legacy-format');
+  await seed('donor_submissions/legacy-format', donorSubmission({
+    submitted_at: stamp,
+    donor_payload: donorPayload({ phone: '+8801700000000' }),
+  }));
+  await assertFails(approveDonor(db(), 'legacy-format'));
+  await assertSucceeds(updateDoc(doc(db(), 'donor_submissions/legacy-format'), {
+    status: 'rejected',
+    rejected_by: 'person-own',
+    rejected_at: serverTimestamp(),
+    rejection_reason: 'Old phone format requires a reviewed replacement.',
+  }));
+  assert.equal((await getDoc(doc(db(), 'donor_submissions/legacy-format'))).data().status, 'rejected');
+  await assertFails(setDoc(doc(db(), 'donor_submissions/noncanonical'), donorSubmission({
+    donor_payload: donorPayload({ phone: '017' }),
+  })));
+});
+
 test('phone registry missing or not ready blocks approval and phone reservation', async () => {
   await seed('users/person-own', user({ access_role: 'leader' }));
   await seedPendingSubmission('unready');
