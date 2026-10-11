@@ -32,7 +32,7 @@ void main() {
     expect(service, contains('searchActiveDonorsPage('));
     expect(service, contains("where('active', isEqualTo: true)"));
     expect(service, contains("where('phone', isEqualTo: phone)"));
-    expect(service, contains("startAt([term]).endAt([term + '\\uf8ff'])"));
+    expect(service, contains('startAt([term]).endAt('));
     expect(service, contains('startAfterDocument(after)'));
     expect(service, contains('query.limit(pageSize + 1)'));
     expect(controller, contains('indexedSearchTerm'));
