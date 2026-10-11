@@ -21,7 +21,7 @@ import {
 import { AdmissionError } from './src/policy.js';
 import { rolloverCommitteeTerm } from './src/committee_term.js';
 import { deactivateDonor } from './src/donor.js';
-import { auditDonorPhoneIdentities } from './src/donor_phone_plan.js';
+import { auditDonorPhoneIdentities, auditDonorPhoneRegistry } from './src/donor_phone_plan.js';
 import { correctDonation, recordDonation } from './src/donation.js';
 import { cancelBloodRequest, editBloodRequest, fulfillBloodRequest } from './src/blood_request.js';
 import { archiveNotice, createNotice, editNotice, publishNotice } from './src/notice.js';
@@ -339,6 +339,8 @@ async function main() {
     });
   } else if (command === 'audit-donor-phones') {
     result = await auditDonorPhoneIdentities({ db: dependencies.db });
+  } else if (command === 'audit-donor-registry') {
+    result = await auditDonorPhoneRegistry({ db: dependencies.db });
   } else if (command === 'deactivate-donor') {
     result = await deactivateDonor({
       ...dependencies,
@@ -443,7 +445,23 @@ async function main() {
       'Unknown command. Use an explicitly reviewed registration, organization, donor, or event operation.',
     );
   }
-  if (command === 'provision-committee-accounts') {
+  if (command === 'audit-donor-phones') {
+    // Never print private phone keys or donor IDs to CI/public logs.
+    const counts = {
+      mode: 'READ_ONLY',
+      writesPerformed: 0,
+      donorsScanned: result.total,
+      distinctPhoneCount: result.validUniquePhones,
+      invalidDonorCount: result.invalidIds.length,
+      duplicatePhoneGroups: result.duplicateGroups.length,
+      migrationReady: result.migrationReady,
+    };
+    console.log(JSON.stringify(counts, null, 2));
+    if (!result.migrationReady) process.exitCode = 2;
+  } else if (command === 'audit-donor-registry') {
+    console.log(JSON.stringify(result, null, 2));
+    if (!result.releaseReady) process.exitCode = 2;
+  } else if (command === 'provision-committee-accounts') {
     console.log(JSON.stringify({
       detected: result.detected,
       created: result.created.length,
