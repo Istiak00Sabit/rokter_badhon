@@ -70,6 +70,8 @@ class _RequestService extends BloodRequestService {
   }
 }
 
+// Test-only structural cursor; no Firebase reads are performed by this fake.
+// ignore: subtype_of_sealed_class
 class _FakeCursor implements DocumentSnapshot<Map<String, dynamic>> {
   @override
   final String id;
