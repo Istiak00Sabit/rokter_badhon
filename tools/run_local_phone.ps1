@@ -27,6 +27,12 @@ Write-Host 'Seeding the local test administrator...'
 & node tools/operator/cli.js seed-test-admin --project-id $projectId
 if ($LASTEXITCODE -ne 0) { throw 'The local emulator seed failed.' }
 
+Write-Host 'Checking the empty local donor registry for approval tests...'
+& node tools/operator/cli.js seed-empty-demo-donor-registry --project-id $projectId
+if ($LASTEXITCODE -ne 0) {
+    throw 'The local donor registry is not clean/empty. Preserve its data and review the emulator state before enabling approvals.'
+}
+
 Write-Host 'Building the emulator-configured debug APK...'
 & flutter build apk --debug `
     --dart-define=USE_FIREBASE_EMULATOR=true `
