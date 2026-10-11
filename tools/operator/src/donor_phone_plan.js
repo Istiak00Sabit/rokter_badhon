@@ -60,3 +60,31 @@ export function planDonorPhoneReservations(records) {
     migrationReady: invalidIds.length === 0 && duplicateKeys.size === 0,
   };
 }
+
+/**
+ * Emulator-only CLI audit. Paginate the full historical donor collection,
+ * including inactive profiles. This never creates a phone-key document.
+ */
+export async function auditDonorPhoneIdentities({ db, pageSize = 200, maxRecords = 100000 }) {
+  if (!Number.isInteger(pageSize) || pageSize < 1 || pageSize > 500 ||
+      !Number.isInteger(maxRecords) || maxRecords < pageSize) {
+    fail('invalid_argument', 'Unsafe identity scan bounds.');
+  }
+  const rows = [];
+  let cursor;
+  while (true) {
+    let query = db.collection('donors').orderBy('__name__').limit(pageSize);
+    if (cursor) query = query.startAfter(cursor);
+    const snapshot = await query.get();
+    for (const doc of snapshot.docs) {
+      if (rows.length >= maxRecords) {
+        fail('limit_exceeded', 'Identity audit is incomplete; increase a reviewed bound.');
+      }
+      const raw = doc.data();
+      rows.push({ id: doc.id, phone: raw?.phone, active: raw?.active });
+    }
+    if (snapshot.docs.length < pageSize) break;
+    cursor = snapshot.docs.at(-1);
+  }
+  return planDonorPhoneReservations(rows);
+}
