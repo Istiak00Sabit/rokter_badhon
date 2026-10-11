@@ -95,10 +95,20 @@ Updated: 2026-10-10. Target: Android APK on Firebase Spark (no Blaze upgrade, Cl
 - A redacted manual acceptance checklist was added for identity admission, committee, donors, emergency requests, donation history, translations, offline errors and application restart. **No physical-device execution has been claimed.**
 - The 51-person official roster and the two approved leaders remain untouched. No Firebase production write, Rules deploy or committee import was performed in this work.
 
+## Stage 9 Batch 2 — bounded emergency blood-request lists
+
+- Replaced unbounded status list reads with `BloodRequestPage` (30 displayed records plus one lookahead) and Firestore snapshot cursor pagination. The status filter and descending `created_at` ordering remain unchanged; the corresponding composite index already exists in source.
+- The controller now tracks distinct active, fulfilled and cancelled cursors. Only developer_admin, leader and executive query terminal statuses; ordinary committee/member users fetch active requests only.
+- Active and terminal lists expose separate Load More/Retry controls. A failed later page retains previously visible records and the original cursor. Terminal batches commit both status pages together so a partial network failure cannot skip one status on retry.
+- Added Flutter regression tests for member-scoped paging, active retry and atomic privileged-terminal retry. Expanded the Firestore Rules emulator regression for ordered cursor reads by executive and member without widening terminal access.
+- Removed a redundant reload after leaving the request form. Existing duplicate request-submission protection remains in place.
+- Code changes are committed on `main`. This is **not** evidence of physical-device validation or real Firebase deployment. CI for this batch must be evaluated against its final commit before marking it passed.
+- Remaining Stage 9 work includes bounded Notice/Event/media lists, donor search/archive gaps and real Android-phone acceptance.
+
 ## Next concrete tasks
 
 1. Review the new Stage 9 documentation/test CI result, then perform the listed emulator-configured Android-phone MVP checks and record redacted evidence.
-2. Finish bounded, complete Blood Request / Notice / Event queries and trusted status transitions without widening Firestore Rules or silently hiding records.
+2. Finish bounded, complete Notice / Event / media queries and trusted status transitions without widening Firestore Rules or silently hiding records; Blood Request status paging is code-complete pending CI/device acceptance.
 3. Return to Stage 6's accurate paginated donor search, duplicate detection and trusted archive; do not silently truncate emergency search results.
 4. Obtain explicit owner review/approval for live Rules, admin identity and any 51-member import; source CI never changes Firebase.
 5. Complete Stage 9 physical-device acceptance before treating the signed Stage 10 release as ready.
