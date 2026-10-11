@@ -606,6 +606,45 @@ test('media gallery cursor paging preserves term/event scopes and hidden-media d
   }
 });
 
+test('donor directory cursor, blood-group and active phone lookup remain accessible to admitted members', async () => {
+  await seedBusiness();
+  await seed('donors/a-first', donor({
+    name: 'Alpha', blood_group: 'A+', phone: '01711111111',
+    active: true, created_at: stamp, updated_at: stamp,
+  }));
+  await seed('donors/z-last', donor({
+    name: 'Zulu', blood_group: 'A+', phone: '01722222222',
+    active: true, created_at: stamp, updated_at: stamp,
+  }));
+  await seed('donors/inactive-duplicate', donor({
+    name: 'Inactive', blood_group: 'A+', phone: '01711111111',
+    active: false, created_at: stamp, updated_at: stamp,
+  }));
+  await seed('users/person-own', user({ access_role: 'member' }));
+  const c = db();
+  const all = query(collection(c, 'donors'),
+    where('active', '==', true), orderBy('name', 'asc'));
+  const first = await assertSucceeds(getDocs(query(all, limit(1))));
+  assert.equal(first.docs[0].id, 'a-first');
+  const second = await assertSucceeds(getDocs(query(all,
+    startAfter(first.docs[0]), limit(1))));
+  assert.equal(second.docs[0].id, 'active');
+
+  const filtered = query(collection(c, 'donors'),
+    where('active', '==', true), where('blood_group', '==', 'A+'),
+    orderBy('name', 'asc'));
+  const byGroup = await assertSucceeds(getDocs(query(filtered, limit(4))));
+  assert.deepEqual(byGroup.docs.map(d => d.id), ['a-first', 'active', 'z-last']);
+
+  const byPhone = await assertSucceeds(getDocs(query(
+    collection(c, 'donors'), where('active', '==', true),
+    where('phone', '==', '01711111111'), limit(2),
+  )));
+  assert.deepEqual(byPhone.docs.map(d => d.id), ['a-first']);
+  await assertFails(getDocs(query(collection(c, 'donors'),
+    where('phone', '==', '01711111111'), limit(2))));
+});
+
 const expectRead = (allowed, promise) => allowed ? assertSucceeds(promise) : assertFails(promise);
 for (const role of roles) {
   test(`${role}: business read audiences, parents and constrained queries`, async () => {
