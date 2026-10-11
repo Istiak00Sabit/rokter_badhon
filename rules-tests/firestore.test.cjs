@@ -464,6 +464,18 @@ test('donation history cursor pages remain role protected; active blood request 
   )));
   assert.equal(active.docs.length, 1);
 
+  // Two active requests with ordered cursor reads must both remain visible.
+  // A lookahead page must not consume the next document permanently.
+  await seed('blood_requests/active-new',
+    blood({ created_at: Timestamp.fromMillis(1700000000001) }));
+  const requestBase = query(collection(client, 'blood_requests'),
+    where('status', '==', 'active'), orderBy('created_at', 'desc'));
+  const firstRequest = await assertSucceeds(getDocs(query(requestBase, limit(1))));
+  assert.equal(firstRequest.docs[0].id, 'active-new');
+  const nextRequest = await assertSucceeds(getDocs(query(requestBase,
+    startAfter(firstRequest.docs[0]), limit(1))));
+  assert.equal(nextRequest.docs[0].id, 'active');
+
   await seed('users/person-own', user({ access_role: 'member' }));
   await assertFails(getDocs(query(collection(db(), 'donations'),
     orderBy('donation_date', 'desc'), limit(30))));
@@ -475,6 +487,13 @@ test('donation history cursor pages remain role protected; active blood request 
     collection(db(), 'blood_requests'), where('status', '==', 'fulfilled'),
     orderBy('created_at', 'desc'), limit(30),
   )));
+  const memberBase = query(collection(db(), 'blood_requests'),
+    where('status', '==', 'active'), orderBy('created_at', 'desc'));
+  const memberFirst = await assertSucceeds(getDocs(query(memberBase, limit(1))));
+  assert.equal(memberFirst.docs[0].id, 'active-new');
+  const memberNext = await assertSucceeds(getDocs(query(memberBase,
+    startAfter(memberFirst.docs[0]), limit(1))));
+  assert.equal(memberNext.docs[0].id, 'active');
 });
 
 const expectRead = (allowed, promise) => allowed ? assertSucceeds(promise) : assertFails(promise);
