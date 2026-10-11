@@ -564,6 +564,48 @@ test('bounded notices and events pagination keeps role-scoped historical pages',
   }
 });
 
+test('media gallery cursor paging preserves term/event scopes and hidden-media denial', async () => {
+  await seedBusiness();
+  const baseMedia = {
+    image_url: 'https://example.test/next.jpg', caption: null, sort_order: 1,
+    active: true, uploaded_at: stamp, uploaded_by: 'person-own',
+    provider: null, provider_public_id: null,
+  };
+  await seed('event_media/active-page2', { ...baseMedia, event_id: 'active' });
+  await seed('committee_media/active-page2', { ...baseMedia, term_id: 'active' });
+  await seed('event_media/active-hidden2', {
+    ...baseMedia, event_id: 'active', active: false,
+  });
+  for (const role of ['member', 'leader']) {
+    await seed('users/person-own', user({ access_role: role }));
+    const c = db();
+    for (const [name, field] of [
+      ['event_media', 'event_id'], ['committee_media', 'term_id'],
+    ]) {
+      const base = query(collection(c, name), where(field, '==', 'active'),
+        where('active', '==', true), orderBy('sort_order', 'asc'),
+        orderBy('__name__', 'asc'));
+      const first = await assertSucceeds(getDocs(query(base, limit(1))));
+      assert.equal(first.docs[0].id, 'active-active');
+      const second = await assertSucceeds(getDocs(query(base,
+        startAfter(first.docs[0]), limit(1))));
+      assert.equal(second.docs[0].id, 'active-page2');
+    }
+    const hiddenBase = query(collection(c, 'event_media'),
+      where('event_id', '==', 'active'), where('active', '==', false),
+      orderBy('sort_order', 'asc'), orderBy('__name__', 'asc'));
+    if (role === 'leader') {
+      const hidden = await assertSucceeds(getDocs(query(hiddenBase, limit(2))));
+      assert.equal(hidden.docs.some(d => d.id === 'active-hidden2'), true);
+    } else {
+      await assertFails(getDocs(query(hiddenBase, limit(2))));
+    }
+    await assertFails(getDocs(query(collection(c, 'event_media'),
+      where('event_id', '==', 'missing'), where('active', '==', true),
+      orderBy('sort_order', 'asc'), orderBy('__name__', 'asc'), limit(1))));
+  }
+});
+
 const expectRead = (allowed, promise) => allowed ? assertSucceeds(promise) : assertFails(promise);
 for (const role of roles) {
   test(`${role}: business read audiences, parents and constrained queries`, async () => {
