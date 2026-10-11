@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -121,27 +122,157 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                 ),
               ),
               const SizedBox(height: 10),
-              if (value.gallery.isEmpty)
-                Text(
-                  'no_gallery_images'.tr,
-                  style: const TextStyle(color: AppColors.textGrey),
-                )
-              else
-                SizedBox(
-                  height: 190,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: value.gallery.length,
-                    separatorBuilder: (_, _) => const SizedBox(width: 10),
-                    itemBuilder: (_, index) =>
-                        _Gallery(media: value.gallery[index]),
-                  ),
-                ),
+              _EventGalleryPager(
+                detail: value,
+                service: service,
+                includeHiddenMedia: widget.includeHiddenMedia,
+              ),
             ],
           ),
         );
       },
     ),
+  );
+}
+
+class _EventGalleryPager extends StatefulWidget {
+  final EventDetail detail;
+  final EventService service;
+  final bool includeHiddenMedia;
+
+  const _EventGalleryPager({
+    required this.detail,
+    required this.service,
+    required this.includeHiddenMedia,
+  });
+
+  @override
+  State<_EventGalleryPager> createState() => _EventGalleryPagerState();
+}
+
+class _EventGalleryPagerState extends State<_EventGalleryPager> {
+  late List<EventMediaModel> media;
+  DocumentSnapshot<Map<String, dynamic>>? activeCursor;
+  DocumentSnapshot<Map<String, dynamic>>? hiddenCursor;
+  bool hasMoreActive = false;
+  bool hasMoreHidden = false;
+  bool loading = false;
+  bool failed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _reset();
+  }
+
+  @override
+  void didUpdateWidget(covariant _EventGalleryPager oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.detail, widget.detail)) _reset();
+  }
+
+  void _reset() {
+    media = List<EventMediaModel>.of(widget.detail.gallery);
+    activeCursor = widget.detail.activeCursor;
+    hiddenCursor = widget.detail.hiddenCursor;
+    hasMoreActive = widget.detail.hasMoreActive;
+    hasMoreHidden =
+        widget.includeHiddenMedia && widget.detail.hasMoreHidden;
+    loading = false;
+    failed = false;
+  }
+
+  bool get hasMore => hasMoreActive || hasMoreHidden;
+
+  Future<void> _loadMore() async {
+    if (loading || !hasMore) return;
+    setState(() {
+      loading = true;
+      failed = false;
+    });
+    try {
+      // Keep both cursors unchanged until both reads succeed.
+      final activePage = hasMoreActive && activeCursor != null
+          ? await widget.service.getMediaPage(
+              widget.detail.event.id,
+              active: true,
+              after: activeCursor,
+            )
+          : null;
+      final hiddenPage = hasMoreHidden && hiddenCursor != null
+          ? await widget.service.getMediaPage(
+              widget.detail.event.id,
+              active: false,
+              after: hiddenCursor,
+            )
+          : null;
+      if ((hasMoreActive && activePage == null) ||
+          (hasMoreHidden && hiddenPage == null)) {
+        throw StateError('Missing gallery cursor');
+      }
+      if (!mounted) return;
+      setState(() {
+        final byId = <String, EventMediaModel>{
+          for (final item in media) item.id: item,
+          for (final item in activePage?.items ?? <EventMediaModel>[]) item.id: item,
+          for (final item in hiddenPage?.items ?? <EventMediaModel>[]) item.id: item,
+        };
+        media = byId.values.toList()
+          ..sort((left, right) {
+            final sort = left.sortOrder.compareTo(right.sortOrder);
+            return sort != 0 ? sort : left.id.compareTo(right.id);
+          });
+        if (activePage != null) {
+          activeCursor = activePage.cursor;
+          hasMoreActive = activePage.hasMore;
+        }
+        if (hiddenPage != null) {
+          hiddenCursor = hiddenPage.cursor;
+          hasMoreHidden = hiddenPage.hasMore;
+        }
+      });
+    } catch (_) {
+      if (mounted) setState(() => failed = true);
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      if (media.isEmpty)
+        Text(
+          'no_gallery_images'.tr,
+          style: const TextStyle(color: AppColors.textGrey),
+        )
+      else
+        SizedBox(
+          height: 190,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: media.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 10),
+            itemBuilder: (_, index) => _Gallery(media: media[index]),
+          ),
+        ),
+      if (failed)
+        Padding(
+          padding: const EdgeInsets.only(top: 10),
+          child: Text('gallery_retry'.tr),
+        ),
+      if (hasMore || failed)
+        Padding(
+          padding: const EdgeInsets.only(top: 10),
+          child: loading
+              ? const CircularProgressIndicator()
+              : OutlinedButton(
+                  onPressed: _loadMore,
+                  child: Text(failed ? 'retry'.tr : 'load_more'.tr),
+                ),
+        ),
+    ],
   );
 }
 
