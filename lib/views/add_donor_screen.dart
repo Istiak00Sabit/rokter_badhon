@@ -83,14 +83,16 @@ class AddDonorScreen extends StatelessWidget {
             ),
             const SizedBox(height: 14),
 
-            // Phone
-            _buildTextField(
+            // Phone is an immutable identity once approved. Changing it
+            // requires a separately audited trusted operator workflow.
+            Obx(() => _buildTextField(
               controller: controller.phoneController,
               label: '${'phone_number'.tr} *',
               hint: '01XXXXXXXXX',
               icon: Icons.phone_outlined,
               keyboardType: TextInputType.phone,
-            ),
+              readOnly: controller.editingDonorId.value != null,
+            )),
             const SizedBox(height: 14),
 
             // Blood Group
@@ -287,10 +289,12 @@ class AddDonorScreen extends StatelessWidget {
     required String hint,
     required IconData icon,
     TextInputType keyboardType = TextInputType.text,
+    bool readOnly = false,
   }) {
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
+      readOnly: readOnly,
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
