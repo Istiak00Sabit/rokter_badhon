@@ -14,6 +14,18 @@ class EventDetail {
   const EventDetail(this.event, this.gallery);
 }
 
+class EventPage {
+  final List<EventModel> items;
+  final DocumentSnapshot<Map<String, dynamic>>? cursor;
+  final bool hasMore;
+
+  const EventPage({
+    required this.items,
+    required this.cursor,
+    required this.hasMore,
+  });
+}
+
 class EventService {
   static const eventsCollection = 'events';
   static const mediaCollection = 'event_media';
@@ -22,17 +34,23 @@ class EventService {
   EventService({FirebaseFirestore? firestore})
     : _firestore = firestore ?? FirebaseFirestore.instance;
 
-  Future<List<EventModel>> getActiveEvents() => _events(active: true);
-  Future<List<EventModel>> getHiddenEvents() => _events(active: false);
-
-  Future<List<EventModel>> _events({required bool active}) async {
+  Future<EventPage> getEventsPage({
+    required bool active,
+    DocumentSnapshot<Map<String, dynamic>>? after,
+    int pageSize = 30,
+  }) async {
+    if (pageSize < 1 || pageSize > 100) {
+      throw const EventServiceException('invalid_limit');
+    }
     try {
-      final snapshot = await _firestore
+      Query<Map<String, dynamic>> query = _firestore
           .collection(eventsCollection)
           .where('active', isEqualTo: active)
-          .orderBy('event_date', descending: true)
-          .get();
-      final events = snapshot.docs
+          .orderBy('event_date', descending: true);
+      if (after != null) query = query.startAfterDocument(after);
+      final snapshot = await query.limit(pageSize + 1).get();
+      final docs = snapshot.docs.take(pageSize).toList(growable: false);
+      final events = docs
           .map((doc) => EventModel.fromMap(doc.data(), doc.id))
           .toList(growable: false);
       if (events.any((event) => event.active != active)) {
@@ -40,13 +58,24 @@ class EventService {
           'Event query returned an unapproved state.',
         );
       }
-      return events;
+      return EventPage(
+        items: List<EventModel>.unmodifiable(events),
+        cursor: docs.isEmpty ? null : docs.last,
+        hasMore: snapshot.docs.length > pageSize,
+      );
     } on EventDataException {
       rethrow;
     } on FirebaseException catch (error) {
       throw EventServiceException(_safeCode(error.code));
     }
   }
+
+  /// Compatibility callers get the bounded first page.
+  Future<List<EventModel>> getActiveEvents() async =>
+      (await getEventsPage(active: true)).items;
+
+  Future<List<EventModel>> getHiddenEvents() async =>
+      (await getEventsPage(active: false)).items;
 
   Future<EventDetail> getDetail(
     EventModel event, {
