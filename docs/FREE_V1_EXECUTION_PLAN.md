@@ -114,10 +114,18 @@ Updated: 2026-10-10. Target: Android APK on Firebase Spark (no Blaze upgrade, Cl
 - **Still outstanding:** Event and Committee media/gallery reads are not yet paginated. Trusted event/notice publishing remains outside the Flutter client. Device/production acceptance, deployment and official committee import remain owner-controlled and unperformed by this batch.
 - CI for the final batch commit must pass before marking code verification complete.
 
+## Stage 9 Batch 4 — paginated event and committee galleries
+
+- Event media is fetched as **20-item status-scoped cursor pages** (plus one lookahead) with event_id, active state, sort_order and document ID ordering. Ordinary members read active media only; leader/developer_admin can separately review hidden media when authorized. Both cursors commit only after successful retrieval, preserving visible images after a network error.
+- Both **current** and **past** Committee rosters now load their own gallery as 20-item active-media cursor pages; initial bundled preview remains read-only, with no server import. Current/past member lists, approved 51-person JSON and two frozen leaders remain unchanged.
+- Both gallery widgets show Load More, retain earlier images on failed next pages, and allow Retry. A generation guard discards stale pagination responses after a refresh or roster change; duplicate image IDs are deduplicated.
+- Added event/committee gallery widget retries, source contract assertions, and Firestore Rules emulator cursor/role regressions. The existing media composite indexes and deployed Rules files were **not** modified.
+- This is a source-only batch. Real Android device acceptance, production Rules validation, official committee import and donor search/archive remain **open gates**, not claims of completion. Verify the latest batch CI before treating code tests/APK as passed.
+
 ## Next concrete tasks
 
 1. Review the new Stage 9 documentation/test CI result, then perform the listed emulator-configured Android-phone MVP checks and record redacted evidence.
-2. Confirm Stage 9 Batch 3 CI, finish bounded Event/Committee media galleries and operator-only editorial transitions without weakening Firestore Rules; Blood Request, Notice and Event list paging are coded pending device acceptance.
+2. Verify Stage 9 Batch 4 media pagination CI, then finish remaining donor search/duplicate/archive gaps and secure operator-only editorial transitions without weakening Rules.
 3. Return to Stage 6's accurate paginated donor search, duplicate detection and trusted archive; do not silently truncate emergency search results.
 4. Obtain explicit owner review/approval for live Rules, admin identity and any 51-member import; source CI never changes Firebase.
 5. Complete Stage 9 physical-device acceptance before treating the signed Stage 10 release as ready.
