@@ -7,22 +7,45 @@ class BloodRequestServiceException implements Exception {
   const BloodRequestServiceException(this.code);
 }
 
+/// A bounded page with a snapshot cursor. The extra lookahead document
+/// determines if the next page exists without skipping that document.
+class BloodRequestPage {
+  final List<BloodRequestModel> items;
+  final DocumentSnapshot<Map<String, dynamic>>? cursor;
+  final bool hasMore;
+
+  const BloodRequestPage({
+    required this.items,
+    required this.cursor,
+    required this.hasMore,
+  });
+}
+
 class BloodRequestService {
   final FirebaseFirestore _firestore;
   BloodRequestService({FirebaseFirestore? firestore})
     : _firestore = firestore ?? FirebaseFirestore.instance;
 
-  Future<List<BloodRequestModel>> getByStatus(String status) async {
+  Future<BloodRequestPage> getByStatusPage(
+    String status, {
+    DocumentSnapshot<Map<String, dynamic>>? after,
+    int pageSize = 30,
+  }) async {
     if (!{'active', 'fulfilled', 'cancelled'}.contains(status)) {
       throw const BloodRequestDataException('Unknown requested status.');
     }
+    if (pageSize < 1 || pageSize > 100) {
+      throw const BloodRequestServiceException('invalid_limit');
+    }
     try {
-      final snapshot = await _firestore
+      Query<Map<String, dynamic>> query = _firestore
           .collection('blood_requests')
           .where('status', isEqualTo: status)
-          .orderBy('created_at', descending: true)
-          .get();
-      final values = snapshot.docs
+          .orderBy('created_at', descending: true);
+      if (after != null) query = query.startAfterDocument(after);
+      final snapshot = await query.limit(pageSize + 1).get();
+      final docs = snapshot.docs.take(pageSize).toList(growable: false);
+      final values = docs
           .map((doc) => BloodRequestModel.fromMap(doc.data(), doc.id))
           .toList(growable: false);
       if (values.any((value) => value.status != status)) {
@@ -30,13 +53,21 @@ class BloodRequestService {
           'Request query returned an unapproved state.',
         );
       }
-      return values;
+      return BloodRequestPage(
+        items: List<BloodRequestModel>.unmodifiable(values),
+        cursor: docs.isEmpty ? null : docs.last,
+        hasMore: snapshot.docs.length > pageSize,
+      );
     } on BloodRequestDataException {
       rethrow;
     } on FirebaseException catch (error) {
       throw BloodRequestServiceException(_code(error.code));
     }
   }
+
+  /// Legacy callers receive a bounded first page, never an unbounded query.
+  Future<List<BloodRequestModel>> getByStatus(String status) async =>
+      (await getByStatusPage(status)).items;
 
   Future<String> create(BloodRequestInput input, String actorId) async {
     try {
