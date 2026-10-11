@@ -179,8 +179,6 @@ service cloud.firestore {
       allow create: if admitted() && editorial() && donorRegistryReady()
         && validPhoneKey(request.resource.data, phone)
         && !exists(/databases/$(database)/documents/donors/$(request.resource.data.donor_id))
-        && getAfter(/databases/$(database)/documents/donors/$(request.resource.data.donor_id)).data.phone == phone
-        && getAfter(/databases/$(database)/documents/donors/$(request.resource.data.donor_id)).data.updated_by == ownId()
         && getAfter(/databases/$(database)/documents/donor_submissions/$(request.resource.data.donor_id)).data.status == 'approved'
         && getAfter(/databases/$(database)/documents/donor_submissions/$(request.resource.data.donor_id)).data.approved_by == ownId();
     }
@@ -196,9 +194,8 @@ service cloud.firestore {
         && d.created_by == s.submitted_by && d.updated_by == ownId()
         && s.status == 'approved' && s.approved_by == ownId() && s.approved_at == request.time
         && s.donor_id == id && s.rejected_by == null && s.rejected_at == null && s.rejection_reason == null
-        && donorRegistryReady() && d.phone.matches('01[3-9][0-9]{8}')
-        && getAfter(donorPhoneKeyPath(d.phone)).data.donor_id == id
-        && getAfter(donorPhoneKeyPath(d.phone)).data.phone == d.phone;
+        && d.phone.matches('01[3-9][0-9]{8}')
+        && getAfter(donorPhoneKeyPath(d.phone)).data.donor_id == id;
     }
     match /committee_terms/{id} {
       allow read: if admitted();
@@ -260,9 +257,7 @@ service cloud.firestore {
             && request.resource.data.rejection_reason == null
             && getAfter(/databases/$(database)/documents/donors/$(id)).data.active == true
             && getAfter(/databases/$(database)/documents/donors/$(id)).data.created_at == request.time
-            && getAfter(/databases/$(database)/documents/donors/$(id)).data.created_by == resource.data.submitted_by
-            && donorRegistryReady()
-            && getAfter(donorPhoneKeyPath(resource.data.donor_payload.phone)).data.donor_id == id)
+            && getAfter(/databases/$(database)/documents/donors/$(id)).data.created_by == resource.data.submitted_by)
           ||
           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','rejected_by','rejected_at','rejection_reason'])
             && request.resource.data.status == 'rejected' && request.resource.data.rejected_by == ownId()
