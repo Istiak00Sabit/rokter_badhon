@@ -662,7 +662,7 @@ test('indexed donor lookup searches complete name prefixes and exact phones, nev
   const c = db();
   const prefix = query(collection(c, 'donors'),
     where('active', '==', true), where('blood_group', '==', 'O+'),
-    orderBy('name'), startAt('Rahim'), endAt('Rahim\\uf8ff'));
+    orderBy('name'), startAt('Rahim'), endAt('Rahim' + String.fromCharCode(0xf8ff)));
   const first = await assertSucceeds(getDocs(query(prefix, limit(1))));
   assert.equal(first.docs[0].id, 'prefix-a');
   const second = await assertSucceeds(getDocs(query(prefix,
