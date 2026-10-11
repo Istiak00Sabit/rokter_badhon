@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:rokter_badhon/models/event_media_model.dart';
 import 'package:rokter_badhon/models/event_model.dart';
 import 'package:rokter_badhon/models/committee_media_model.dart';
@@ -122,6 +123,7 @@ class _CommitteeService extends CommitteeService {
 }
 
 void main() {
+  setUpAll(() async => initializeDateFormatting('bn'));
   setUp(() => Get.testMode = true);
   tearDown(Get.reset);
 
