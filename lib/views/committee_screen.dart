@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -103,7 +104,7 @@ class _CommitteeScreenState extends State<CommitteeScreen> {
               if (roster == null)
                 _EmptyCommittee(message: 'no_current_committee'.tr)
               else
-                CommitteeRosterView(roster: roster),
+                CommitteeRosterView(roster: roster, service: controller.service),
             ],
           ),
         );
@@ -226,7 +227,7 @@ class _PastCommitteeDetailScreenState extends State<PastCommitteeDetailScreen> {
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.all(16),
-              children: [CommitteeRosterView(roster: snapshot.requireData)],
+              children: [CommitteeRosterView(roster: snapshot.requireData, service: widget.service)],
             ),
           );
         },
@@ -237,8 +238,13 @@ class _PastCommitteeDetailScreenState extends State<PastCommitteeDetailScreen> {
 
 class CommitteeRosterView extends StatelessWidget {
   final CommitteeRoster roster;
+  final CommitteeService service;
 
-  const CommitteeRosterView({required this.roster, super.key});
+  const CommitteeRosterView({
+    required this.roster,
+    required this.service,
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -281,7 +287,7 @@ class CommitteeRosterView extends StatelessWidget {
           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
-        _CommitteeGallery(media: roster.gallery),
+        _CommitteeGallery(roster: roster, service: service),
         const SizedBox(height: 18),
         if (roster.members.isEmpty)
           _EmptyCommittee(message: 'no_assignments'.tr)
@@ -292,54 +298,142 @@ class CommitteeRosterView extends StatelessWidget {
   }
 }
 
-class _CommitteeGallery extends StatelessWidget {
-  final List<CommitteeMediaModel> media;
+class _CommitteeGallery extends StatefulWidget {
+  final CommitteeRoster roster;
+  final CommitteeService service;
 
-  const _CommitteeGallery({required this.media});
+  const _CommitteeGallery({required this.roster, required this.service});
 
   @override
-  Widget build(BuildContext context) {
-    if (media.isEmpty) {
-      return Text(
-        'no_gallery_images'.tr,
-        style: const TextStyle(color: AppColors.textGrey),
-      );
-    }
-    return SizedBox(
-      height: 190,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: media.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 10),
-        itemBuilder: (context, index) {
-          final item = media[index];
-          return SizedBox(
-            width: 230,
-            child: Card(
-              clipBehavior: Clip.antiAlias,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Expanded(
-                    child: _CommitteeImage(url: item.imageUrl, gallery: true),
-                  ),
-                  if (item.caption != null)
-                    Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: Text(
-                        item.caption!,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
+  State<_CommitteeGallery> createState() => _CommitteeGalleryState();
+}
+
+class _CommitteeGalleryState extends State<_CommitteeGallery> {
+  late List<CommitteeMediaModel> media;
+  DocumentSnapshot<Map<String, dynamic>>? cursor;
+  bool hasMore = false;
+  bool loading = false;
+  bool failed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _reset();
   }
+
+  @override
+  void didUpdateWidget(covariant _CommitteeGallery oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.roster, widget.roster)) _reset();
+  }
+
+  void _reset() {
+    media = List<CommitteeMediaModel>.of(widget.roster.gallery);
+    cursor = widget.roster.galleryCursor;
+    hasMore = widget.roster.galleryHasMore && !widget.roster.isBundledPreview;
+    loading = false;
+    failed = false;
+  }
+
+  Future<void> _loadMore() async {
+    if (loading || !hasMore) return;
+    setState(() {
+      loading = true;
+      failed = false;
+    });
+    try {
+      final oldCursor = cursor;
+      if (oldCursor == null) {
+        throw StateError('Missing committee gallery cursor');
+      }
+      final page = await widget.service.getActiveMediaPage(
+        widget.roster.term.id,
+        after: oldCursor,
+      );
+      if (!mounted) return;
+      setState(() {
+        final byId = <String, CommitteeMediaModel>{
+          for (final item in media) item.id: item,
+          for (final item in page.items) item.id: item,
+        };
+        media = CommitteeService.validateGallery(
+          widget.roster.term.id,
+          byId.values,
+        );
+        cursor = page.cursor;
+        hasMore = page.hasMore;
+      });
+    } catch (_) {
+      if (mounted) setState(() => failed = true);
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      if (media.isEmpty)
+        Text(
+          'no_gallery_images'.tr,
+          style: const TextStyle(color: AppColors.textGrey),
+        )
+      else
+        SizedBox(
+          height: 190,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: media.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 10),
+            itemBuilder: (context, index) {
+              final item = media[index];
+              return SizedBox(
+                width: 230,
+                child: Card(
+                  clipBehavior: Clip.antiAlias,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(
+                        child: _CommitteeImage(
+                          url: item.imageUrl,
+                          gallery: true,
+                        ),
+                      ),
+                      if (item.caption != null)
+                        Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Text(
+                            item.caption!,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      if (failed)
+        Padding(
+          padding: const EdgeInsets.only(top: 10),
+          child: Text('gallery_retry'.tr),
+        ),
+      if (hasMore || failed)
+        Padding(
+          padding: const EdgeInsets.only(top: 10),
+          child: loading
+              ? const CircularProgressIndicator()
+              : OutlinedButton(
+                  onPressed: _loadMore,
+                  child: Text(failed ? 'retry'.tr : 'load_more'.tr),
+                ),
+        ),
+    ],
+  );
 }
 
 class _CommitteeMemberCard extends StatelessWidget {
