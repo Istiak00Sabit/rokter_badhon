@@ -148,10 +148,12 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Image first'), findsOneWidget);
     expect(find.text('load_more'), findsOneWidget);
+    await tester.ensureVisible(find.text('load_more'));
     await tester.tap(find.text('load_more'));
     await tester.pumpAndSettle();
     expect(find.text('Image first'), findsOneWidget);
     expect(find.text('retry'), findsOneWidget);
+    await tester.ensureVisible(find.text('retry'));
     await tester.tap(find.text('retry'));
     await tester.pumpAndSettle();
     expect(find.text('Image first'), findsOneWidget);
@@ -191,10 +193,12 @@ void main() {
     ));
     await tester.pumpAndSettle();
     expect(find.text('Image first'), findsOneWidget);
+    await tester.ensureVisible(find.text('load_more'));
     await tester.tap(find.text('load_more'));
     await tester.pumpAndSettle();
     expect(find.text('retry'), findsOneWidget);
     expect(find.text('Image first'), findsOneWidget);
+    await tester.ensureVisible(find.text('retry'));
     await tester.tap(find.text('retry'));
     await tester.pumpAndSettle();
     expect(find.text('Image second'), findsOneWidget);
