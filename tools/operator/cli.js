@@ -21,6 +21,7 @@ import {
 import { AdmissionError } from './src/policy.js';
 import { rolloverCommitteeTerm } from './src/committee_term.js';
 import { deactivateDonor } from './src/donor.js';
+import { auditDonorPhoneIdentities } from './src/donor_phone_plan.js';
 import { correctDonation, recordDonation } from './src/donation.js';
 import { cancelBloodRequest, editBloodRequest, fulfillBloodRequest } from './src/blood_request.js';
 import { archiveNotice, createNotice, editNotice, publishNotice } from './src/notice.js';
@@ -336,6 +337,8 @@ async function main() {
         ? null
         : options['group-photo-url'],
     });
+  } else if (command === 'audit-donor-phones') {
+    result = await auditDonorPhoneIdentities({ db: dependencies.db });
   } else if (command === 'deactivate-donor') {
     result = await deactivateDonor({
       ...dependencies,
