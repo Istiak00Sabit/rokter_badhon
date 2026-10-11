@@ -126,7 +126,7 @@ service cloud.firestore {
           (d.keys().hasAll(['name','phone','blood_group','gender','photo_url','village','union','upazila','district','profession'])
             && d.keys().hasOnly(['name','phone','blood_group','gender','photo_url','village','union','upazila','district','profession']))
         )
-        && d.name is string && d.name.size() > 0 && d.phone is string && d.phone.matches('01[3-9][0-9]{8}')
+        && d.name is string && d.name.size() > 0 && d.phone is string && d.phone.size() > 0
         && d.blood_group is string && d.blood_group.size() > 0
         && nullableString(d.gender) && nullableString(d.village) && nullableString(d.union)
         && d.upazila is string && d.upazila.size() > 0 && d.district is string && d.district.size() > 0
@@ -238,6 +238,7 @@ service cloud.firestore {
       allow read: if admitted() && (resource.data.submitted_by == ownId() || editorial());
       allow create: if admitted() && validDonorSubmission(request.resource.data)
         && request.resource.data.status == 'pending' && request.resource.data.submitted_by == ownId()
+        && request.resource.data.donor_payload.phone.matches('01[3-9][0-9]{8}')
         && request.resource.data.submitted_at == request.time
         && request.resource.data.approved_by == null && request.resource.data.approved_at == null
         && request.resource.data.rejected_by == null && request.resource.data.rejected_at == null
@@ -253,6 +254,7 @@ service cloud.firestore {
         && (
           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','approved_by','approved_at','donor_id'])
             && request.resource.data.status == 'approved' && request.resource.data.approved_by == ownId()
+            && resource.data.donor_payload.phone.matches('01[3-9][0-9]{8}')
             && request.resource.data.approved_at == request.time && request.resource.data.donor_id == id
             && request.resource.data.rejected_by == null && request.resource.data.rejected_at == null
             && request.resource.data.rejection_reason == null
