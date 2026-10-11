@@ -17,16 +17,32 @@ class CommitteeDataException implements Exception {
   String toString() => message;
 }
 
+class CommitteeMediaPage {
+  final List<CommitteeMediaModel> items;
+  final DocumentSnapshot<Map<String, dynamic>>? cursor;
+  final bool hasMore;
+
+  const CommitteeMediaPage({
+    required this.items,
+    required this.cursor,
+    required this.hasMore,
+  });
+}
+
 class CommitteeRoster {
   final CommitteeTermModel term;
   final List<CommitteeMemberModel> members;
   final List<CommitteeMediaModel> gallery;
+  final DocumentSnapshot<Map<String, dynamic>>? galleryCursor;
+  final bool galleryHasMore;
   final bool isBundledPreview;
 
   const CommitteeRoster({
     required this.term,
     required this.members,
     required this.gallery,
+    this.galleryCursor,
+    this.galleryHasMore = false,
     this.isBundledPreview = false,
   });
 }
@@ -179,20 +195,43 @@ class CommitteeService {
     return assignments;
   }
 
-  Future<List<CommitteeMediaModel>> getActiveMediaForTerm(String termId) async {
+  Future<CommitteeMediaPage> getActiveMediaPage(
+    String termId, {
+    DocumentSnapshot<Map<String, dynamic>>? after,
+    int pageSize = 20,
+  }) async {
     _requireDocumentId(termId, 'term');
-    final snapshot = await _firestore
-        .collection(mediaCollection)
-        .where('term_id', isEqualTo: termId)
-        .where('active', isEqualTo: true)
-        .orderBy('sort_order')
-        .orderBy(FieldPath.documentId)
-        .get();
-    final media = snapshot.docs
-        .map((doc) => CommitteeMediaModel.fromMap(doc.data(), doc.id))
-        .toList(growable: false);
-    return validateGallery(termId, media);
+    if (pageSize < 1 || pageSize > 100) {
+      throw const CommitteeDataException('Invalid committee media page size.');
+    }
+    try {
+      Query<Map<String, dynamic>> query = _firestore
+          .collection(mediaCollection)
+          .where('term_id', isEqualTo: termId)
+          .where('active', isEqualTo: true)
+          .orderBy('sort_order')
+          .orderBy(FieldPath.documentId);
+      if (after != null) query = query.startAfterDocument(after);
+      final snapshot = await query.limit(pageSize + 1).get();
+      final docs = snapshot.docs.take(pageSize).toList(growable: false);
+      final media = docs
+          .map((doc) => CommitteeMediaModel.fromMap(doc.data(), doc.id))
+          .toList(growable: false);
+      return CommitteeMediaPage(
+        items: validateGallery(termId, media),
+        cursor: docs.isEmpty ? null : docs.last,
+        hasMore: snapshot.docs.length > pageSize,
+      );
+    } on FirebaseException catch (_) {
+      throw const CommitteeDataException(
+        'Committee gallery could not be loaded.',
+      );
+    }
   }
+
+  /// Compatibility callers obtain a bounded first page.
+  Future<List<CommitteeMediaModel>> getActiveMediaForTerm(String termId) async =>
+      (await getActiveMediaPage(termId)).items;
 
   Future<CommitteeRoster> getCurrentRoster(CommitteeTermModel term) async {
     if (!term.active) {
@@ -220,13 +259,16 @@ class CommitteeService {
       _getActiveDirectoryEntries(
         assignments.map((assignment) => assignment.userId).toSet(),
       ),
-      getActiveMediaForTerm(term.id),
+      getActiveMediaPage(term.id),
     ]);
     final directory = results[0] as Map<String, UserDirectoryModel>;
+    final galleryPage = results[1] as CommitteeMediaPage;
     return CommitteeRoster(
       term: term,
       members: mapDirectoryPresentation(assignments, directory),
-      gallery: results[1] as List<CommitteeMediaModel>,
+      gallery: galleryPage.items,
+      galleryCursor: galleryPage.cursor,
+      galleryHasMore: galleryPage.hasMore,
     );
   }
 
