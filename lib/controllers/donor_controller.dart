@@ -32,6 +32,7 @@ class DonorController extends GetxController {
   final RxBool hasMoreDonors = false.obs;
   final RxString pageErrorCode = ''.obs;
   final RxString directoryBloodGroup = ''.obs;
+  final RxString indexedSearchTerm = ''.obs;
   DocumentSnapshot<Map<String, dynamic>>? _directoryCursor;
   int _directoryGeneration = 0;
   final RxnString editingDonorId = RxnString();
@@ -205,6 +206,16 @@ class DonorController extends GetxController {
     }
   }
 
+  Future<void> searchDirectory(String term) async {
+    final normalized = term.trim();
+    if (indexedSearchTerm.value == normalized) {
+      await loadDonors();
+      return;
+    }
+    indexedSearchTerm.value = normalized;
+    await loadDonors();
+  }
+
   Future<void> setDirectoryBloodGroup(String? bloodGroup) async {
     final value = bloodGroup ?? '';
     if (directoryBloodGroup.value == value) return;
@@ -223,9 +234,15 @@ class DonorController extends GetxController {
     donors.clear();
     final filter = directoryBloodGroup.value;
     try {
-      final page = await _donorService.getActiveDonorsPage(
-        bloodGroup: filter.isEmpty ? null : filter,
-      );
+      final term = indexedSearchTerm.value;
+      final page = term.isEmpty
+          ? await _donorService.getActiveDonorsPage(
+              bloodGroup: filter.isEmpty ? null : filter,
+            )
+          : await _donorService.searchActiveDonorsPage(
+              search: term,
+              bloodGroup: filter.isEmpty ? null : filter,
+            );
       if (generation != _directoryGeneration) return;
       donors.assignAll(page.items);
       _directoryCursor = page.cursor;
@@ -256,10 +273,17 @@ class DonorController extends GetxController {
     isLoadingMore.value = true;
     pageErrorCode.value = '';
     try {
-      final page = await _donorService.getActiveDonorsPage(
-        bloodGroup: filter.isEmpty ? null : filter,
-        after: cursor,
-      );
+      final term = indexedSearchTerm.value;
+      final page = term.isEmpty
+          ? await _donorService.getActiveDonorsPage(
+              bloodGroup: filter.isEmpty ? null : filter,
+              after: cursor,
+            )
+          : await _donorService.searchActiveDonorsPage(
+              search: term,
+              bloodGroup: filter.isEmpty ? null : filter,
+              after: cursor,
+            );
       if (generation != _directoryGeneration) return;
       final existing = donors.map((value) => value.id).toSet();
       donors.addAll(page.items.where((value) => existing.add(value.id)));
