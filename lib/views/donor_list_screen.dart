@@ -26,6 +26,11 @@ class _DonorListScreenState extends State<DonorListScreen> {
     controller = Get.isRegistered<DonorController>()
         ? Get.find<DonorController>()
         : Get.put(DonorController());
+    // Keep the visible filter synchronized when GetX reuses this controller
+    // after navigating away and returning to the donor directory.
+    selectedFilter.value = controller.directoryBloodGroup.value.isEmpty
+        ? 'all'
+        : controller.directoryBloodGroup.value;
     // A build/rebuild must never start new Firestore reads.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) controller.loadDonors();
