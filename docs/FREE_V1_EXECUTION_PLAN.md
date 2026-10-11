@@ -122,11 +122,21 @@ Updated: 2026-10-10. Target: Android APK on Firebase Spark (no Blaze upgrade, Cl
 - Added event/committee gallery widget retries, source contract assertions, and Firestore Rules emulator cursor/role regressions. The existing media composite indexes and deployed Rules files were **not** modified.
 - This is a source-only batch. Real Android device acceptance, production Rules validation, official committee import and donor search/archive remain **open gates**, not claims of completion. Verify the latest batch CI before treating code tests/APK as passed.
 
+## Stage 9 Batch 5 — donor directory and duplicate/archival gates
+
+- The Flutter active donor directory now uses 30-record cursor pages (plus a lookahead) and **server-side blood-group filtering** rather than downloading all active donors on initial screen open. Each filter change starts a new generation; an old response cannot overwrite the selected group's records. Later-page network errors retain existing donors and the original cursor, with retry and ID deduplication.
+- Name/phone substring matching is intentionally **limited to pages already loaded**. The interface explicitly warns when pages remain and offers Load More. An empty loaded-page match must never be described as a complete global search. Truly complete substring search still requires exhausting all pages or a separately indexed search design; no unsupported global-search guarantee is made.
+- Active phone collision preflights have been added for submission, donor edit and approval; approval also checks that the target donor document does not already exist before transaction.set. These checks fail closed on query failure. **They are NOT a transactional uniqueness guarantee** for concurrent, separately submitted applications or differently normalized phone formats. A trusted phone-key reservation and reviewed migration of existing records are still required before production duplicate-free guarantees.
+- `firestore.indexes.json` now declares the active+group+name and active+phone composite indexes required by the new queries. Source index changes do **not** deploy indexes to real Firebase; until owner-authorized index deployment, the production version of these queries may return `query_unavailable` and block writes rather than skip the check.
+- Donor deactivation remains an existing authenticated, audited **trusted operator transaction** (`tools/operator/src/donor.js`), deliberately unavailable as an unrestricted mobile delete. The operator CLI remains emulator-only for `deactivate-donor`; production archive cannot be declared enabled without separate owner-approved safeguards.
+- New Flutter controller tests cover retry without duplicates, blood-group switch and stale request protection. Firestore Emulator tests cover ordered pages, server-side group filtering and the exact active phone check without expanding Rules.
+- This is source-only work: no Committee roster edits, production Firebase writes, Rules/Index deployment, or Android physical-device acceptance have been performed. Check the final Batch 5 CI before marking automated verification successful.
+
 ## Next concrete tasks
 
 1. Review the new Stage 9 documentation/test CI result, then perform the listed emulator-configured Android-phone MVP checks and record redacted evidence.
 2. Verify Stage 9 Batch 4 media pagination CI, then finish remaining donor search/duplicate/archive gaps and secure operator-only editorial transitions without weakening Rules.
-3. Return to Stage 6's accurate paginated donor search, duplicate detection and trusted archive; do not silently truncate emergency search results.
+3. Close remaining global donor substring-search and fully atomic phone-key uniqueness gates; retain trusted, audited archive (emulator-only until separate production authorization).
 4. Obtain explicit owner review/approval for live Rules, admin identity and any 51-member import; source CI never changes Firebase.
 5. Complete Stage 9 physical-device acceptance before treating the signed Stage 10 release as ready.
 
