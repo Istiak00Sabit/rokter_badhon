@@ -358,7 +358,7 @@ class DonorService {
         query = query.where('phone', isEqualTo: phone).orderBy('name');
       } else {
         query = query.orderBy('name')
-            .startAt([term]).endAt(['${term}\uf8ff']);
+            .startAt([term]).endAt(['$term\uf8ff']);
       }
       if (after != null) query = query.startAfterDocument(after);
       final snapshot = await query.limit(pageSize + 1).get();
