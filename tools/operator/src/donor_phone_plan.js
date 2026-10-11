@@ -192,7 +192,7 @@ async function readAllDocuments(db, collectionName, pageSize, maxRecords) {
       if (records.length >= maxRecords) {
         fail('limit_exceeded', 'Registry scan is incomplete; never accept truncated data.');
       }
-      records.push({ id: doc.id, ...doc.data() });
+      records.push({ ...doc.data(), id: doc.id });
     }
     if (snapshot.docs.length < pageSize) break;
     cursor = snapshot.docs.at(-1);
