@@ -97,7 +97,9 @@ void main() {
       final source = File('lib/services/event_service.dart').readAsStringSync();
       expect(source, contains("where('active', isEqualTo: active)"));
       expect(source, contains("orderBy('event_date', descending: true)"));
-      expect(source, contains("where('event_id', isEqualTo: event.id)"));
+      expect(source, contains("where('event_id', isEqualTo: eventId)"));
+      expect(source, contains('startAfterDocument(after)'));
+      expect(source, contains('query.limit(pageSize + 1)'));
       expect(source, contains("orderBy('sort_order')"));
       expect(source, isNot(contains('.add(')));
       expect(source, isNot(contains('.set(')));
