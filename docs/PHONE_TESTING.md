@@ -12,11 +12,23 @@ extract the ZIP and install `app-debug.apk` on an Android phone
 (only install builds from your own trusted repository). This is a debug
 build for testing and is **not** a signed production release.
 
-Use a new phone number not already registered to test Registration →
-Pending → trusted approval → Phone + Password Login. Confirm that
-a pending applicant cannot access protected screens. Separately test
-developer_admin Committee Add, JSON roster, Donor Add, Donor Approve/Reject,
-and Bengali/English locality selectors.
+**Do not use the normal CI APK to mutate real Firebase during acceptance
+testing without explicit owner approval.** That APK targets the configured
+real Firebase project, not the local emulators. Use the emulator-configured
+physical-phone helper below for development tests.
+
+In the emulator, test Registration → Pending → trusted operator approval →
+Phone + Password Login. A pending or rejected applicant must not reach
+protected screens; an approved applicant without a valid AuthLink must also
+be denied. Separately test donor submission, leader approval/rejection,
+active-donor visibility, and Bengali/English locality selectors.
+
+Committee display is **read-only in Flutter**: confirm the unsynced bundled
+51-person preview when no current Firestore term exists. After a separate
+emulator-only committee seed, confirm the live 51-person roster with exactly
+2 leaders, 31 executives and 18 committee members. In-app Committee Add
+is intentionally unavailable; member changes require the trusted operator
+and must never be simulated with client Firestore writes.
 
 For existing real users, test approved logins **without deleting or
 recreating their accounts**. Older email-based identities may require
@@ -86,7 +98,7 @@ Phone:    01000000000
 Password: 123456
 ```
 
-They exist only in the `demo-rokterbadhon` Auth emulator. The local seed gives
+They exist only in the `demo-rokter-badhon` Auth emulator. The local seed gives
 this account the explicit `developer_admin` application role; it is not a
 production identity and is not a committee-member Auth account.
 
@@ -106,3 +118,26 @@ demo project. The generated credentials are written to the ignored
 
 Do not run a second emulator process on the same ports. If the phone is
 unplugged, rerun the two `adb reverse` commands after reconnecting it.
+
+
+## Stage 9 physical-phone acceptance notes
+
+Keep a local, redacted record of device/Android version, exact Git commit and
+APK origin, each test performed and its pass/fail result. Never include real
+member phones, credentials, applicant IDs or patient details in shared logs.
+
+Before declaring Stage 9 complete, verify on an actual Android device:
+- Emulator-only registration, pending/rejected access denial, approved login,
+  logout and blocked disabled-user reentry.
+- Committee preview versus seeded live roster and past-term presentation
+  without any direct Add Member action in the mobile client.
+- Pending donor never appearing in active search; leader approval and rejection
+  with repeat-tap protection and clear failure states.
+- Emergency blood request submission (including failed network and duplicate
+  tap), role-scoped donation history, ranking, notices and events.
+- Bangla/English switching, Ghatail union/village choices, network loss,
+  recovery/retry and application restart.
+
+An automated CI pass and a compiled APK do **not** confirm these device tests.
+Real Firebase acceptance, deployed Rules review and the official production
+committee import remain separate owner-controlled gates.
