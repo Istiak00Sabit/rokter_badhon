@@ -309,9 +309,9 @@ class DonorService {
     }
   }
 
-  /// Fully indexed prefix lookup across the chosen active directory scope.
-  /// A name prefix is case-sensitive against existing stored names; an exact
-  /// Bangladeshi phone matches canonical 01XXXXXXXXX values.
+  /// Exact normalized BD-phone lookup or case-sensitive name-prefix lookup.
+  /// Indexed across the complete chosen active directory, with cursor paging.
+  /// Does NOT pretend to support arbitrary substring or fuzzy matching.
   Future<ActiveDonorPage> searchActiveDonorsPage({
     required String search,
     String? bloodGroup,
@@ -328,58 +328,16 @@ class DonorService {
     if (bloodGroup != null && !AppConstants.bloodGroups.contains(bloodGroup)) {
       throw const DonorDataException('Unknown blood group filter.');
     }
-    // Phone queries never fall back to name matching. Unsupported partial
-    // numbers are rejected rather than misrepresented as a complete search.
-    final looksLikePhone = RegExp(r'^[+0-9\\s-]+
-  Future<List<DonorModel>> getAllDonors() async =>
-      (await getActiveDonorsPage()).items;
-
-  Future<List<DonorModel>> getDonorsByBloodGroup(String bloodGroup) async =>
-      (await getActiveDonorsPage(bloodGroup: bloodGroup)).items;
-
-  static String _safeCode(String code) => switch (code) {
-    'permission-denied' => 'permission_denied',
-    'failed-precondition' => 'query_unavailable',
-    'unavailable' || 'network-request-failed' => 'network_unavailable',
-    _ => 'operation_failed',
-  };
-
-  static void _validateId(String value, String label) {
-    if (value.isEmpty || value.contains('/')) {
-      throw DonorDataException('Invalid $label document ID.');
-    }
-  }
-}
-).hasMatch(term);
+    final looksLikePhone = RegExp(r'^[+0-9\s-]+$').hasMatch(term);
     String? phone;
     if (looksLikePhone) {
-      final compact = term.replaceAll(RegExp(r'[\\s-]'), '');
+      final compact = term.replaceAll(RegExp(r'[\s-]'), '');
       phone = compact.startsWith('+880')
-          ? '0${compact.substring(4)}'
+          ? '0' + compact.substring(4)
           : compact.startsWith('880')
-              ? '0${compact.substring(3)}'
+              ? '0' + compact.substring(3)
               : compact;
-      if (!RegExp(r'^01[3-9][0-9]{8}
-  Future<List<DonorModel>> getAllDonors() async =>
-      (await getActiveDonorsPage()).items;
-
-  Future<List<DonorModel>> getDonorsByBloodGroup(String bloodGroup) async =>
-      (await getActiveDonorsPage(bloodGroup: bloodGroup)).items;
-
-  static String _safeCode(String code) => switch (code) {
-    'permission-denied' => 'permission_denied',
-    'failed-precondition' => 'query_unavailable',
-    'unavailable' || 'network-request-failed' => 'network_unavailable',
-    _ => 'operation_failed',
-  };
-
-  static void _validateId(String value, String label) {
-    if (value.isEmpty || value.contains('/')) {
-      throw DonorDataException('Invalid $label document ID.');
-    }
-  }
-}
-).hasMatch(phone)) {
+      if (!RegExp(r'^01[3-9][0-9]{8}$').hasMatch(phone)) {
         throw const DonorDataException('Use a complete BD mobile phone number.');
       }
     }
@@ -394,7 +352,7 @@ class DonorService {
         query = query.where('phone', isEqualTo: phone).orderBy('name');
       } else {
         query = query.orderBy('name')
-            .startAt([term]).endAt(['${term}\\uf8ff']);
+            .startAt([term]).endAt([term + '\uf8ff']);
       }
       if (after != null) query = query.startAfterDocument(after);
       final snapshot = await query.limit(pageSize + 1).get();
