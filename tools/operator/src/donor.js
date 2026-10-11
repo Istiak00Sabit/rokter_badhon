@@ -68,12 +68,19 @@ async function getAuthRecord(auth, uid) {
 }
 
 export async function deactivateDonor({
-  db, auth, serverTimestamp, operatorUid, donorId, operationId, reason,
+  db, auth, serverTimestamp, operatorUid, donorId, confirmDonorId,
+  operationId, reason,
 }) {
   validateId(operatorUid, 'operator UID');
   validateId(donorId, 'donor ID');
   validateId(operationId, 'operation ID');
-  if (typeof reason !== 'string' || reason.trim().length === 0) fail('invalid_argument', 'reason is required.');
+  if (confirmDonorId !== donorId) {
+    fail('confirmation_required', 'Confirm the exact donor ID before archiving.');
+  }
+  if (typeof reason !== 'string' || reason.trim().length < 10 ||
+      reason.trim() !== reason) {
+    fail('invalid_argument', 'A trimmed audit reason of at least 10 characters is required.');
+  }
   const authRecord = await getAuthRecord(auth, operatorUid);
   const donorReference = db.collection('donors').doc(donorId);
   const auditReference = db.collection('audit_logs').doc(operationId);
