@@ -34,6 +34,15 @@
       { "fieldPath": "active", "order": "ASCENDING" },
       { "fieldPath": "name", "order": "ASCENDING" }
     ] },
+    { "collectionGroup": "donors", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "active", "order": "ASCENDING" },
+      { "fieldPath": "blood_group", "order": "ASCENDING" },
+      { "fieldPath": "name", "order": "ASCENDING" }
+    ] },
+    { "collectionGroup": "donors", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "active", "order": "ASCENDING" },
+      { "fieldPath": "phone", "order": "ASCENDING" }
+    ] },
     { "collectionGroup": "donor_submissions", "queryScope": "COLLECTION", "fields": [
       { "fieldPath": "status", "order": "ASCENDING" },
       { "fieldPath": "submitted_at", "order": "ASCENDING" }
