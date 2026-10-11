@@ -120,6 +120,48 @@ Do not run a second emulator process on the same ports. If the phone is
 unplugged, rerun the two `adb reverse` commands after reconnecting it.
 
 
+## Stage 9 Batch 8 — local phone registry prerequisites
+
+The approved local phone helper now runs `seed-empty-demo-donor-registry`
+after `seed-test-admin`. It operates **only** on project
+`demo-rokter-badhon` with both Auth and Firestore emulators running.
+
+The fixture enables `system_config/donor_phone_registry` only when the
+local donor collection and phone-key collection are BOTH empty, or returns
+success if an already-ready **empty** fixture matches the schema. Any
+historical donor, stray phone-key document, unknown registry schema or
+incomplete scan stops the helper with an error. **No data is migrated or
+deleted.** Never point this command at real Firebase.
+
+Manual equivalent for a NEW/EMPTY local emulator:
+
+```powershell
+$env:FIRESTORE_EMULATOR_HOST='127.0.0.1:8080'
+$env:FIREBASE_AUTH_EMULATOR_HOST='127.0.0.1:9099'
+node tools/operator/cli.js seed-empty-demo-donor-registry --project-id demo-rokter-badhon
+```
+
+To inspect local registry completeness *without writing*:
+
+```powershell
+node tools/operator/cli.js audit-donor-registry --project-id demo-rokter-badhon
+```
+
+This reports only counts, flags and issue counts, never donor IDs/phone numbers.
+It exits with code 2 if reservation integrity/registry readiness is incomplete.
+For existing emulator histories it is normal for the result to be blocked until
+a separately reviewed migration; do not delete/reseed data just to get a green
+result. After the local fixture, use a fresh synthetic donor submission and
+verify approval by a leader, duplicate phone rejection for a second submission,
+and the original donor remains visible without duplicate active records.
+Once a donor exists, rerunning `seed-empty-demo-donor-registry` intentionally
+refuses to auto-activate anything.
+
+Automated emulator CI is not a physical-device acceptance result. Record
+device/Android version, commit, build source, tests, outcome and redacted
+failure details in the acceptance matrix, and keep all production changes
+blocked pending separate owner approval.
+
 ## Stage 9 physical-phone acceptance notes
 
 Keep a local, redacted record of device/Android version, exact Git commit and
