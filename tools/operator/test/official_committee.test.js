@@ -36,6 +36,18 @@ test('bundled app preview is byte-identical to approved official roster', () => 
   assert.equal(bundled, canonical);
 });
 
+test('phone acceptance guide uses the actual demo project and read-only committee workflow', () => {
+  const guide = fs.readFileSync(
+    new URL('../../../docs/PHONE_TESTING.md', import.meta.url),
+    'utf8',
+  );
+  assert.match(guide, /demo-rokter-badhon/);
+  assert.doesNotMatch(guide, /demo-rokterbadhon/);
+  assert.match(guide, /Committee display is \*\*read-only in Flutter\*\*/);
+  assert.match(guide, /2 leaders, 31 executives and 18 committee members/);
+  assert.doesNotMatch(guide, /developer_admin Committee Add/);
+});
+
 test('owner-approved president and general secretary cannot be replaced, reordered or promoted', () => {
   const leaders = source.filter(row => row.access_role === 'leader');
   assert.deepEqual(leaders.map(row => ({
