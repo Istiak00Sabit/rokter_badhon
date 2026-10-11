@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -27,6 +28,12 @@ class DonorController extends GetxController {
   final RxBool isLoading = false.obs;
   final RxString errorCode = ''.obs;
   final RxList<DonorModel> donors = <DonorModel>[].obs;
+  final RxBool isLoadingMore = false.obs;
+  final RxBool hasMoreDonors = false.obs;
+  final RxString pageErrorCode = ''.obs;
+  final RxString directoryBloodGroup = ''.obs;
+  DocumentSnapshot<Map<String, dynamic>>? _directoryCursor;
+  int _directoryGeneration = 0;
   final RxnString editingDonorId = RxnString();
 
   String? get _role => _authController.currentUser.value?.accessRole;
@@ -198,22 +205,78 @@ class DonorController extends GetxController {
     }
   }
 
+  Future<void> setDirectoryBloodGroup(String? bloodGroup) async {
+    final value = bloodGroup ?? '';
+    if (directoryBloodGroup.value == value) return;
+    directoryBloodGroup.value = value;
+    await loadDonors();
+  }
+
   Future<void> loadDonors() async {
+    final generation = ++_directoryGeneration;
+    isLoading.value = true;
+    isLoadingMore.value = false;
+    errorCode.value = '';
+    pageErrorCode.value = '';
+    hasMoreDonors.value = false;
+    _directoryCursor = null;
+    donors.clear();
+    final filter = directoryBloodGroup.value;
     try {
-      isLoading.value = true;
-      errorCode.value = '';
-      donors.assignAll(await _donorService.getAllDonors());
+      final page = await _donorService.getActiveDonorsPage(
+        bloodGroup: filter.isEmpty ? null : filter,
+      );
+      if (generation != _directoryGeneration) return;
+      donors.assignAll(page.items);
+      _directoryCursor = page.cursor;
+      hasMoreDonors.value = page.hasMore;
     } on DonorDataException {
-      donors.clear();
-      errorCode.value = 'malformed_data';
+      if (generation == _directoryGeneration) {
+        errorCode.value = 'malformed_data';
+      }
     } on DonorServiceException catch (error) {
-      donors.clear();
-      errorCode.value = error.code;
+      if (generation == _directoryGeneration) errorCode.value = error.code;
     } catch (_) {
-      donors.clear();
-      errorCode.value = 'operation_failed';
+      if (generation == _directoryGeneration) {
+        errorCode.value = 'operation_failed';
+      }
     } finally {
-      isLoading.value = false;
+      if (generation == _directoryGeneration) isLoading.value = false;
+    }
+  }
+
+  Future<void> loadMoreDonors() async {
+    if (isLoading.value || isLoadingMore.value || !hasMoreDonors.value ||
+        _directoryCursor == null) {
+      return;
+    }
+    final generation = _directoryGeneration;
+    final cursor = _directoryCursor;
+    final filter = directoryBloodGroup.value;
+    isLoadingMore.value = true;
+    pageErrorCode.value = '';
+    try {
+      final page = await _donorService.getActiveDonorsPage(
+        bloodGroup: filter.isEmpty ? null : filter,
+        after: cursor,
+      );
+      if (generation != _directoryGeneration) return;
+      final existing = donors.map((value) => value.id).toSet();
+      donors.addAll(page.items.where((value) => existing.add(value.id)));
+      _directoryCursor = page.cursor;
+      hasMoreDonors.value = page.hasMore;
+    } on DonorDataException {
+      if (generation == _directoryGeneration) {
+        pageErrorCode.value = 'malformed_data';
+      }
+    } on DonorServiceException catch (error) {
+      if (generation == _directoryGeneration) pageErrorCode.value = error.code;
+    } catch (_) {
+      if (generation == _directoryGeneration) {
+        pageErrorCode.value = 'operation_failed';
+      }
+    } finally {
+      if (generation == _directoryGeneration) isLoadingMore.value = false;
     }
   }
 
