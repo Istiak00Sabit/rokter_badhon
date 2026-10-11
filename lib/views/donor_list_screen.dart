@@ -67,7 +67,7 @@ class _DonorListScreenState extends State<DonorListScreen> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    'people_count'.trParams({
+                    'donors_loaded_count'.trParams({
                       'count': '${controller.donors.length}',
                     }),
                     style: const TextStyle(
@@ -142,7 +142,12 @@ class _DonorListScreenState extends State<DonorListScreen> {
                       return Obx(() {
                         final isSelected = selectedFilter.value == filter;
                         return GestureDetector(
-                          onTap: () => selectedFilter.value = filter,
+                          onTap: () {
+                            selectedFilter.value = filter;
+                            controller.setDirectoryBloodGroup(
+                              filter == 'all' ? null : filter,
+                            );
+                          },
                           child: Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 14,
@@ -220,13 +225,14 @@ class _DonorListScreenState extends State<DonorListScreen> {
                       searchQuery.value.toLowerCase(),
                     ) ||
                     donor.phone.contains(searchQuery.value);
-                final matchesFilter =
-                    selectedFilter.value == 'all' ||
-                    donor.bloodGroup == selectedFilter.value;
-                return matchesSearch && matchesFilter;
+                // The blood group is filtered on Firestore. Search is a
+                // substring over loaded pages, not a complete global search.
+                return matchesSearch;
               }).toList();
 
-              if (filtered.isEmpty) {
+              if (filtered.isEmpty &&
+                  !controller.hasMoreDonors.value &&
+                  controller.pageErrorCode.value.isEmpty) {
                 return Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -260,13 +266,59 @@ class _DonorListScreenState extends State<DonorListScreen> {
               return RefreshIndicator(
                 onRefresh: controller.loadDonors,
                 color: AppColors.primary,
-                child: ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: filtered.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 10),
-                  itemBuilder: (context, index) {
-                    return _buildDonorCard(filtered[index], controller);
-                  },
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
+                  children: [
+                    if (searchQuery.value.isNotEmpty ||
+                        controller.hasMoreDonors.value)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Text(
+                          controller.hasMoreDonors.value
+                              ? 'donor_search_partial'.tr
+                              : 'donor_search_complete'.tr,
+                          style: const TextStyle(
+                            color: AppColors.textGrey,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    if (filtered.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Text(
+                          'donor_no_matches_loaded'.tr,
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ...filtered.map((donor) => Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: _buildDonorCard(donor, controller),
+                        )),
+                    if (controller.pageErrorCode.value.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Text(
+                          'donor_page_error'.tr,
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    if (controller.hasMoreDonors.value ||
+                        controller.pageErrorCode.value.isNotEmpty)
+                      Center(
+                        child: controller.isLoadingMore.value
+                            ? const CircularProgressIndicator()
+                            : OutlinedButton(
+                                onPressed: controller.loadMoreDonors,
+                                child: Text(
+                                  controller.pageErrorCode.value.isNotEmpty
+                                      ? 'retry'.tr
+                                      : 'load_more'.tr,
+                                ),
+                              ),
+                      ),
+                  ],
                 ),
               );
             }),
