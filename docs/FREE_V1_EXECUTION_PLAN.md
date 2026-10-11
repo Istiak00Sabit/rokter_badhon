@@ -87,13 +87,21 @@ Updated: 2026-10-10. Target: Android APK on Firebase Spark (no Blaze upgrade, Cl
 - **Outstanding:** Blood Requests, Notices, Events and media still use unbounded list reads; their scalable pagination must retain access to all valid records rather than silently truncating them. Full request fulfil/cancel, event/notice publishing and donation-recording workflows remain trusted operator commands, not buttons that claim to work in the Flutter client. Release-grade live tests remain blocked by production bootstrap/rules approval.
 - **No production write:** Firebase Rules, real requests/donations, Auth identities, committee roster, and project billing were not changed.
 
+## Stage 9 start — acceptance preparation and device-test guide
+
+- The final Stage 8 GitHub Actions run for commit `a67dfbc9` passed both the Flutter and backend jobs (run 148, 2026-10-10). This includes Flutter analyze/tests, backend tests, Firestore Rules emulator tests, a debug Android APK build and artifact upload.
+- The physical-phone guide now distinguishes the **normal debug APK (real Firebase target)** from the separate emulator-only APK helper. It fixes the emulator project ID to `demo-rokter-badhon` and removes an inaccurate instruction to test a Flutter Committee Add button that is intentionally unavailable.
+- An operator regression checks the phone guide's demo project ID, read-only committee workflow and exact 2/31/18 live-roster expectation.
+- A redacted manual acceptance checklist was added for identity admission, committee, donors, emergency requests, donation history, translations, offline errors and application restart. **No physical-device execution has been claimed.**
+- The 51-person official roster and the two approved leaders remain untouched. No Firebase production write, Rules deploy or committee import was performed in this work.
+
 ## Next concrete tasks
 
-1. Verify final Stage 8 CI success (Backend/Firestore Rules tests, Flutter analyze/tests and Android debug APK build).
-2. Finish remaining bounded, complete Blood Request / Notice / Event queries and privileged status transitions without widening Firestore Rules or silently hiding records.
-3. Return to Stage 6's remaining accurate paginated donor search, duplicate detection and trusted archive; do not silently truncate emergency search results.
-4. Before production changes, obtain explicit owner review/approval for deployed Rules, trusted admin identity and any 51-member import. Never assume a source CI run changes Firebase.
-5. Stage 9 quality and physical-device MVP tests; then signed Stage 10 release only after acceptance gates are met.
+1. Review the new Stage 9 documentation/test CI result, then perform the listed emulator-configured Android-phone MVP checks and record redacted evidence.
+2. Finish bounded, complete Blood Request / Notice / Event queries and trusted status transitions without widening Firestore Rules or silently hiding records.
+3. Return to Stage 6's accurate paginated donor search, duplicate detection and trusted archive; do not silently truncate emergency search results.
+4. Obtain explicit owner review/approval for live Rules, admin identity and any 51-member import; source CI never changes Firebase.
+5. Complete Stage 9 physical-device acceptance before treating the signed Stage 10 release as ready.
 
 ## Stop conditions
 
