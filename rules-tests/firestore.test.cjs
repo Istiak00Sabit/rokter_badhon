@@ -3,7 +3,7 @@ const { before, after, beforeEach, test } = require('node:test');
 const assert = require('node:assert/strict');
 const { initializeTestEnvironment, assertSucceeds, assertFails } = require('@firebase/rules-unit-testing');
 const { doc, collection, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where,
-  writeBatch, serverTimestamp, Timestamp, deleteField, orderBy, getCountFromServer, limit, startAfter } = require('firebase/firestore');
+  writeBatch, serverTimestamp, Timestamp, deleteField, orderBy, getCountFromServer, limit, startAfter, documentId } = require('firebase/firestore');
 
 const projectId = 'demo-rokter-badhon';
 let env;
@@ -584,7 +584,7 @@ test('media gallery cursor paging preserves term/event scopes and hidden-media d
     ]) {
       const base = query(collection(c, name), where(field, '==', 'active'),
         where('active', '==', true), orderBy('sort_order', 'asc'),
-        orderBy('__name__', 'asc'));
+        orderBy(documentId(), 'asc'));
       const first = await assertSucceeds(getDocs(query(base, limit(1))));
       assert.equal(first.docs[0].id, 'active-active');
       const second = await assertSucceeds(getDocs(query(base,
@@ -593,7 +593,7 @@ test('media gallery cursor paging preserves term/event scopes and hidden-media d
     }
     const hiddenBase = query(collection(c, 'event_media'),
       where('event_id', '==', 'active'), where('active', '==', false),
-      orderBy('sort_order', 'asc'), orderBy('__name__', 'asc'));
+      orderBy('sort_order', 'asc'), orderBy(documentId(), 'asc'));
     if (role === 'leader') {
       const hidden = await assertSucceeds(getDocs(query(hiddenBase, limit(2))));
       assert.equal(hidden.docs.some(d => d.id === 'active-hidden2'), true);
@@ -602,7 +602,7 @@ test('media gallery cursor paging preserves term/event scopes and hidden-media d
     }
     await assertFails(getDocs(query(collection(c, 'event_media'),
       where('event_id', '==', 'missing'), where('active', '==', true),
-      orderBy('sort_order', 'asc'), orderBy('__name__', 'asc'), limit(1))));
+      orderBy('sort_order', 'asc'), orderBy(documentId(), 'asc'), limit(1))));
   }
 });
 
