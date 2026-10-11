@@ -249,7 +249,9 @@ class _DonorListScreenState extends State<DonorListScreen> {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'no_donors'.tr,
+                        searchQuery.value.isNotEmpty
+                            ? 'donor_no_matches_loaded'.tr
+                            : 'no_donors'.tr,
                         style: const TextStyle(
                           fontSize: 16,
                           color: AppColors.textGrey,
