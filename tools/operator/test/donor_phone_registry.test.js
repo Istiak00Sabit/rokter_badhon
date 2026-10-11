@@ -98,7 +98,7 @@ function fakeReader({ donors, keys, registry }) {
           return { docs: docs.slice(from, from + size) };
         },
         startAfter(cursor) {
-          return paginate(docs.indexOf(cursor) + 1, size);
+          return paginate(docs.findIndex(x => x.id === cursor.id) + 1, size);
         },
       });
       return {
