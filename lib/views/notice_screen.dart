@@ -56,6 +56,13 @@ class _NoticeScreenState extends State<NoticeScreen> {
             ...controller.published.map(
               (notice) => _NoticeCard(notice: notice),
             ),
+            if (controller.publishedHasMore.value ||
+                controller.publishedPageErrorCode.value.isNotEmpty)
+              _NoticePageControl(
+                loading: controller.isLoadingMorePublished.value,
+                error: controller.publishedPageErrorCode.value,
+                onLoad: controller.loadMorePublished,
+              ),
             if (controller.canViewUnpublished &&
                 controller.unpublished.isNotEmpty) ...[
               Padding(
@@ -72,10 +79,47 @@ class _NoticeScreenState extends State<NoticeScreen> {
                 (notice) => _NoticeCard(notice: notice),
               ),
             ],
+            if (controller.canViewUnpublished &&
+                (controller.unpublishedHasMore.value ||
+                 controller.unpublishedPageErrorCode.value.isNotEmpty))
+              _NoticePageControl(
+                loading: controller.isLoadingMoreUnpublished.value,
+                error: controller.unpublishedPageErrorCode.value,
+                onLoad: controller.loadMoreUnpublished,
+              ),
           ],
         ),
       );
     }),
+  );
+}
+
+class _NoticePageControl extends StatelessWidget {
+  final bool loading;
+  final String error;
+  final Future<void> Function() onLoad;
+
+  const _NoticePageControl({
+    required this.loading,
+    required this.error,
+    required this.onLoad,
+  });
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 12),
+    child: Column(
+      children: [
+        if (error.isNotEmpty) Text(_error(error).tr),
+        if (loading)
+          const CircularProgressIndicator()
+        else
+          OutlinedButton(
+            onPressed: onLoad,
+            child: Text(error.isNotEmpty ? 'retry'.tr : 'load_more'.tr),
+          ),
+      ],
+    ),
   );
 }
 
