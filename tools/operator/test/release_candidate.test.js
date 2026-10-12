@@ -111,3 +111,24 @@ test('Free V1 source has no hosted execution, scheduler, Storage, or upload depe
     /firebase_storage|image_picker|cloud_functions|firebase_functions|cloud_run|pubsub|scheduler/i,
   );
 });
+
+test('Android release requires owner-held signing; network permission survives production build', () => {
+  const gradle = readFileSync(source('android', 'app', 'build.gradle.kts'), 'utf8');
+  const manifest = readFileSync(source('android', 'app', 'src', 'main', 'AndroidManifest.xml'), 'utf8');
+  const debugManifest = readFileSync(source('android', 'app', 'src', 'debug', 'AndroidManifest.xml'), 'utf8');
+  const ignore = readFileSync(source('.gitignore'), 'utf8');
+  assert.match(gradle, /releaseTaskRequested/);
+  assert.match(gradle, /requiredReleaseSigningKeys/);
+  assert.match(gradle, /releasePropertiesFile\.isFile/);
+  assert.match(gradle, /signingConfigs\.getByName\("release"\)/);
+  assert.doesNotMatch(gradle, /signingConfigs\.getByName\("debug"\)/);
+  assert.match(gradle, /signingConfig = if \(releaseSigningConfigured\)/);
+  assert.match(gradle, /"key\.properties"/);
+  assert.match(gradle, /"keyPassword"/);
+  assert.match(manifest, /android\.permission\.INTERNET/);
+  assert.doesNotMatch(manifest, /usesCleartextTraffic\s*=\s*"true"/);
+  assert.match(debugManifest, /usesCleartextTraffic="true"/);
+  assert.match(ignore, /\/android\/key\.properties/);
+  assert.match(ignore, /\/android\/\*\.jks/);
+  assert.match(ignore, /\/android\/app\/\*\.keystore/);
+});
