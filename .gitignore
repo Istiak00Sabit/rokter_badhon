@@ -59,3 +59,11 @@ app.*.map.json
 
 /lib.zip
 /lib/models.zip
+
+# Android release signing material (local owner custody only)
+/android/key.properties
+/android/*.jks
+/android/*.keystore
+/android/app/*.jks
+/android/app/*.keystore
+*.p12
