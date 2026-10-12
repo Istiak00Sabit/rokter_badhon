@@ -132,3 +132,20 @@ test('Android release requires owner-held signing; network permission survives p
   assert.match(ignore, /\/android\/\*\.jks/);
   assert.match(ignore, /\/android\/app\/\*\.keystore/);
 });
+
+test('Android package ID and Firebase registration must match before a signed release', () => {
+  const gradle = readFileSync(source('android', 'app', 'build.gradle.kts'), 'utf8');
+  const googleServices = JSON.parse(
+    readFileSync(source('android', 'app', 'google-services.json'), 'utf8'),
+  );
+  const packageMatch = gradle.match(/applicationId\s*=\s*"([^"]+)"/);
+  assert.ok(packageMatch, 'Application ID must be explicit in Gradle.');
+  const applicationId = packageMatch[1];
+  const firebasePackages = googleServices.client.map(
+    c => c.client_info?.android_client_info?.package_name,
+  );
+  assert.ok(firebasePackages.includes(applicationId),
+    'Build applicationId must be registered in the matching Firebase Android project.');
+  assert.equal(googleServices.project_info?.project_id, 'rokterbadhon-b247b');
+  // Matching a development ID is not a production app-ID approval.
+});
