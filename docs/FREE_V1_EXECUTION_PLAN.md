@@ -1,6 +1,6 @@
 # Rokter Badhon Ghatail — Free V1 execution tracker
 
-Updated: 2026-10-10. Target: Android APK on Firebase Spark (no Blaze upgrade, Cloud Functions, paid SMS OTP, Firebase Storage, or paid server).
+Updated: 2026-10-12. Target: Android APK on Firebase Spark (no Blaze upgrade, Cloud Functions, paid SMS OTP, Firebase Storage, or paid server).
 
 ## Frozen product decisions
 
@@ -162,6 +162,16 @@ Updated: 2026-10-10. Target: Android APK on Firebase Spark (no Blaze upgrade, Cl
 - Unit tests cover donor/key mismatches, archived phone ownership, legacy formats, privacy-safe reports, bounded scan failures, repeatable demo setup, non-demo target denial and unknown existing registry rejection.
 - New `docs/STAGE9_ANDROID_ACCEPTANCE_MATRIX.md` captures required Android hardware tests as **UNTESTED** (not silently passed) and maintains a complete NO-GO production blocker list.
 - Batch 8 latest GitHub CI is required before marking the source and emulator-side work successful. **No real phone was tested, no live Firebase data read/backfill/write/deployed, no production Rules/indexes/registry activated, no committee import and no signed release created**. Spark Free Plan and 51-person Committee remain unchanged.
+
+## Stage 10 Batch 1 — safe Android release configuration (source-only)
+
+- Stage 9 Batch 8's latest GitHub Actions run `38133879892` completed **successfully**, including Flutter Analyze/Tests, Backend Operator Tests, Firestore Rules Tests, debug Android APK compilation and artifact upload.
+- The Android Gradle `release` build previously used the **debug signing key**. This has been removed. Release signing now requires a private `android/key.properties` and a valid local `storeFile`, `storePassword`, `keyAlias`, and `keyPassword`. Missing configuration is a deliberate failure for release tasks, not a fallback to debug signing. CI's debug build retains its own existing debug signing.
+- Android's **main** manifest now requests `android.permission.INTERNET` for Firebase production-network access. `usesCleartextTraffic=true` remains restricted to the debug manifest for local emulator use.
+- The signing properties and keystores are ignored by Git. No key material was generated, stored, committed, printed or put into GitHub Actions.
+- Added `docs/ANDROID_RELEASE_SIGNING.md` with owner-held key custody, correct package/Firebase registration, signed APK/AAB verification and update-install acceptance guidance.
+- New operator regression checks protect against debug signing reintroduction, missing Internet permission and accidental cleartext configuration in the release manifest.
+- **Production signing and release are NOT COMPLETE**. The existing `com.example.rokter_badhon` application ID has not been owner-approved; signing key custody, correct Firebase Android identity and SHA/App Check attestation, physical Android acceptance, historical donor key backfill, signed artifacts, privacy and deployed Rules are all external release gates. No production Firebase mutation, official committee change or paid upgrade occurred.
 
 ## Next concrete tasks
 
