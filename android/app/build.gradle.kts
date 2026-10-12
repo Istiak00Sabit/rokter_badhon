@@ -1,6 +1,16 @@
 import java.io.FileInputStream
 import java.util.Properties
 
+plugins {
+    id("com.android.application")
+    // START: FlutterFire Configuration
+    id("com.google.gms.google-services")
+    // END: FlutterFire Configuration
+    id("kotlin-android")
+    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+    id("dev.flutter.flutter-gradle-plugin")
+}
+
 // Signing secrets are developer-owned and must never be committed or added
 // to CI. An explicit release task must fail when secure signing is absent.
 val releasePropertiesFile = rootProject.file("key.properties")
@@ -25,15 +35,6 @@ if (releaseTaskRequested) {
     }
 }
 
-plugins {
-    id("com.android.application")
-    // START: FlutterFire Configuration
-    id("com.google.gms.google-services")
-    // END: FlutterFire Configuration
-    id("kotlin-android")
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
-    id("dev.flutter.flutter-gradle-plugin")
-}
 
 android {
     namespace = "com.example.rokter_badhon"
