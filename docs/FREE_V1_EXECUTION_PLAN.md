@@ -202,6 +202,14 @@ Updated: 2026-10-12. Target: Android APK on Firebase Spark (no Blaze upgrade, Cl
 - Backend regression assertions and release/acceptance guides were updated. These cloud checks are **not** full Registration → Approval E2E acceptance, physical Android device tests, a signed release build, approved Android package ID or historical donor registry production cutover. The production gate stays **NO-GO**.
 - The latest Batch 4 GitHub Actions run must pass **including the cloud UI acceptance** before these new tests can be marked successful. No Firebase production writes, Rules/index deployment, signing secrets or official 51-person Committee modifications were performed.
 
+## Stage 10 Batch 7 — fail-closed Android emulator Firebase startup diagnostics
+
+- Prior GitHub CI run `38347299727` passed Flutter, operator, Firestore Rules and emulator-only APK verification, but **failed cloud UI acceptance** before the Login screen. Android app process remained foreground/alive while no recognized Flutter accessibility nodes were found; Firebase error booleans were all false. Root cause is **not conclusively established**.
+- A bounded 15-second initialization for the **demo emulator build only** now displays explicit `Demo Firebase initialization unavailable` or `Demo Firebase emulator unavailable` UI if the native demo initialization/port configuration stalls/fails. It intentionally does **not** fall back to production Firebase or pretend Login was successful.
+- Android UI acceptance recognizes these diagnostic labels and fails explicitly rather than waiting for a missing Login language button. Existing coarse diagnostics still avoid exposing credentials, donor records or raw UI dumps.
+- Added regression source assertions for fail-closed startup and visible diagnostic state; production Firebase initialization and official 51-member roster remain unmodified.
+- Latest CI including the APK cloud UI job must still pass. This batch does **not** mark Android login, committee navigation, real hardware acceptance, production donor migration or signed release as completed. Production release remains **NO-GO**.
+
 ## Next concrete tasks
 
 1. Review the new Stage 9 documentation/test CI result, then perform the listed emulator-configured Android-phone MVP checks and record redacted evidence.
