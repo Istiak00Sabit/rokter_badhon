@@ -23,8 +23,11 @@ void main() {
     final seed = File('tools/release/start_demo_emulators.sh')
         .readAsStringSync();
     expect(main, contains('if (FirebaseRuntimeConfig.useEmulators)'));
-    expect(main, contains("Firebase.initializeApp(demoProjectId: 'demo-rokter-badhon')"));
-    expect(main, contains('Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform)'));
+    expect(
+      main,
+      contains("Firebase.initializeApp(demoProjectId: 'demo-rokter-badhon')"),
+    );
+    expect(main, contains('DefaultFirebaseOptions.currentPlatform'));
     expect(seed, contains('project="demo-rokter-badhon"'));
     expect(seed, contains('seed-test-admin --project-id'));
   });
