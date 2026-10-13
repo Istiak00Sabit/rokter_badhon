@@ -111,6 +111,8 @@ void main() {
 
 
       await tester.pump();
+      // Flush the zero-delay GetX root refresh scheduled after this frame.
+      await tester.pump(const Duration(milliseconds: 1));
 
 
       expect(
@@ -126,6 +128,8 @@ void main() {
 
 
       await tester.pump();
+      // Flush the zero-delay GetX root refresh scheduled after this frame.
+      await tester.pump(const Duration(milliseconds: 1));
 
 
       expect(
@@ -161,8 +165,8 @@ void main() {
       await controller.setLanguage(
         AppTranslations.english,
       );
-
-
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 1));
 
       Get.reset();
 
