@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import {
   readProjectSources,
@@ -79,4 +82,44 @@ test('version must have positive build number', () => {
   const broken = fixture();
   broken.pubspec = broken.pubspec.replace('version: 1.0.0+1', 'version: 1.0.0+0');
   rejected(broken, 'invalid or missing Android app version');
+});
+
+test('CI shares ONLY emulator-configured debug APK, with provenance and Android launch smoke', () => {
+  const root = fileURLToPath(new URL('../../../', import.meta.url));
+  const file = (...paths) => readFileSync(join(root, ...paths), 'utf8');
+  const workflow = file('.github', 'workflows', 'flutter-checks.yml');
+  const runtime = file('lib', 'config', 'firebase_runtime_config.dart');
+  const verifier = file('tools', 'release', 'verify_candidate.mjs');
+  const smoke = file('tools', 'release', 'android_smoke.sh');
+
+  assert.match(workflow, /flutter build apk --debug\s+--dart-define=USE_FIREBASE_EMULATOR=true\s+--dart-define=FIREBASE_EMULATOR_HOST=127\.0\.0\.1/);
+  assert.match(workflow, /--mode emulator-debug/);
+  assert.match(workflow, /--commit-sha \$\{\{ github\.sha \}\}/);
+  assert.match(workflow, /--run-id \$\{\{ github\.run_id \}\}/);
+  assert.match(workflow, /rokter-badhon-emulator-debug-apk/);
+  assert.doesNotMatch(workflow, /name: rokter-badhon-debug-apk\b/);
+  assert.match(workflow, /needs: flutter/);
+  assert.match(workflow, /reactivecircus\/android-emulator-runner@v2/);
+  assert.match(workflow, /bash tools\/release\/android_smoke\.sh/);
+  assert.match(smoke, /adb install -r -t/);
+  assert.match(smoke, /adb shell am start -W/);
+  assert.match(smoke, /adb shell am force-stop/);
+  assert.match(smoke, /targetDeclaration.*firebase-emulator-only/);
+  assert.match(runtime, /'USE_FIREBASE_EMULATOR'/);
+  assert.match(runtime, /defaultValue: false/);
+  assert.match(runtime, /useAuthEmulator\(/);
+  assert.match(runtime, /useFirestoreEmulator\(/);
+  assert.match(verifier, /mode === 'emulator-debug'/);
+  assert.match(verifier, /'firebase-emulator-only'/);
+  assert.match(verifier, /targetAttestation/);
+});
+
+test('real production app cannot be declared ready by emulator smoke or debug APK', () => {
+  const root = fileURLToPath(new URL('../../../', import.meta.url));
+  const load = (...paths) => readFileSync(join(root, ...paths), 'utf8');
+  const smoke = load('tools', 'release', 'android_smoke.sh');
+  const verifier = load('tools', 'release', 'verify_candidate.mjs');
+  assert.match(smoke, /NO production acceptance/);
+  assert.match(verifier, /releaseApproval: 'NO_GO'/);
+  assert.match(verifier, /productionReady: false/);
 });
