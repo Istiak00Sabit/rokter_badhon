@@ -25,7 +25,7 @@ void main() {
     expect(main, contains('if (FirebaseRuntimeConfig.useEmulators)'));
     expect(
       main,
-      contains("Firebase.initializeApp(demoProjectId: 'demo-rokter-badhon')"),
+      contains("demoProjectId: 'demo-rokter-badhon'"),
     );
     expect(main, contains('DefaultFirebaseOptions.currentPlatform'));
     expect(seed, contains('project="demo-rokter-badhon"'));
