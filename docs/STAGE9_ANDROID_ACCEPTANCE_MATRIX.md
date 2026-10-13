@@ -26,6 +26,7 @@
 | Built debug APK package, Internet permission, signature and SHA-256 | PASS only after latest binary-preflight CI step succeeds and report is archived |
 | Donor migration integrity checker / demo fixture | PASS only on latest GitHub CI green run |
 | Cloud Android 14 install, launch, restart smoke | PASS only after same-commit `android-smoke` CI job succeeds; **not a real phone or end-to-end test** |
+| Cloud Android 14 + synthetic Auth/Firestore emulators: language switch, admitted login, Committee navigation | PASS only after latest same-commit `android-smoke` CI job succeeds; **not physical-device testing or all A01/A05/A14 acceptance** |
 | Signed release APK/AAB | NOT DONE; this debug APK is not a release |
 
 CI release-candidate verification: `tools/release/verify_candidate.mjs` generates the
@@ -35,6 +36,14 @@ Git commit as the APK; the cloud Android launch smoke runs that artifact.
 A passing check verifies a **debug** APK only; it never
 approves the placeholder package ID, private release signing or production
 distribution. See `docs/ANDROID_RELEASE_CANDIDATE.md`.
+
+Stage 10 Batch 4 expands the cloud emulator smoke with a fresh
+`demo-rokter-badhon` Auth/Firestore emulator pair and a synthetic
+`developer_admin` account. It exercises the accessibility-exposed Login
+screen, English language switch, local account authentication, and Committee
+navigation on Android 14. Only these specific checks can pass through CI.
+The entire physical-phone acceptance matrix below remains **UNTESTED** until
+a person completes it on real hardware.
 
 ## Physical Android acceptance — all initially UNTESTED
 
