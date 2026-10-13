@@ -117,6 +117,11 @@ jobs:
         with:
           node-version: '24'
           cache: npm
+      - name: Validate CI test scripts before expensive emulator jobs
+        run: |
+          bash -n tools/release/start_demo_emulators.sh
+          bash -n tools/release/android_smoke.sh
+          python3 -m py_compile tools/release/android_ui_acceptance.py
       - name: Install operator dependencies
         run: npm --prefix tools/operator ci
       - name: Run operator tests
