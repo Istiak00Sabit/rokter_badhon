@@ -7,15 +7,32 @@ is opt-in at compile time and never changes the production default.
 ## Install the automated test APK
 
 Open the latest successful GitHub Actions **Flutter checks** run on the
-repository. Under **Artifacts**, download `rokter-badhon-debug-apk`,
-extract the ZIP and install `app-debug.apk` on an Android phone
-(only install builds from your own trusted repository). This is a debug
-build for testing and is **not** a signed production release.
+repository. Under **Artifacts**, download `rokter-badhon-emulator-debug-apk`,
+extract the ZIP, and inspect `release-preflight.json` from **the same run**.
+The APK is built using
+`USE_FIREBASE_EMULATOR=true` and
+`FIREBASE_EMULATOR_HOST=127.0.0.1`, rather than targeting real Firebase
+for test operations. It is an **emulator-only debug APK**, NOT a signed
+production release. It requires reachable Auth and Firestore emulators for
+data operations; without them it should fail closed instead of using
+production. The APK is not a production-login validation.
 
-**Do not use the normal CI APK to mutate real Firebase during acceptance
-testing without explicit owner approval.** That APK targets the configured
-real Firebase project, not the local emulators. Use the emulator-configured
-physical-phone helper below for development tests.
+Only install artifacts from your trusted repository. With a physical USB
+device, connect the Android device to your PC, start the local Firebase
+Auth + Firestore emulators, and run:
+
+```powershell
+adb -s <adb-device-id> reverse tcp:9099 tcp:9099
+adb -s <adb-device-id> reverse tcp:8080 tcp:8080
+adb -s <adb-device-id> install -r -t app-debug.apk
+```
+
+The `tools/run_local_phone.ps1` helper remains preferred for fresh,
+properly seeded local demo tests. It builds this same emulator-only mode
+and applies the USB routes. **A normal `flutter run` or `flutter build apk
+--debug` without these defines targets the configured real Firebase
+project** and is not safe for synthetic acceptance mutations without
+explicit owner approval.
 
 In the emulator, test Registration → Pending → trusted operator approval →
 Phone + Password Login. A pending or rejected applicant must not reach
