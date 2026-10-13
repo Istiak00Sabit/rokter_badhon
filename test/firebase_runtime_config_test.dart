@@ -32,6 +32,21 @@ void main() {
     expect(seed, contains('seed-test-admin --project-id'));
   });
 
+  test('emulator bootstrap fails closed without production fallback', () {
+    final main = File('lib/main.dart').readAsStringSync();
+    final start = main.indexOf('if (FirebaseRuntimeConfig.useEmulators)');
+    final end = main.indexOf('Get.put(await LocalizationController.create()');
+    expect(start, greaterThanOrEqualTo(0));
+    expect(end, greaterThan(start));
+    final bootstrap = main.substring(start, end);
+    expect(bootstrap, contains("demoProjectId: 'demo-rokter-badhon'"));
+    expect(bootstrap, contains('Duration(seconds: 15)'));
+    expect(bootstrap, contains('Demo Firebase initialization unavailable'));
+    expect(bootstrap, contains('Demo Firebase emulator unavailable'));
+    expect(bootstrap, contains('return;'));
+    expect(bootstrap, contains('DefaultFirebaseOptions.currentPlatform'));
+  });
+
   test('physical Android loopback uses the adb-reverse-safe host', () {
     expect(
       FirebaseRuntimeConfig.hostForPlatform(host: '127.0.0.1', android: true),
