@@ -35,13 +35,23 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - run: flutter build apk --debug
-      - name: Verify built debug APK package, permissions, signature and SHA-256
-        run: node tools/release/verify_candidate.mjs --apk build/app/outputs/flutter-apk/app-debug.apk --out release-preflight.json
+      - name: Build test APK with Firebase emulators ONLY
+        run: >-
+          flutter build apk --debug
+          --dart-define=USE_FIREBASE_EMULATOR=true
+          --dart-define=FIREBASE_EMULATOR_HOST=127.0.0.1
+      - name: Verify emulator-only debug APK metadata, signature and SHA-256
+        run: >-
+          node tools/release/verify_candidate.mjs
+          --apk build/app/outputs/flutter-apk/app-debug.apk
+          --out release-preflight.json
+          --mode emulator-debug
+          --commit-sha ${{ github.sha }}
+          --run-id ${{ github.run_id }}
       - name: Save installable Android test APK
         uses: actions/upload-artifact@v4
         with:
-          name: rokter-badhon-debug-apk
+          name: rokter-badhon-emulator-debug-apk
           path: |
             build/app/outputs/flutter-apk/app-debug.apk
             release-preflight.json
