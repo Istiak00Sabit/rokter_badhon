@@ -13,7 +13,13 @@ import 'config/firebase_runtime_config.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('bn');
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  if (FirebaseRuntimeConfig.useEmulators) {
+    // A demo-only project has no live Firebase resources. It must match
+    // the project used by the local Auth/Firestore emulator and seed tools.
+    await Firebase.initializeApp(demoProjectId: 'demo-rokter-badhon');
+  } else {
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  }
   await FirebaseRuntimeConfig.connectEmulators();
   Get.put(await LocalizationController.create(), permanent: true);
   runApp(const MyApp());
