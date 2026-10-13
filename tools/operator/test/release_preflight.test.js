@@ -102,7 +102,11 @@ test('CI shares ONLY emulator-configured debug APK, with provenance and Android 
   assert.match(workflow, /reactivecircus\/android-emulator-runner@v2/);
   assert.match(workflow, /bash tools\/release\/android_smoke\.sh/);
   assert.match(smoke, /adb install -r -t/);
-  assert.match(smoke, /adb shell am start -W/);
+  assert.match(smoke, /adb shell am start -n/);
+  assert.match(smoke, /assert_healthy/);
+  assert.match(smoke, /mResumedActivity/);
+  assert.match(smoke, /AndroidRuntime:E/);
+  assert.doesNotMatch(smoke, /adb shell am start -W/);
   assert.match(smoke, /adb shell am force-stop/);
   assert.match(smoke, /targetDeclaration.*firebase-emulator-only/);
   assert.match(runtime, /'USE_FIREBASE_EMULATOR'/);
