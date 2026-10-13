@@ -16,13 +16,46 @@ void main() async {
   if (FirebaseRuntimeConfig.useEmulators) {
     // A demo-only project has no live Firebase resources. It must match
     // the project used by the local Auth/Firestore emulator and seed tools.
-    await Firebase.initializeApp(demoProjectId: 'demo-rokter-badhon');
+    try {
+      await Firebase.initializeApp(
+        demoProjectId: 'demo-rokter-badhon',
+      ).timeout(const Duration(seconds: 15));
+    } catch (_) {
+      // Demo test builds must fail closed. No fallback to the real Firebase
+      // project and no private initialization error exposed in the UI.
+      runApp(
+        const MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: Text('Demo Firebase initialization unavailable'),
+            ),
+          ),
+        ),
+      );
+      return;
+    }
   } else {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
   }
-  await FirebaseRuntimeConfig.connectEmulators();
+  if (FirebaseRuntimeConfig.useEmulators) {
+    try {
+      await FirebaseRuntimeConfig.connectEmulators()
+          .timeout(const Duration(seconds: 15));
+    } catch (_) {
+      runApp(
+        const MaterialApp(
+          home: Scaffold(
+            body: Center(child: Text('Demo Firebase emulator unavailable')),
+          ),
+        ),
+      );
+      return;
+    }
+  } else {
+    await FirebaseRuntimeConfig.connectEmulators();
+  }
   Get.put(await LocalizationController.create(), permanent: true);
   runApp(const MyApp());
 }
