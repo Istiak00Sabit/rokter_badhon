@@ -154,10 +154,8 @@ def main():
     print("Android UI: English language switch + demo Auth login: PASS")
     committee = select_node(main_nav, "Committee", exact=True)
     tap(committee)
-    retry(lambda data: data if (
-        has_label(data, "Current Committee") or
-        has_label(data, "Committee")
-    ) else None, "committee navigation")
+    retry(lambda data: data if has_label(data, "Current committee") else None,
+          "committee page heading")
     # Logout/login and complete registration flows are not exercised here.
     print("Android UI: committee navigation: PASS (synthetic emulator)")
     print("Android UI acceptance: PASS; physical device and production remain NO-GO")
