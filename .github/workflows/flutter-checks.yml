@@ -62,7 +62,10 @@ jobs:
   android-smoke:
     needs: flutter
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
+    env:
+      FIRESTORE_EMULATOR_HOST: 127.0.0.1:8080
+      FIREBASE_AUTH_EMULATOR_HOST: 127.0.0.1:9099
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -75,6 +78,15 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+      - name: Install Firebase emulator and trusted operator test dependencies
+        run: |
+          npm ci
+          npm --prefix tools/operator ci
+      - name: Start local demo Auth/Firestore and seed synthetic test admin
+        env:
+          FIRESTORE_EMULATOR_HOST: 127.0.0.1:8080
+          FIREBASE_AUTH_EMULATOR_HOST: 127.0.0.1:9099
+        run: bash tools/release/start_demo_emulators.sh
       - name: Enable KVM for Android emulator
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -88,7 +100,9 @@ jobs:
           arch: x86_64
           profile: pixel_5
           disable-animations: true
-          script: bash tools/release/android_smoke.sh build/app/outputs/flutter-apk/app-debug.apk
+          script: |
+            bash tools/release/android_smoke.sh build/app/outputs/flutter-apk/app-debug.apk
+            python3 tools/release/android_ui_acceptance.py
 
   backend:
     runs-on: ubuntu-latest
