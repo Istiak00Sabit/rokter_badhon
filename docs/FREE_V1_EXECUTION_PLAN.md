@@ -173,6 +173,16 @@ Updated: 2026-10-12. Target: Android APK on Firebase Spark (no Blaze upgrade, Cl
 - New operator regression checks protect against debug signing reintroduction, missing Internet permission and accidental cleartext configuration in the release manifest.
 - **Production signing and release are NOT COMPLETE**. The existing `com.example.rokter_badhon` application ID has not been owner-approved; signing key custody, correct Firebase Android identity and SHA/App Check attestation, physical Android acceptance, historical donor key backfill, signed artifacts, privacy and deployed Rules are all external release gates. No production Firebase mutation, official committee change or paid upgrade occurred.
 
+## Stage 10 Batch 2 — release candidate identity and debug artifact verification
+
+- The prior Stage 10 Batch 1 final GitHub Actions run `38286155450` succeeded, including Flutter, Firestore Security Rules, backend operator tests, Android debug APK and artifact upload.
+- Added `tools/release/verify_candidate.mjs`: a fail-closed source consistency audit of the Android package ID, namespace/MainActivity, `google-services.json`, Flutter Android Firebase ID/project number, version/build number, production Internet permission, debug-only cleartext setting and owner-private signing configuration.
+- The checker **always reports `releaseApproval: NO_GO`**, because matching source does not prove production owner approval or device acceptance. The current `com.example.rokter_badhon` remains an unapproved development package ID. It is **not changed** by this batch.
+- Added binary verification of the **actual built debug APK** via SDK `aapt` and `apksigner` for package identity, Internet permission and APK signature, and a computed SHA-256/size. Failing or missing inspection tools make CI fail rather than silently skip artifact verification.
+- GitHub Actions now runs both audits and uploads a privacy-safe `release-preflight.json` beside the short-retention debug APK. The report contains no Firebase API key, private signing password or donor/member data. New backend regression tests cover mismatched Firebase IDs, missing permissions, insecure signing, invalid version and missing APK.
+- See `docs/ANDROID_RELEASE_CANDIDATE.md` and the acceptance matrix. This is **not** signed release APK/AAB verification, Play Store acceptance, real Android phone testing, migration/backfill, production Firebase deployment, signing-key creation or owner authorization. All of those gates remain **NO-GO** until independently completed.
+- Latest Batch 2 CI must be checked against its **final** commit and its binary preflight before marking automated verification passed.
+
 ## Next concrete tasks
 
 1. Review the new Stage 9 documentation/test CI result, then perform the listed emulator-configured Android-phone MVP checks and record redacted evidence.
