@@ -193,6 +193,15 @@ Updated: 2026-10-12. Target: Android APK on Firebase Spark (no Blaze upgrade, Cl
 - Backend regression tests guard the emulator-only build settings and safety labeling. Current app package remains the development ID; no production Firebase Rules/indexes/data/committee imports or private signing materials were touched.
 - **Batch 3 automated checks need the latest GitHub run to pass**, including the new cloud Android smoke job. Historical phone-key migration, real hardware End-to-End tests, final application ID and signed APK/AAB remain owner-controlled release blockers. This batch is still NO-GO for distribution.
 
+## Stage 10 Batch 4 — isolated Android cloud Auth/UI acceptance
+
+- Stage 10 Batch 3's final CI run `38338521358` passed all Flutter/backend/Firestore tests, emulator-only debug APK signature/checksum inspection, and the Android 14 install/launch/restart smoke.
+- Cloud `android-smoke` now starts **real local Firebase Auth + Firestore emulators**, hard-scoped to `demo-rokter-badhon`, with credential/project guards and synthetic test-admin/empty-donor-registry seeding. No production account or data are accessed.
+- New Android Python accessibility acceptance checks the English language switch, phone/password fields, sign-in using the public emulator-only developer-admin, and navigation to the Current committee page. These checks require the local emulators and intentionally emit no screenshots, real phone numbers or credentials.
+- The CI APK remains the verified `USE_FIREBASE_EMULATOR=true` build, with Git SHA, CI run, Android APK signature and SHA-256 report; no production-targeted APK is used for synthetic tests.
+- Backend regression assertions and release/acceptance guides were updated. These cloud checks are **not** full Registration → Approval E2E acceptance, physical Android device tests, a signed release build, approved Android package ID or historical donor registry production cutover. The production gate stays **NO-GO**.
+- The latest Batch 4 GitHub Actions run must pass **including the cloud UI acceptance** before these new tests can be marked successful. No Firebase production writes, Rules/index deployment, signing secrets or official 51-person Committee modifications were performed.
+
 ## Next concrete tasks
 
 1. Review the new Stage 9 documentation/test CI result, then perform the listed emulator-configured Android-phone MVP checks and record redacted evidence.
