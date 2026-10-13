@@ -18,7 +18,9 @@ void main() async {
     // the project used by the local Auth/Firestore emulator and seed tools.
     await Firebase.initializeApp(demoProjectId: 'demo-rokter-badhon');
   } else {
-    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
   }
   await FirebaseRuntimeConfig.connectEmulators();
   Get.put(await LocalizationController.create(), permanent: true);
