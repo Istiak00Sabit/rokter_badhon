@@ -26,8 +26,8 @@ for i in $(seq 1 90); do
     tail -n 30 "$RUNNER_TEMP/firebase-emulators.log"
     exit 1
   fi
-  if (echo >/dev/tcp/127.0.0.1/8080) 2>/dev/null &&
-      echo >/dev/tcp/127.0.0.1/9099) 2>/dev/null; then
+  if ( echo >/dev/tcp/127.0.0.1/8080 &&
+       echo >/dev/tcp/127.0.0.1/9099 ) 2>/dev/null; then
     break
   fi
   sleep 2
