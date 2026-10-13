@@ -34,10 +34,33 @@ def nodes():
     return list(tree.iter("node"))
 
 
+def node_labels(node):
+    # Flutter may expose the same string as both text and content-desc.
+    # Joining them produces "Sign in Sign in" and breaks exact matching.
+    return tuple(
+        x.strip() for x in (node.get("text", ""), node.get("content-desc", ""))
+        if x and x.strip()
+    )
+
+
 def label(node):
-    return " ".join(
-        node.get(attr, "") for attr in ("text", "content-desc")
-    ).strip()
+    return " ".join(dict.fromkeys(node_labels(node)))
+
+
+# Strict allowlist: never output arbitrary rendered UI or personal records.
+SAFE_UI_LABELS = (
+    "English", "বাংলা", "Login", "Sign in",
+    "Access your account", "আপনার অ্যাকাউন্টে প্রবেশ করুন",
+    "Language", "ভাষা", "Donors", "Committee",
+    "Profile", "Current committee",
+)
+
+
+def safe_ui_state(data):
+    return {word: any(
+        word == x or x.startswith(word + " ")
+        for node in data for x in node_labels(node)
+    ) for word in SAFE_UI_LABELS}
 
 
 def bounds(node):
@@ -53,8 +76,9 @@ def bounds(node):
 def select_node(data, term, exact=False):
     matches = []
     for node in data:
-        text = label(node)
-        if (text == term if exact else term.lower() in text.lower()):
+        parts = node_labels(node)
+        if any((part == term if exact else term.casefold() in part.casefold())
+               for part in parts):
             point = bounds(node)
             if point:
                 box = node.get("bounds", "")
@@ -69,18 +93,23 @@ def select_node(data, term, exact=False):
 def retry(predicate, label_for_error, seconds=45):
     deadline = time.monotonic() + seconds
     last_error = None
+    last_allowed_state = {}
     while time.monotonic() < deadline:
         try:
             snapshot = nodes()
+            last_allowed_state = safe_ui_state(snapshot)
             found = predicate(snapshot)
             if found is not None:
                 return found
         except (ET.ParseError, subprocess.SubprocessError) as exc:
             last_error = type(exc).__name__
         time.sleep(2)
+    # Report booleans for public UI labels only; no XML or typed field values.
+    visible = sorted(k for k, value in last_allowed_state.items() if value)
     raise AssertionError(
         f"Android UI acceptance: {label_for_error} not found "
-        f"(last UI capture state: {last_error or 'no matching node'})"
+        f"(allowed labels visible: {visible}; "
+        f"capture: {last_error or 'available'})"
     )
 
 
@@ -128,8 +157,10 @@ def main():
     english = retry(lambda data: select_node(data, "English", exact=True),
                     "English language button")
     tap(english)
-    retry(lambda data: data if has_label(data, "Sign in") else None,
-          "English login heading")
+    retry(lambda data: data if (
+        has_label(data, "Sign in") and
+        has_label(data, "Access your account")
+    ) else None, "English login heading and subtitle")
     snapshot = retry(lambda data: data if len(textfields(data)) >= 2 else None,
                      "phone and password input accessibility")
     inputs = textfields(snapshot)
