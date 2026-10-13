@@ -47,48 +47,56 @@ adb reverse tcp:8080 tcp:8080
 adb reverse tcp:9099 tcp:9099
 adb logcat -c
 
+# A cold Flutter/Firebase startup sometimes exceeds the ActivityManager
+# wait timeout. "am start -W" can report a timeout even while the app is
+# starting normally; instead require the process to launch, survive, remain
+# foreground, and avoid an app-specific fatal Android exception.
+assert_healthy() {
+  local phase="$1"
+  local pid=""
+  local foreground=""
+  for i in $(seq 1 25); do
+    pid="$(adb shell pidof "$package" 2>/dev/null | tr -d '\r' || true)"
+    if [[ -n "$pid" ]]; then break; fi
+    sleep 2
+  done
+  if [[ -z "$pid" ]]; then
+    echo "Android smoke: $phase did not create an app process."
+    return 1
+  fi
+  sleep 6
+  if [[ -z "$(adb shell pidof "$package" 2>/dev/null || true)" ]]; then
+    echo "Android smoke: $phase process exited."
+    return 1
+  fi
+  foreground="$(adb shell dumpsys activity activities 2>/dev/null || true)"
+  if ! grep -Eq "mResumedActivity.*$package|topResumedActivity.*$package" <<< "$foreground"; then
+    echo "Android smoke: $phase did not retain foreground activity."
+    return 1
+  fi
+  if adb logcat -d -s AndroidRuntime:E | grep -F "Process: $package," >/dev/null; then
+    echo "Android smoke: app-specific fatal exception during $phase."
+    return 1
+  fi
+}
+
+launch_app() {
+  local phase="$1"
+  local output=""
+  if ! output="$(adb shell am start -n "$activity" 2>&1)"; then
+    echo "Android smoke: ActivityManager could not launch during $phase."
+    return 1
+  fi
+  if grep -Eq 'Error:|Exception|does not exist' <<< "$output"; then
+    echo "Android smoke: ActivityManager rejected the $phase launch."
+    return 1
+  fi
+  assert_healthy "$phase"
+}
+
 echo "Android smoke: opening Flutter activity..."
-launch="$(adb shell am start -W -n "$activity")"
-if ! grep -q 'Status: ok' <<< "$launch"; then
-  echo "Android smoke: the launcher did not report success."
-  exit 1
-fi
-
-for i in $(seq 1 20); do
-  pid="$(adb shell pidof "$package" 2>/dev/null | tr -d '\r' || true)"
-  if [[ -n "$pid" ]]; then break; fi
-  sleep 2
-done
-if [[ -z "${pid:-}" ]]; then
-  echo "Android smoke: app process did not start."
-  exit 1
-fi
-
-sleep 8
-if [[ -z "$(adb shell pidof "$package" 2>/dev/null || true)" ]]; then
-  echo "Android smoke: app process did not survive startup."
-  exit 1
-fi
-# Filter the AndroidRuntime error buffer to this application's process.
-if adb logcat -d -s AndroidRuntime:E | grep -F "Process: $package," >/dev/null; then
-  echo "Android smoke: app-specific fatal exception detected."
-  exit 1
-fi
-
+launch_app "initial startup"
 echo "Android smoke: relaunching after a force stop..."
 adb shell am force-stop "$package"
-restart="$(adb shell am start -W -n "$activity")"
-if ! grep -q 'Status: ok' <<< "$restart"; then
-  echo "Android smoke: app failed to restart."
-  exit 1
-fi
-sleep 6
-if [[ -z "$(adb shell pidof "$package" 2>/dev/null || true)" ]]; then
-  echo "Android smoke: app process did not survive restart."
-  exit 1
-fi
-if adb logcat -d -s AndroidRuntime:E | grep -F "Process: $package," >/dev/null; then
-  echo "Android smoke: fatal exception after restart."
-  exit 1
-fi
+launch_app "restart"
 echo "Android emulator launch/restart smoke: PASS (NO production acceptance)"
