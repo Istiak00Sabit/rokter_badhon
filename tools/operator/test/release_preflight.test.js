@@ -123,3 +123,33 @@ test('real production app cannot be declared ready by emulator smoke or debug AP
   assert.match(verifier, /releaseApproval: 'NO_GO'/);
   assert.match(verifier, /productionReady: false/);
 });
+
+
+test('cloud Android UI acceptance starts isolated real Auth/Firestore emulators, not production', () => {
+  const root = fileURLToPath(new URL('../../../', import.meta.url));
+  const load = (...paths) => readFileSync(join(root, ...paths), 'utf8');
+  const workflow = load('.github', 'workflows', 'flutter-checks.yml');
+  const start = load('tools', 'release', 'start_demo_emulators.sh');
+  const ui = load('tools', 'release', 'android_ui_acceptance.py');
+  const phone = load('docs', 'PHONE_TESTING.md');
+
+  assert.match(workflow, /bash tools\/release\/start_demo_emulators\.sh/);
+  assert.match(workflow, /python3 tools\/release\/android_ui_acceptance\.py/);
+  assert.match(workflow, /FIRESTORE_EMULATOR_HOST: 127\.0\.0\.1:8080/);
+  assert.match(workflow, /FIREBASE_AUTH_EMULATOR_HOST: 127\.0\.0\.1:9099/);
+  assert.match(start, /project="demo-rokter-badhon"/);
+  assert.match(start, /--only auth,firestore/);
+  assert.match(start, /seed-test-admin --project-id/);
+  assert.match(start, /seed-empty-demo-donor-registry --project-id/);
+  assert.match(start, /audit-donor-registry --project-id/);
+  assert.match(start, /GOOGLE_APPLICATION_CREDENTIALS/);
+  assert.match(start, /GITHUB_ACTIONS/);
+  assert.match(ui, /"01000000000"/);
+  assert.match(ui, /"123456"/);
+  assert.match(ui, /"English"/);
+  assert.match(ui, /"Sign in"/);
+  assert.match(ui, /"Current committee"/);
+  assert.match(ui, /FIRESTORE_EMULATOR_HOST/);
+  assert.match(ui, /FIREBASE_AUTH_EMULATOR_HOST/);
+  assert.match(phone, /rokter-badhon-emulator-debug-apk/);
+});
