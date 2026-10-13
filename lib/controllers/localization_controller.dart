@@ -69,11 +69,18 @@ class LocalizationController extends GetxController {
     );
 
 
-    // Get.locale only changes the global value. Get.updateLocale also
-    // refreshes the GetMaterialApp translation dependents and visible .tr
-    // strings. Do not await the framework rebuild from a button callback.
+    // Get.updateLocale rebuilds the root navigator. Calling it synchronously
+    // from a language button may trigger a nested Flutter test frame. Defer
+    // the root refresh until the current frame is complete and ignore stale
+    // selections if the user switches languages again before the callback.
     if (Get.locale != nextLocale) {
-      Get.updateLocale(nextLocale);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Future<void>.delayed(Duration.zero, () {
+          if (locale.value == nextLocale) {
+            Get.updateLocale(nextLocale);
+          }
+        });
+      });
     }
   }
 }
