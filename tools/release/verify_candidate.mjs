@@ -155,23 +155,48 @@ export function inspectDebugApk({ apkPath, applicationId, sdkRoot }) {
 
 function main() {
   const args = process.argv.slice(2);
-  ensure(args.every((a, i) => ['--source-only', '--apk', '--out'].includes(a) ||
-    (i > 0 && ['--apk', '--out'].includes(args[i - 1]))),
+  const flags = ['--source-only', '--apk', '--out', '--mode', '--commit-sha', '--run-id'];
+  const valueFlags = flags.filter(x => x !== '--source-only');
+  ensure(args.every((a, i) => flags.includes(a) ||
+    (i > 0 && valueFlags.includes(args[i - 1]))),
   'unsupported command argument');
+  const flagValue = flag => {
+    const index = args.indexOf(flag);
+    if (index === -1) return null;
+    ensure(args[index + 1] && !args[index + 1].startsWith('--'),
+      flag + ' requires a value');
+    return args[index + 1];
+  };
+  const mode = flagValue('--mode');
+  const commitSha = flagValue('--commit-sha');
+  const runId = flagValue('--run-id');
+  if (mode !== null) {
+    ensure(mode === 'emulator-debug', 'only explicitly emulator-configured debug builds are supported');
+  }
+  if (commitSha !== null) {
+    ensure(/^[a-f0-9]{40}$/.test(commitSha), 'invalid Git commit SHA');
+  }
+  if (runId !== null) {
+    ensure(/^[1-9][0-9]*$/.test(runId), 'invalid CI run ID');
+  }
   const source = inspectReleaseSources(readProjectSources());
   const apkIndex = args.indexOf('--apk');
   const report = { source };
   if (apkIndex !== -1) {
-    ensure(Boolean(args[apkIndex + 1]), '--apk requires a file path');
+    ensure(mode === 'emulator-debug',
+      'APK inspection requires --mode emulator-debug; production-targeted test artifacts are forbidden');
     report.debugApk = inspectDebugApk({
       apkPath: resolve(args[apkIndex + 1]),
       applicationId: source.applicationId,
       sdkRoot: process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT,
     });
+    report.debugApk.targetDeclaration = 'firebase-emulator-only';
+    report.debugApk.targetAttestation = 'CI build flags (not an extracted APK flag)';
+    if (commitSha !== null) report.debugApk.gitCommit = commitSha;
+    if (runId !== null) report.debugApk.githubRunId = runId;
   }
   const outIndex = args.indexOf('--out');
   if (outIndex !== -1) {
-    ensure(Boolean(args[outIndex + 1]), '--out requires a file path');
     writeFileSync(resolve(args[outIndex + 1]), JSON.stringify(report, null, 2) + '\n');
   }
   // Print only non-sensitive source/build metadata and NO-GO gates.
