@@ -122,6 +122,7 @@ jobs:
           bash -n tools/release/start_demo_emulators.sh
           bash -n tools/release/android_smoke.sh
           python3 -m py_compile tools/release/android_ui_acceptance.py
+          python3 -m unittest discover -s tools/release -p 'test_*.py' -v
       - name: Install operator dependencies
         run: npm --prefix tools/operator ci
       - name: Run operator tests
