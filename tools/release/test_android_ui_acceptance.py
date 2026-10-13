@@ -15,7 +15,7 @@ class AndroidAccessibilityMatchingTest(unittest.TestCase):
             'bounds="[20,40][300,80]"/></hierarchy>'
         )
         self.assertIsNotNone(select_node(result, "Sign in", exact=True))
-        self.assertEqual(label(result[1]), "Sign in")
+        self.assertEqual(label(result[0]), "Sign in")
 
     def test_button_and_text_with_separate_accessibility_fields(self):
         result = self.make_nodes(
