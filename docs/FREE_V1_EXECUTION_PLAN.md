@@ -183,6 +183,16 @@ Updated: 2026-10-12. Target: Android APK on Firebase Spark (no Blaze upgrade, Cl
 - See `docs/ANDROID_RELEASE_CANDIDATE.md` and the acceptance matrix. This is **not** signed release APK/AAB verification, Play Store acceptance, real Android phone testing, migration/backfill, production Firebase deployment, signing-key creation or owner authorization. All of those gates remain **NO-GO** until independently completed.
 - Latest Batch 2 CI must be checked against its **final** commit and its binary preflight before marking automated verification passed.
 
+## Stage 10 Batch 3 — emulator-only Android build provenance and cloud launch smoke
+
+- The Stage 10 Batch 2 GitHub Actions run `38336749225` finished successfully, including the actual built Android debug APK's package/permission/signature/sha256 verification.
+- **CI's installable test APK now uses `USE_FIREBASE_EMULATOR=true` and `FIREBASE_EMULATOR_HOST=127.0.0.1`.** This changes the CI artifact from the old production-targeted debug APK to `rokter-badhon-emulator-debug-apk` for safe synthetic local tests, not production login.
+- Its `release-preflight.json` report declares the emulator target and includes the exact Git commit, GitHub Actions run ID and APK SHA-256. The target declaration attests to the reviewed CI build flags; signature and checksum inspection alone cannot prove embedded Dart defines.
+- A new `android-smoke` GitHub Actions job consumes the verified APK artifact, starts an Android 14 cloud emulator, checks checksum/provenance and installs, launches and restarts the app, failing on an app-specific AndroidRuntime fatal exception. **No Firebase emulators are started during this minimal startup smoke; no credentials, role-protected workflows or real device are tested.**
+- Updated `docs/PHONE_TESTING.md`, `docs/ANDROID_RELEASE_CANDIDATE.md` and the physical Android acceptance matrix to distinguish emulator-only CI artifacts from a normal `flutter run`, which still targets real Firebase without special flags.
+- Backend regression tests guard the emulator-only build settings and safety labeling. Current app package remains the development ID; no production Firebase Rules/indexes/data/committee imports or private signing materials were touched.
+- **Batch 3 automated checks need the latest GitHub run to pass**, including the new cloud Android smoke job. Historical phone-key migration, real hardware End-to-End tests, final application ID and signed APK/AAB remain owner-controlled release blockers. This batch is still NO-GO for distribution.
+
 ## Next concrete tasks
 
 1. Review the new Stage 9 documentation/test CI result, then perform the listed emulator-configured Android-phone MVP checks and record redacted evidence.
