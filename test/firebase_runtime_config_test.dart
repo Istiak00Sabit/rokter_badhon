@@ -18,6 +18,17 @@ void main() {
     expect(source, isNot(contains('testCredential')));
   });
 
+  test('emulator apps use exactly the same demo Firebase project as CI seed', () {
+    final main = File('lib/main.dart').readAsStringSync();
+    final seed = File('tools/release/start_demo_emulators.sh')
+        .readAsStringSync();
+    expect(main, contains('if (FirebaseRuntimeConfig.useEmulators)'));
+    expect(main, contains("Firebase.initializeApp(demoProjectId: 'demo-rokter-badhon')"));
+    expect(main, contains('Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform)'));
+    expect(seed, contains('project="demo-rokter-badhon"'));
+    expect(seed, contains('seed-test-admin --project-id'));
+  });
+
   test('physical Android loopback uses the adb-reverse-safe host', () {
     expect(
       FirebaseRuntimeConfig.hostForPlatform(host: '127.0.0.1', android: true),
