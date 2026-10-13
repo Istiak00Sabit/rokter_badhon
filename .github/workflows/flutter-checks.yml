@@ -17,12 +17,17 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
       - run: flutter --version
       - run: flutter pub get
+      - name: Validate release candidate source configuration (NO-GO)
+        run: node tools/release/verify_candidate.mjs --source-only --out release-preflight.json
       - run: dart format --output=none lib test
       - run: flutter analyze
       - run: flutter test
@@ -31,11 +36,15 @@ jobs:
           distribution: temurin
           java-version: '21'
       - run: flutter build apk --debug
+      - name: Verify built debug APK package, permissions, signature and SHA-256
+        run: node tools/release/verify_candidate.mjs --apk build/app/outputs/flutter-apk/app-debug.apk --out release-preflight.json
       - name: Save installable Android test APK
         uses: actions/upload-artifact@v4
         with:
           name: rokter-badhon-debug-apk
-          path: build/app/outputs/flutter-apk/app-debug.apk
+          path: |
+            build/app/outputs/flutter-apk/app-debug.apk
+            release-preflight.json
           if-no-files-found: error
           retention-days: 7
 
