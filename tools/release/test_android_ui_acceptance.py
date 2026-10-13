@@ -2,7 +2,7 @@
 import unittest
 import xml.etree.ElementTree as ET
 
-from android_ui_acceptance import label, select_node, safe_ui_state
+from android_ui_acceptance import label, select_node, safe_ui_state, safe_flutter_error_flags
 
 
 class AndroidAccessibilityMatchingTest(unittest.TestCase):
@@ -46,6 +46,20 @@ class AndroidAccessibilityMatchingTest(unittest.TestCase):
             'bounds="[5,5][150,45]"/></hierarchy>'
         )
         self.assertIsNone(select_node(result, "Login", exact=True))
+
+    def test_diagnostics_allowlist_contains_no_private_fields(self):
+        items = self.make_nodes(
+            '<hierarchy>'
+            '<node text="Private Phone 01712345678" content-desc="" '
+            'bounds="[1,1][300,80]"/>'
+            '<node text="English" content-desc="English" '
+            'bounds="[1,80][300,140]"/>'
+            '</hierarchy>'
+        )
+        report = safe_ui_state(items)
+        self.assertTrue(report["English"])
+        self.assertFalse(any("01712345678" in k for k in report))
+        self.assertTrue(all(type(v) is bool for v in report.values()))
 
 
 if __name__ == "__main__":
