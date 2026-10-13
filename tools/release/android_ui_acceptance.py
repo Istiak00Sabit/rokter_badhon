@@ -53,6 +53,8 @@ SAFE_UI_LABELS = (
     "Access your account", "আপনার অ্যাকাউন্টে প্রবেশ করুন",
     "Language", "ভাষা", "Donors", "Committee",
     "Profile", "Current committee",
+    "Demo Firebase initialization unavailable",
+    "Demo Firebase emulator unavailable",
 )
 
 
@@ -133,6 +135,14 @@ def retry(predicate, label_for_error, seconds=45):
             snapshot = nodes()
             last_nodes = snapshot
             last_allowed_state = safe_ui_state(snapshot)
+            if any(has_label(snapshot, msg) for msg in (
+                "Demo Firebase initialization unavailable",
+                "Demo Firebase emulator unavailable",
+            )):
+                raise AssertionError(
+                    "Android UI acceptance: demo Firebase startup unavailable; "
+                    "no production fallback"
+                )
             found = predicate(snapshot)
             if found is not None:
                 return found
