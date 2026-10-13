@@ -26,7 +26,18 @@ node --input-type=module -e '
   assert.equal(p.debugApk.apkSignatureVerified, true);
   assert.equal(p.debugApk.internetPermission, true);
   assert.match(p.debugApk.sha256, /^[0-9a-f]{64}$/);
+  if (process.env.GITHUB_SHA) assert.equal(p.debugApk.gitCommit, process.env.GITHUB_SHA);
+  if (process.env.GITHUB_RUN_ID) assert.equal(p.debugApk.githubRunId, process.env.GITHUB_RUN_ID);
 '
+
+# The report and APK must describe the exact same binary, not just a
+# syntactically valid SHA-256 field.
+actual_sha="$(sha256sum "$apk" | cut -d' ' -f1)"
+reported_sha="$(node -p 'JSON.parse(require("fs").readFileSync("release-preflight.json", "utf8")).debugApk.sha256')"
+if [[ "$actual_sha" != "$reported_sha" ]]; then
+  echo "Android smoke: APK checksum disagrees with same-run verification report."
+  exit 1
+fi
 
 echo "Android smoke: installing emulator-only debug APK..."
 adb install -r -t "$apk" >/dev/null
