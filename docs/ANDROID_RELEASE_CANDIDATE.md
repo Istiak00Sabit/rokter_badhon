@@ -24,9 +24,34 @@ node tools/release/verify_candidate.mjs --apk build/app/outputs/flutter-apk/app-
 
 The checker uses installed Android build-tools `aapt` and `apksigner` to verify the actual debug APK's package identity, Internet permission, APK signature, size and SHA-256. It checks for missing Android SDK tooling rather than silently skipping verification. The report is machine-readable and deliberately contains no secret signing properties, Firebase API keys, raw donor information, user IDs or private application data.
 
-GitHub Actions `Flutter checks` runs the source preflight before Flutter Analyze, and after building the debug APK runs the binary preflight. A successful run uploads both `app-debug.apk` and `release-preflight.json` as one short-retention artifact. Always verify the run's commit SHA and inspect the downloaded report before any installation.
+GitHub Actions `Flutter checks` runs the source preflight before Flutter Analyze, builds a **Firebase-emulator-configured** debug APK, and runs the binary preflight. A successful run uploads both `app-debug.apk` and `release-preflight.json` as one short-retention artifact. Always verify the run's commit SHA and inspect the downloaded report before installation.
 
 **This artifact is debug-only.** It cannot be accepted as a release APK and should never be publicly distributed as the organization's production client.
+
+## Stage 10 Batch 3 — safe emulator-only CI artifact and cloud launch smoke
+
+GitHub Actions now explicitly builds its installable debug APK with
+`--dart-define=USE_FIREBASE_EMULATOR=true` and
+`--dart-define=FIREBASE_EMULATOR_HOST=127.0.0.1`.
+The artifact is named **`rokter-badhon-emulator-debug-apk`** so it cannot
+be confused with a production Firebase build. The `release-preflight.json`
+report includes a declared emulator target plus the exact Git SHA and GitHub
+Actions run ID, the built APK SHA-256, package ID and signature check.
+The mode declaration follows reviewed CI build flags; binary inspection by
+itself does **not** recover Dart compile-time defines from the APK.
+
+A separate GitHub Actions `android-smoke` job downloads that same artifact,
+boots an Android 14 cloud emulator, installs the APK, launches the Flutter
+activity and checks that the app process survives an initial launch and restart
+without an AndroidRuntime fatal exception. The Firebase emulators are **not**
+started by this smoke job; network/database, UI navigation and credentials
+are **not tested** by this basic runtime check. It intentionally never contacts
+real Firebase for user operations.
+
+Use the same-run report and the smoke job result when recording the tested
+build. The smoke job passing does **not** validate Registration, Login,
+Donor Approval, committee screens, or real hardware: those remain explicitly
+UNTESTED in the physical-device acceptance matrix.
 
 ## Release owner gates (all still required)
 
