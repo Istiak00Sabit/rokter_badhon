@@ -22,8 +22,16 @@
 | Firestore Rules Emulator including concurrent donor approvals | PASS only on latest GitHub CI green run |
 | Flutter analyze and tests | PASS only on latest GitHub CI green run |
 | Android debug APK build + artifact | PASS only on latest GitHub CI green run |
+| Android release candidate source alignment (package / Firebase / permissions / private signing) | PASS only after latest source preflight CI step succeeds; **production approval still NO-GO** |
+| Built debug APK package, Internet permission, signature and SHA-256 | PASS only after latest binary-preflight CI step succeeds and report is archived |
 | Donor migration integrity checker / demo fixture | PASS only on latest GitHub CI green run |
 | Signed release APK/AAB | NOT DONE; this debug APK is not a release |
+
+CI release-candidate verification: `tools/release/verify_candidate.mjs` generates the
+privacy-safe `release-preflight.json` artifact. It must be evaluated against the **same**
+Git commit as the APK. A passing check verifies a **debug** APK only; it never
+approves the placeholder package ID, private release signing or production
+distribution. See `docs/ANDROID_RELEASE_CANDIDATE.md`.
 
 ## Physical Android acceptance — all initially UNTESTED
 
