@@ -53,6 +53,27 @@ build. The smoke job passing does **not** validate Registration, Login,
 Donor Approval, committee screens, or real hardware: those remain explicitly
 UNTESTED in the physical-device acceptance matrix.
 
+## Stage 10 Batch 4 — isolated cloud Firebase login UI acceptance
+
+The Android 14 CI emulator now also runs local Firebase Auth and Firestore
+emulators under **`demo-rokter-badhon`**, seeds its synthetic developer-admin
+AuthLink/User and an empty donor phone registry, and checks the registry
+integrity before launching. Local emulator endpoints and guarded seeding must
+be available; missing ports, a populated donor history, or a non-demo target
+stop the test instead of switching to production.
+
+The `android-smoke` job now separately exercises accessibility-visible login
+fields, Bengali-to-English language switch, the public synthetic demo account
+login through real local Auth/Firestore emulators, and a navigation check to
+the Current committee screen. It prints no credentials, donor IDs, screenshots
+or application content to CI output. This is a **targeted Android-cloud test**,
+not a test of real production Firebase, completed donor approval, all
+registration workflows or physical hardware.
+
+Only mark these cloud checks passed after the **latest commit's** GitHub CI
+run succeeds, including the actual Android UI script. All physical-device
+acceptance cases in `STAGE9_ANDROID_ACCEPTANCE_MATRIX.md` remain untested.
+
 ## Release owner gates (all still required)
 
 - Finalize and approve application ID, Android namespace where needed, Firebase registration, app fingerprints, app-attestation and expected update path before any package rename.
