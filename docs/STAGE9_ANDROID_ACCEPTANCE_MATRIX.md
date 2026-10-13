@@ -21,15 +21,18 @@
 | Operator unit/security tests | PASS only on latest GitHub CI green run |
 | Firestore Rules Emulator including concurrent donor approvals | PASS only on latest GitHub CI green run |
 | Flutter analyze and tests | PASS only on latest GitHub CI green run |
-| Android debug APK build + artifact | PASS only on latest GitHub CI green run |
+| Emulator-only Android debug APK build + artifact | PASS only when latest CI succeeds and mode/provenance report confirms `firebase-emulator-only` |
 | Android release candidate source alignment (package / Firebase / permissions / private signing) | PASS only after latest source preflight CI step succeeds; **production approval still NO-GO** |
 | Built debug APK package, Internet permission, signature and SHA-256 | PASS only after latest binary-preflight CI step succeeds and report is archived |
 | Donor migration integrity checker / demo fixture | PASS only on latest GitHub CI green run |
+| Cloud Android 14 install, launch, restart smoke | PASS only after same-commit `android-smoke` CI job succeeds; **not a real phone or end-to-end test** |
 | Signed release APK/AAB | NOT DONE; this debug APK is not a release |
 
 CI release-candidate verification: `tools/release/verify_candidate.mjs` generates the
-privacy-safe `release-preflight.json` artifact. It must be evaluated against the **same**
-Git commit as the APK. A passing check verifies a **debug** APK only; it never
+privacy-safe `release-preflight.json` artifact for the **Firebase emulator-only
+debug APK**. It must be evaluated against the **same**
+Git commit as the APK; the cloud Android launch smoke runs that artifact.
+A passing check verifies a **debug** APK only; it never
 approves the placeholder package ID, private release signing or production
 distribution. See `docs/ANDROID_RELEASE_CANDIDATE.md`.
 
