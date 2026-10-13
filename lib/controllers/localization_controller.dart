@@ -69,11 +69,11 @@ class LocalizationController extends GetxController {
     );
 
 
-    // Update GetX locale without awaiting rebuild.
-    // Awaiting Get.updateLocale causes Flutter test frame conflict.
+    // Get.locale only changes the global value. Get.updateLocale also
+    // refreshes the GetMaterialApp translation dependents and visible .tr
+    // strings. Do not await the framework rebuild from a button callback.
     if (Get.locale != nextLocale) {
-      Get.locale = nextLocale;
-      update();
+      Get.updateLocale(nextLocale);
     }
   }
 }
