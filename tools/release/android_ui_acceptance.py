@@ -90,13 +90,48 @@ def select_node(data, term, exact=False):
     return min(matches, key=lambda pair: pair[0])[1]
 
 
+def safe_android_runtime_state(data):
+    """Coarse non-personal diagnostics; never print raw UI or logcat."""
+    node_count = len(data)
+    types = [item.get("class", "") for item in data]
+    foreground = adb("shell", "dumpsys", "activity", "activities")
+    own_process = bool(adb("shell", "pidof", PACKAGE).strip())
+    return {
+        "nodes": node_count,
+        "edit_fields": sum("EditText" in name for name in types),
+        "flutter_view": any("FlutterView" in name for name in types),
+        "package_foreground": (
+            "mResumedActivity" in foreground and PACKAGE in foreground
+        ) or ("topResumedActivity" in foreground and PACKAGE in foreground),
+        "process_alive": own_process,
+    }
+
+
+def safe_flutter_error_flags():
+    try:
+        logs = adb("logcat", "-d", "-s", "flutter:E", "AndroidRuntime:E",
+                   timeout=25)
+    except subprocess.SubprocessError:
+        return {"logcat_readable": False}
+    checks = {
+        "firebase_core_error": ("firebase_core", "FirebaseCore", "core/duplicate-app"),
+        "firebase_config_error": ("api-key", "APIKey", "Invalid FirebaseOptions"),
+        "flutter_unhandled_error": ("Unhandled Exception", "Unhandled exception"),
+        "android_fatal": ("FATAL EXCEPTION",),
+    }
+    return {key: any(marker in logs for marker in markers)
+            for key, markers in checks.items()}
+
+
 def retry(predicate, label_for_error, seconds=45):
     deadline = time.monotonic() + seconds
     last_error = None
     last_allowed_state = {}
+    last_nodes = []
     while time.monotonic() < deadline:
         try:
             snapshot = nodes()
+            last_nodes = snapshot
             last_allowed_state = safe_ui_state(snapshot)
             found = predicate(snapshot)
             if found is not None:
@@ -106,9 +141,12 @@ def retry(predicate, label_for_error, seconds=45):
         time.sleep(2)
     # Report booleans for public UI labels only; no XML or typed field values.
     visible = sorted(k for k, value in last_allowed_state.items() if value)
+    runtime = safe_android_runtime_state(last_nodes)
+    errors = safe_flutter_error_flags()
     raise AssertionError(
         f"Android UI acceptance: {label_for_error} not found "
         f"(allowed labels visible: {visible}; "
+        f"runtime: {runtime}; error categories: {errors}; "
         f"capture: {last_error or 'available'})"
     )
 
