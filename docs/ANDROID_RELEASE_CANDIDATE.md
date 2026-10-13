@@ -62,6 +62,14 @@ integrity before launching. Local emulator endpoints and guarded seeding must
 be available; missing ports, a populated donor history, or a non-demo target
 stop the test instead of switching to production.
 
+Flutter's emulator build is also initialized with
+`Firebase.initializeApp(demoProjectId: 'demo-rokter-badhon')`, matching the
+project used by the seeded Auth and Firestore emulators. Merely changing the
+network host without changing the Firebase project ID is insufficient: it can
+query the wrong emulator partition. When `USE_FIREBASE_EMULATOR` is absent,
+the existing production Firebase options remain unchanged. No production
+data is seeded or read by this setup.
+
 The `android-smoke` job now separately exercises accessibility-visible login
 fields, Bengali-to-English language switch, the public synthetic demo account
 login through real local Auth/Firestore emulators, and a navigation check to
