@@ -11,6 +11,7 @@ import '../models/committee_media_model.dart';
 import '../models/committee_term_model.dart';
 import '../services/committee_service.dart';
 import 'member_list_screen.dart';
+import '../widgets/roktobadhon_design.dart';
 
 class CommitteeScreen extends StatefulWidget {
   const CommitteeScreen({super.key});
@@ -62,6 +63,12 @@ class _CommitteeScreenState extends State<CommitteeScreen> {
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
             children: [
+              RBPageIntro(
+                title: 'current_committee'.tr,
+                eyebrow: 'org_location'.tr,
+                subtitle: roster == null ? 'no_current_committee'.tr : roster.term.name,
+              ),
+              const SizedBox(height: 18),
               Row(
                 children: [
                   Expanded(
@@ -290,7 +297,7 @@ class CommitteeRosterView extends StatelessWidget {
         _CommitteeGallery(roster: roster, service: service),
         const SizedBox(height: 18),
         if (roster.members.isEmpty)
-          _EmptyCommittee(message: 'no_assignments'.tr)
+          RBEmptyPanel(title: 'no_assignments'.tr, icon: Icons.groups_outlined)
         else
           ...roster.members.map(_CommitteeMemberCard.new),
       ],
