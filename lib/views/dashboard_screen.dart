@@ -15,6 +15,7 @@ import '../views/registration_review_screen.dart';
 import '../views/audit_log_screen.dart';
 import '../views/pending_donor_approvals_screen.dart';
 import '../widgets/auth_language_switch.dart';
+import '../widgets/roktobadhon_design.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -91,19 +92,24 @@ class DashboardScreen extends StatelessWidget {
 
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Summary section title
-                      Text(
-                        'dashboard_summary'.tr,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textDark,
-                        ),
+                      // Community-first introduction and live metrics.
+                      RBPageIntro(
+                        title: 'greeting'.tr,
+                        eyebrow: 'org_location'.tr,
+                        subtitle: controller.currentUser.value?.name ?? 'app_name'.tr,
                       ),
+                      const SizedBox(height: 20),
+                      RBInfoStrip(
+                        icon: Icons.favorite_outline,
+                        title: 'app_name'.tr,
+                        subtitle: 'tagline'.tr,
+                      ),
+                      const SizedBox(height: 22),
+                      RBSectionHeader(title: 'dashboard_summary'.tr),
                       const SizedBox(height: 12),
 
                       // Stats grid - 2x2
@@ -203,14 +209,7 @@ class DashboardScreen extends StatelessWidget {
                       const SizedBox(height: 24),
 
                       // Quick actions
-                      Text(
-                        'quick_actions'.tr,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textDark,
-                        ),
-                      ),
+                      RBSectionHeader(title: 'quick_actions'.tr),
                       const SizedBox(height: 12),
 
                       Row(
