@@ -138,19 +138,10 @@ class _RequestCard extends StatelessWidget {
   const _RequestCard({required this.value});
   @override
   Widget build(BuildContext context) => Card(
-    color: AppColors.white,
+    color: AppColors.surface,
     margin: const EdgeInsets.only(bottom: 10),
     child: ListTile(
-      leading: CircleAvatar(
-        backgroundColor: AppColors.primaryLight,
-        child: Text(
-          value.bloodGroup,
-          style: const TextStyle(
-            color: AppColors.primary,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
+      leading: RBBloodBadge(group: value.bloodGroup),
       title: Text(
         value.patientName ?? 'patient_unavailable'.tr,
         style: const TextStyle(fontWeight: FontWeight.bold),
