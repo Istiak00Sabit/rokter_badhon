@@ -300,18 +300,6 @@ class _CreateBloodRequestScreenState extends State<CreateBloodRequestScreen> {
   );
 }
 
-class _Empty extends StatelessWidget {
-  final String text;
-  const _Empty({required this.text});
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.all(32),
-    child: Center(
-      child: Text(text, style: const TextStyle(color: AppColors.textGrey)),
-    ),
-  );
-}
-
 class _StateMessage extends StatelessWidget {
   final String message;
   final Future<void> Function() retry;
