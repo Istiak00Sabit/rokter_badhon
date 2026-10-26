@@ -6,6 +6,7 @@ import '../constants/app_constants.dart';
 import '../controllers/blood_request_controller.dart';
 import '../localization/app_date_formatter.dart';
 import '../models/blood_request_model.dart';
+import '../widgets/roktobadhon_design.dart';
 
 class BloodRequestScreen extends StatefulWidget {
   const BloodRequestScreen({super.key});
@@ -59,8 +60,12 @@ class _BloodRequestScreenState extends State<BloodRequestScreen> {
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(24, 16, 24, 88),
           children: [
+            RBPageIntro(title: 'blood_requests'.tr, eyebrow: 'org_location'.tr, subtitle: 'tagline'.tr),
+            const SizedBox(height: 16),
+            RBSectionHeader(title: 'blood_requests'.tr),
+            const SizedBox(height: 10),
             if (controller.active.isEmpty)
-              _Empty(text: 'no_active_requests'.tr)
+              RBEmptyPanel(title: 'no_active_requests'.tr, icon: Icons.favorite_border)
             else
               ...controller.active.map((value) => _RequestCard(value: value)),
             if (controller.activeHasMore.value ||
@@ -235,8 +240,12 @@ class _CreateBloodRequestScreenState extends State<CreateBloodRequestScreen> {
     body: Form(
       key: formKey,
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 36),
         children: [
+          RBPageIntro(title: 'new_blood_request'.tr, eyebrow: 'org_location'.tr, subtitle: 'tagline'.tr),
+          const SizedBox(height: 22),
+          RBSectionHeader(title: 'blood_group'.tr),
+          const SizedBox(height: 12),
           DropdownButtonFormField<String>(
             initialValue: bloodGroup,
             items: AppConstants.bloodGroups
@@ -247,6 +256,8 @@ class _CreateBloodRequestScreenState extends State<CreateBloodRequestScreen> {
             onChanged: (value) => setState(() => bloodGroup = value!),
             decoration: InputDecoration(labelText: 'blood_group'.tr),
           ),
+          const SizedBox(height: 24),
+          RBSectionHeader(title: 'patient_name_optional'.tr),
           _field(patient, 'patient_name_optional'.tr, required: false),
           _field(hospital, 'hospital'.tr),
           _field(location, 'location'.tr),
