@@ -89,13 +89,13 @@ class _AddCommitteeMemberScreenState extends State<AddCommitteeMemberScreen> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Text('add_committee_member'.tr),
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.white,
+        backgroundColor: AppColors.surface,
+        foregroundColor: AppColors.textDark,
       ),
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 28),
           children: [
             Text(
               'committee_no_login'.tr,
