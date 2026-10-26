@@ -9,6 +9,7 @@ import '../localization/app_translations.dart';
 import '../localization/app_date_formatter.dart';
 import '../models/profile_update.dart';
 import '../models/user_model.dart';
+import '../widgets/roktobadhon_design.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -51,12 +52,12 @@ class ProfileScreen extends StatelessWidget {
                 width: double.infinity,
 
                 decoration: const BoxDecoration(
-                  color: AppColors.primary,
+                  color: AppColors.surface,
 
                   borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(30),
+                    bottomLeft: Radius.circular(20),
 
-                    bottomRight: Radius.circular(30),
+                    bottomRight: Radius.circular(20),
                   ),
                 ),
 
@@ -70,11 +71,11 @@ class ProfileScreen extends StatelessWidget {
                       height: 90,
 
                       decoration: BoxDecoration(
-                        color: AppColors.white.withValues(alpha: 0.2),
+                        color: AppColors.mutedRed,
 
                         shape: BoxShape.circle,
 
-                        border: Border.all(color: AppColors.white, width: 2),
+                        border: Border.all(color: AppColors.border, width: 2),
                       ),
 
                       clipBehavior: Clip.antiAlias,
@@ -91,7 +92,7 @@ class ProfileScreen extends StatelessWidget {
 
                         fontWeight: FontWeight.bold,
 
-                        color: AppColors.white,
+                        color: AppColors.textDark,
                       ),
                     ),
 
@@ -132,7 +133,7 @@ class ProfileScreen extends StatelessWidget {
               // DETAILS
               // =============================================
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 24),
 
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
