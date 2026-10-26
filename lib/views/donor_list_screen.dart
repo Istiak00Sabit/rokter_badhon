@@ -388,40 +388,16 @@ class _DonorListScreenState extends State<DonorListScreen> {
   Widget _buildDonorCard(DonorModel donor, DonorController controller) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.border),
       ),
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Row(
           children: [
             // Blood group badge
-            Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                color: AppColors.primaryLight,
-                shape: BoxShape.circle,
-                border: Border.all(color: AppColors.primary, width: 1.5),
-              ),
-              child: Center(
-                child: Text(
-                  donor.bloodGroup,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.primary,
-                  ),
-                ),
-              ),
-            ),
+            RBBloodBadge(group: donor.bloodGroup, large: true),
 
             const SizedBox(width: 14),
 
