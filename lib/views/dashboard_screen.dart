@@ -33,21 +33,22 @@ class DashboardScreen extends StatelessWidget {
             slivers: [
               // App Bar
               SliverAppBar(
-                expandedHeight: 160,
+                expandedHeight: 170,
                 floating: false,
                 pinned: true,
-                backgroundColor: AppColors.primary,
+                backgroundColor: AppColors.surface,
+                foregroundColor: AppColors.textDark,
                 automaticallyImplyLeading: false,
                 title: Text('app_name'.tr),
                 actions: const [
                   Padding(
                     padding: EdgeInsets.only(right: 12),
-                    child: Center(child: AuthLanguageSwitch(onPrimary: true)),
+                    child: Center(child: AuthLanguageSwitch()),
                   ),
                 ],
                 flexibleSpace: FlexibleSpaceBar(
                   background: Container(
-                    decoration: const BoxDecoration(color: AppColors.primary),
+                    decoration: const BoxDecoration(color: AppColors.surface),
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(20, 60, 20, 20),
                       child: Column(
@@ -58,7 +59,7 @@ class DashboardScreen extends StatelessWidget {
                             'greeting'.tr,
                             style: TextStyle(
                               fontSize: 14,
-                              color: AppColors.white.withValues(alpha: 0.8),
+                              color: AppColors.textGrey,
                             ),
                           ),
                           const SizedBox(height: 4),
@@ -69,7 +70,7 @@ class DashboardScreen extends StatelessWidget {
                               style: const TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
-                                color: AppColors.white,
+                                color: AppColors.textDark,
                               ),
                             ),
                           ),
@@ -78,7 +79,7 @@ class DashboardScreen extends StatelessWidget {
                             'org_location'.tr,
                             style: TextStyle(
                               fontSize: 13,
-                              color: AppColors.white.withValues(alpha: 0.8),
+                              color: AppColors.textGrey,
                             ),
                           ),
                         ],
