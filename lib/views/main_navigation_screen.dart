@@ -89,12 +89,17 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
           index: navController.currentIndex.value,
           children: _screens,
         ),
-        bottomNavigationBar: BottomNavigationBar(
+        bottomNavigationBar: Container(
+          decoration: const BoxDecoration(
+            color: Color(0xFFF7F3EE),
+            border: Border(top: BorderSide(color: Color(0xFFE9E3DD), width: 2)),
+          ),
+          child: BottomNavigationBar(
           type: BottomNavigationBarType.fixed,
           selectedItemColor: AppColors.primary,
           unselectedItemColor: AppColors.textGrey,
-          backgroundColor: AppColors.white,
-          elevation: 8,
+          backgroundColor: const Color(0xFFF7F3EE),
+          elevation: 0,
           currentIndex: navController.currentIndex.value,
           onTap: navController.changePage,
           selectedLabelStyle: const TextStyle(
@@ -129,6 +134,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
               label: 'profile'.tr,
             ),
           ],
+          ),
         ),
       ),
     );
