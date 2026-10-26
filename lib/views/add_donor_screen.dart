@@ -162,18 +162,21 @@ class AddDonorScreen extends StatelessWidget {
                     onChanged: (val) {
                       controller.selectedUnion.value = val!;
                       controller.villageController.clear();
+                      controller.selectedVillage.value = '';
                     },
                   ),
                   const SizedBox(height: 14),
                   _buildDropdown<String>(
                     label: isMunicipality ? 'mahalla'.tr : 'village'.tr,
                     icon: Icons.home_outlined,
-                    value: localities.contains(controller.villageController.text)
-                        ? controller.villageController.text
+                    value: localities.contains(controller.selectedVillage.value)
+                        ? controller.selectedVillage.value
                         : null,
                     items: localities,
-                    onChanged: (val) =>
-                        controller.villageController.text = val ?? '',
+                    onChanged: (val) {
+                      controller.selectedVillage.value = val ?? '';
+                      controller.villageController.text = val ?? '';
+                    },
                   ),
                   const SizedBox(height: 14),
                 ],
@@ -337,6 +340,8 @@ class AddDonorScreen extends StatelessWidget {
         child: DropdownButton<T>(
           value: value,
           isExpanded: true,
+          isDense: true,
+          menuMaxHeight: 320,
           hint: Row(
             children: [
               Icon(icon, color: AppColors.primary, size: 20),
@@ -356,7 +361,7 @@ class AddDonorScreen extends StatelessWidget {
                     children: [
                       Icon(icon, color: AppColors.primary, size: 18),
                       const SizedBox(width: 12),
-                      Text(itemLabel?.call(item) ?? item.toString()),
+                      Expanded(child: Text(itemLabel?.call(item) ?? item.toString(), maxLines: 1, overflow: TextOverflow.ellipsis)),
                     ],
                   ),
                 ),
