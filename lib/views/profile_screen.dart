@@ -381,6 +381,11 @@ class ProfileScreen extends StatelessWidget {
     final controller = Get.find<LocalizationController>();
     return Obx(
       () => SegmentedButton<String>(
+        style: const ButtonStyle(
+          visualDensity: VisualDensity.compact,
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          padding: WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 8)),
+        ),
         segments: [
           ButtonSegment(
             value: AppTranslations.bangla,
