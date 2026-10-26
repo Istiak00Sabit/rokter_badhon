@@ -68,8 +68,8 @@ class _LanguageButton extends StatelessWidget {
   Widget build(BuildContext context) => TextButton(
     onPressed: selected ? null : onPressed,
     style: TextButton.styleFrom(
-      foregroundColor: foreground,
-      disabledForegroundColor: foreground == AppColors.white ? AppColors.primaryDark : AppColors.white,
+      foregroundColor: selected ? (foreground == AppColors.white ? AppColors.primaryDark : AppColors.white) : foreground,
+      disabledForegroundColor: selected ? (foreground == AppColors.white ? AppColors.primaryDark : AppColors.white) : foreground,
       minimumSize: const Size(0, 28),
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       visualDensity: VisualDensity.compact,
