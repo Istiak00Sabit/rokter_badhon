@@ -6,6 +6,7 @@ import '../controllers/donor_controller.dart';
 import '../models/donor_model.dart';
 import '../localization/app_date_formatter.dart';
 import 'add_donor_screen.dart';
+import '../widgets/roktobadhon_design.dart';
 
 class DonorListScreen extends StatefulWidget {
   const DonorListScreen({super.key});
@@ -96,7 +97,16 @@ class _DonorListScreenState extends State<DonorListScreen> {
             color: AppColors.background,
             padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                RBPageIntro(title: 'donors'.tr, eyebrow: 'org_location'.tr, subtitle: 'search_donors'.tr),
+                const SizedBox(height: 14),
+                Obx(() => RBInfoStrip(
+                  icon: Icons.water_drop_outlined,
+                  title: selectedFilter.value == 'all' ? 'all_blood_groups'.tr : selectedFilter.value,
+                  subtitle: 'donors_loaded_count'.trParams({'count': '${controller.donors.length}'}),
+                )),
+                const SizedBox(height: 14),
                 // Search bar
                 TextField(
                   controller: searchController,
@@ -294,7 +304,7 @@ class _DonorListScreenState extends State<DonorListScreen> {
                 color: AppColors.primary,
                 child: ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
+                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 110),
                   children: [
                     if (searchQuery.value.isNotEmpty ||
                         controller.hasMoreDonors.value)
