@@ -22,7 +22,7 @@ class RBSectionHeader extends StatelessWidget {
           ),
         ),
       ),
-      if (action != null) action!,
+      ?action,
     ],
   );
 }
@@ -159,7 +159,7 @@ class RBInfoStrip extends StatelessWidget {
             ],
           ),
         ),
-        if (action != null) action!,
+        ?action,
       ],
     ),
   );
