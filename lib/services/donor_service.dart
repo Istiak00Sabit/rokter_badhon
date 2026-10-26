@@ -143,6 +143,31 @@ class DonorService {
     }
   }
 
+  /// Approve an already saved submission through the existing audited flow.
+  /// When approval fails, the original submission stays pending.
+  Future<void> approveSubmittedDonor({
+    required String submissionId,
+    required String actorUserId,
+  }) async {
+    _validateId(submissionId, 'submission');
+    try {
+      final snapshot = await _firestore
+          .collection(AppConstants.donorSubmissionsCollection)
+          .doc(submissionId)
+          .get();
+      final data = snapshot.data();
+      if (data == null) {
+        throw const DonorServiceException('submission_missing');
+      }
+      await approveSubmission(
+        submission: DonorSubmissionModel.fromMap(data, snapshot.id),
+        actorUserId: actorUserId,
+      );
+    } on FirebaseException catch (error) {
+      throw DonorServiceException(_safeCode(error.code));
+    }
+  }
+
   /// Fetch a bounded page rather than all applications in one read.
   /// The [after] snapshot is from the previous ordered page.
   Future<PendingDonorPage> getPendingSubmissionsPage({
