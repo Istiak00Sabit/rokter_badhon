@@ -459,16 +459,17 @@ class _CommitteeMemberCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final directory = member.directory;
     return Card(
-      color: AppColors.white,
+      color: AppColors.surface,
       margin: const EdgeInsets.only(bottom: 10),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Row(
           children: [
-            ClipOval(
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
               child: SizedBox(
-                width: 52,
-                height: 52,
+                width: 54,
+                height: 58,
                 child: _CommitteeImage(url: directory?.photoUrl),
               ),
             ),
