@@ -55,8 +55,8 @@ class _DonorListScreenState extends State<DonorListScreen> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Text('donors'.tr),
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.white,
+        backgroundColor: AppColors.surface,
+        foregroundColor: AppColors.textDark,
         centerTitle: true,
         automaticallyImplyLeading: false,
         actions: [
@@ -93,8 +93,8 @@ class _DonorListScreenState extends State<DonorListScreen> {
         children: [
           // Search + Filter section
           Container(
-            color: AppColors.white,
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            color: AppColors.background,
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
             child: Column(
               children: [
                 // Search bar
