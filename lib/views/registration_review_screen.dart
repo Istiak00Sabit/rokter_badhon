@@ -35,8 +35,8 @@ class _RegistrationReviewScreenState extends State<RegistrationReviewScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('pending_registrations'.tr),
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.white,
+        backgroundColor: AppColors.surface,
+        foregroundColor: AppColors.textDark,
       ),
       body: Column(
         children: [
