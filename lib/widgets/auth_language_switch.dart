@@ -23,9 +23,9 @@ class AuthLanguageSwitch extends StatelessWidget {
             color: onPrimary
                 ? AppColors.white.withValues(alpha: 0.16)
                 : AppColors.primary.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(10),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -35,7 +35,7 @@ class AuthLanguageSwitch extends StatelessWidget {
                 foreground: foreground,
                 onPressed: () => controller.setLanguage(AppTranslations.bangla),
               ),
-              Text('|', style: TextStyle(color: foreground)),
+              const SizedBox(width: 2),
               _LanguageButton(
                 label: 'English',
                 selected: current == AppTranslations.english,
@@ -69,10 +69,13 @@ class _LanguageButton extends StatelessWidget {
     onPressed: selected ? null : onPressed,
     style: TextButton.styleFrom(
       foregroundColor: foreground,
-      disabledForegroundColor: foreground,
-      minimumSize: const Size(0, 36),
-      padding: const EdgeInsets.symmetric(horizontal: 8),
+      disabledForegroundColor: foreground == AppColors.white ? AppColors.primaryDark : AppColors.white,
+      minimumSize: const Size(0, 28),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       visualDensity: VisualDensity.compact,
+      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      backgroundColor: selected ? (foreground == AppColors.white ? AppColors.white : AppColors.primary) : Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
     ),
     child: Text(
       label,
