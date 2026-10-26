@@ -53,8 +53,8 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     backgroundColor: AppColors.background,
     appBar: AppBar(
       title: Text('event_details'.tr),
-      backgroundColor: AppColors.primary,
-      foregroundColor: AppColors.white,
+      backgroundColor: AppColors.surface,
+      foregroundColor: AppColors.textDark,
     ),
     body: FutureBuilder<EventDetail>(
       future: detail,
