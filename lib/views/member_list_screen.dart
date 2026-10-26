@@ -21,8 +21,8 @@ class MemberListScreen extends StatelessWidget {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Text('member_directory'.tr),
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.white,
+        backgroundColor: AppColors.surface,
+        foregroundColor: AppColors.textDark,
         centerTitle: true,
         actions: [
           Obx(
