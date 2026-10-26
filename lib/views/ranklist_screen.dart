@@ -55,8 +55,8 @@ class _RanklistScreenState extends State<RanklistScreen> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Text('ranklist'.tr),
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.white,
+        backgroundColor: AppColors.surface,
+        foregroundColor: AppColors.textDark,
         centerTitle: true,
       ),
       body: FutureBuilder<List<DonorModel>>(
