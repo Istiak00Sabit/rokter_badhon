@@ -8,7 +8,6 @@ import '../localization/app_date_formatter.dart';
 import '../models/donor_submission_model.dart';
 import '../models/donor_model.dart';
 import '../services/donor_service.dart';
-import '../widgets/roktobadhon_design.dart';
 
 class PendingDonorApprovalsScreen extends StatefulWidget {
   const PendingDonorApprovalsScreen({super.key});
