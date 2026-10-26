@@ -97,13 +97,16 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
           child: BottomNavigationBar(
           type: BottomNavigationBarType.fixed,
           selectedItemColor: AppColors.primary,
+          selectedFontSize: 11,
+          unselectedFontSize: 10,
+          iconSize: 23,
           unselectedItemColor: AppColors.textGrey,
           backgroundColor: const Color(0xFFF7F3EE),
           elevation: 0,
           currentIndex: navController.currentIndex.value,
           onTap: navController.changePage,
           selectedLabelStyle: const TextStyle(
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w700,
             fontSize: 12,
           ),
           unselectedLabelStyle: const TextStyle(fontSize: 11),
