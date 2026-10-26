@@ -9,6 +9,7 @@ import '../models/registration_request_model.dart';
 import '../services/auth_services.dart';
 import '../controllers/auth_controller.dart';
 import '../widgets/auth_language_switch.dart';
+import '../widgets/roktobadhon_design.dart';
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
@@ -173,6 +174,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            RBPageIntro(title: 'register'.tr, eyebrow: 'org_location'.tr, subtitle: 'tagline'.tr),
+            const SizedBox(height: 22),
             if (!_locationsReady)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 48),
