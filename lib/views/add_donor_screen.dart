@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../constants/app_colors.dart';
+import '../widgets/roktobadhon_design.dart';
 import '../constants/app_constants.dart';
 import '../controllers/donor_controller.dart';
 
@@ -33,10 +34,12 @@ class AddDonorScreen extends StatelessWidget {
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 36),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            RBPageIntro(title: 'add_donor'.tr, eyebrow: 'org_location'.tr),
+            const SizedBox(height: 18),
             // Header info card
             Container(
               width: double.infinity,
