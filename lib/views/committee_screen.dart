@@ -35,8 +35,8 @@ class _CommitteeScreenState extends State<CommitteeScreen> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Text('current_committee'.tr),
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.white,
+        backgroundColor: AppColors.surface,
+        foregroundColor: AppColors.textDark,
         centerTitle: true,
         automaticallyImplyLeading: false,
       ),
@@ -60,7 +60,7 @@ class _CommitteeScreenState extends State<CommitteeScreen> {
           color: AppColors.primary,
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
             children: [
               Row(
                 children: [
@@ -124,8 +124,8 @@ class PastCommitteesScreen extends StatelessWidget {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Text('past_committees'.tr),
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.white,
+        backgroundColor: AppColors.surface,
+        foregroundColor: AppColors.textDark,
       ),
       body: Obx(() {
         final terms = controller.pastTerms;
@@ -203,8 +203,8 @@ class _PastCommitteeDetailScreenState extends State<PastCommitteeDetailScreen> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Text(widget.term.name),
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.white,
+        backgroundColor: AppColors.surface,
+        foregroundColor: AppColors.textDark,
       ),
       body: FutureBuilder<CommitteeRoster>(
         future: roster,
