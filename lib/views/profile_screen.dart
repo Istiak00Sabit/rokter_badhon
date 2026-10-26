@@ -9,7 +9,6 @@ import '../localization/app_translations.dart';
 import '../localization/app_date_formatter.dart';
 import '../models/profile_update.dart';
 import '../models/user_model.dart';
-import '../widgets/roktobadhon_design.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
