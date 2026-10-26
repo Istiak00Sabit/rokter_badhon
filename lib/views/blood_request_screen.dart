@@ -27,8 +27,8 @@ class _BloodRequestScreenState extends State<BloodRequestScreen> {
     backgroundColor: AppColors.background,
     appBar: AppBar(
       title: Text('blood_requests'.tr),
-      backgroundColor: AppColors.primary,
-      foregroundColor: AppColors.white,
+      backgroundColor: AppColors.surface,
+      foregroundColor: AppColors.textDark,
       automaticallyImplyLeading: false,
     ),
     floatingActionButton: FloatingActionButton.extended(
@@ -36,8 +36,8 @@ class _BloodRequestScreenState extends State<BloodRequestScreen> {
         await Get.to(() => CreateBloodRequestScreen(controller: controller));
         // Successful submission already refreshes the list in create().
       },
-      backgroundColor: AppColors.primary,
-      foregroundColor: AppColors.white,
+      backgroundColor: AppColors.surface,
+      foregroundColor: AppColors.textDark,
       icon: const Icon(Icons.add),
       label: Text('new_request'.tr),
     ),
@@ -57,7 +57,7 @@ class _BloodRequestScreenState extends State<BloodRequestScreen> {
         onRefresh: controller.load,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 88),
           children: [
             if (controller.active.isEmpty)
               _Empty(text: 'no_active_requests'.tr)
@@ -229,8 +229,8 @@ class _CreateBloodRequestScreenState extends State<CreateBloodRequestScreen> {
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
       title: Text('new_blood_request'.tr),
-      backgroundColor: AppColors.primary,
-      foregroundColor: AppColors.white,
+      backgroundColor: AppColors.surface,
+      foregroundColor: AppColors.textDark,
     ),
     body: Form(
       key: formKey,
