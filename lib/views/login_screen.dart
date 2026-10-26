@@ -113,12 +113,12 @@ class LoginScreen extends StatelessWidget {
                       // Phone field
                       TextField(
                         controller: phoneController,
-                        keyboardType: TextInputType.emailAddress,
-                        autofillHints: const [AutofillHints.email],
+                        keyboardType: TextInputType.phone,
+                        autofillHints: const [AutofillHints.telephoneNumber],
                         decoration: InputDecoration(
-                          labelText: 'email_or_phone'.tr,
+                          labelText: 'phone_login'.tr,
                           prefixIcon: const Icon(
-                            Icons.alternate_email,
+                            Icons.phone_android,
                             color: AppColors.primary,
                           ),
                           border: OutlineInputBorder(
