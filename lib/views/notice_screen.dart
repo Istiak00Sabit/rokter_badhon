@@ -26,8 +26,8 @@ class _NoticeScreenState extends State<NoticeScreen> {
     backgroundColor: AppColors.background,
     appBar: AppBar(
       title: Text('notices'.tr),
-      backgroundColor: AppColors.primary,
-      foregroundColor: AppColors.white,
+      backgroundColor: AppColors.surface,
+      foregroundColor: AppColors.textDark,
     ),
     body: Obx(() {
       if (controller.isLoading.value) {
@@ -51,7 +51,7 @@ class _NoticeScreenState extends State<NoticeScreen> {
         onRefresh: controller.load,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 28),
           children: [
             ...controller.published.map(
               (notice) => _NoticeCard(notice: notice),
@@ -156,8 +156,8 @@ class NoticeDetailScreen extends StatelessWidget {
     backgroundColor: AppColors.background,
     appBar: AppBar(
       title: Text('notice'.tr),
-      backgroundColor: AppColors.primary,
-      foregroundColor: AppColors.white,
+      backgroundColor: AppColors.surface,
+      foregroundColor: AppColors.textDark,
     ),
     body: ListView(
       padding: const EdgeInsets.all(20),
