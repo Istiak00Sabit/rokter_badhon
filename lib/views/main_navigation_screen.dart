@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../constants/app_colors.dart';
 import '../controllers/auth_controller.dart';
+import '../controllers/committee_controller.dart';
 import '../models/auth_session.dart';
 import 'committee_screen.dart';
 import 'blood_request_screen.dart';
@@ -104,7 +105,14 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
           backgroundColor: const Color(0xFFF7F3EE),
           elevation: 0,
           currentIndex: navController.currentIndex.value,
-          onTap: navController.changePage,
+          onTap: (index) {
+            navController.changePage(index);
+            // IndexedStack keeps tabs mounted. Reload profile photo URLs when
+            // returning to Committee so changes appear without app restart.
+            if (index == 3 && Get.isRegistered<CommitteeController>()) {
+              Get.find<CommitteeController>().loadCommittee();
+            }
+          },
           selectedLabelStyle: const TextStyle(
             fontWeight: FontWeight.w700,
             fontSize: 12,
