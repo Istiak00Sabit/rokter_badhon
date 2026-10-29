@@ -35,7 +35,7 @@ class _RegistrationReviewScreenState extends State<RegistrationReviewScreen> {
 
   Future<void> _review(String uid, bool approve) async {
     if (saving) return;
-    final reason = TextEditingController();
+    String reasonText = '';
     final confirmedReason = await showDialog<String>(
       context: context,
       builder: (dialog) => AlertDialog(
@@ -45,7 +45,7 @@ class _RegistrationReviewScreenState extends State<RegistrationReviewScreen> {
           children: [
             Text('registration_review_reason_hint'.tr),
             TextField(
-              controller: reason,
+              onChanged: (value) => reasonText = value,
               maxLength: 500,
               minLines: 2,
               maxLines: 3,
@@ -55,17 +55,22 @@ class _RegistrationReviewScreenState extends State<RegistrationReviewScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(dialog),
+            onPressed: () {
+              FocusManager.instance.primaryFocus?.unfocus();
+              Navigator.pop(dialog);
+            },
             child: Text('cancel'.tr),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(dialog, reason.text.trim()),
+            onPressed: () {
+              FocusManager.instance.primaryFocus?.unfocus();
+              Navigator.pop(dialog, reasonText.trim());
+            },
             child: Text(approve ? 'approve'.tr : 'reject'.tr),
           ),
         ],
       ),
     );
-    reason.dispose();
     if (confirmedReason == null || !mounted) return;
     if (confirmedReason.length < 10) {
       ScaffoldMessenger.of(context).showSnackBar(
