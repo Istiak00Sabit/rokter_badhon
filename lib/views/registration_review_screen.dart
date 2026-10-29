@@ -17,7 +17,7 @@ class RegistrationReviewScreen extends StatefulWidget {
 
 class _RegistrationReviewScreenState extends State<RegistrationReviewScreen> {
   late final AdministrationController controller;
-  final AdminFunctionsService backend = AdminFunctionsService();
+  late final AdminFunctionsService backend = AdminFunctionsService();
   bool saving = false;
 
   @override
