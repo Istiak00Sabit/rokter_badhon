@@ -12,6 +12,7 @@ import '../views/member_list_screen.dart';
 import '../views/notice_screen.dart';
 import '../views/ranklist_screen.dart';
 import '../views/registration_review_screen.dart';
+import '../views/admin_user_management_screen.dart';
 import '../views/audit_log_screen.dart';
 import '../views/pending_donor_approvals_screen.dart';
 import '../widgets/auth_language_switch.dart';
@@ -282,6 +283,17 @@ class DashboardScreen extends StatelessWidget {
                             ] else
                               const Spacer(),
                           ],
+                        ),
+                      ],
+
+                      if (controller.currentUser.value?.accessRole ==
+                          'developer_admin') ...[
+                        const SizedBox(height: 12),
+                        _buildActionButton(
+                          title: 'admin_user_management'.tr,
+                          icon: Icons.admin_panel_settings_outlined,
+                          onTap: () =>
+                              Get.to(() => const AdminUserManagementScreen()),
                         ),
                       ],
 
