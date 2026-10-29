@@ -173,6 +173,13 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
             padding: const EdgeInsets.all(20),
             physics: const AlwaysScrollableScrollPhysics(),
             children: [
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Text(
+                  'admin_user_explainer'.tr,
+                  style: const TextStyle(color: AppColors.textGrey),
+                ),
+              ),
               if (data.hasMore)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
