@@ -116,6 +116,10 @@ class CommitteeService {
         ),
       );
     }
+    // Committee identity, position and ordering stay exclusively in JSON.
+    // Only an existing public profile's HTTPS photo URL can supplement it.
+    final matchingPhotos = await _bundledCommitteePhotoProfiles(seenPhones);
+    final displayMembers = mergeBundledProfilePhotos(members, matchingPhotos);
     final term = CommitteeTermModel(
       id: '2025-2027',
       name: '2025–2027',
@@ -130,10 +134,75 @@ class CommitteeService {
     );
     return CommitteeRoster(
       term: term,
-      members: List<CommitteeMemberModel>.unmodifiable(members),
+      members: List<CommitteeMemberModel>.unmodifiable(displayMembers),
       gallery: const <CommitteeMediaModel>[],
       isBundledPreview: true,
     );
+  }
+
+  /// Read approved public profile photos only; never store the committee
+  /// roster, assignments, names or positions in Firestore.
+  /// Missing access, offline mode or absent directory must leave JSON intact.
+  Future<List<UserDirectoryModel>> _bundledCommitteePhotoProfiles(
+    Set<String> phones,
+  ) async {
+    try {
+      final snapshot = await _firestore
+          .collection(directoryCollection)
+          .where('active', isEqualTo: true)
+          .get();
+      final matches = <UserDirectoryModel>[];
+      for (final doc in snapshot.docs) {
+        try {
+          final profile = UserDirectoryModel.fromMap(doc.data(), doc.id);
+          if (phones.contains(profile.phone) &&
+              profile.active &&
+              profile.photoUrl != null) {
+            matches.add(profile);
+          }
+        } on FormatException {
+          // Skip malformed directory projections; never use private Users.
+        }
+      }
+      return matches;
+    } on FirebaseException {
+      return const <UserDirectoryModel>[];
+    }
+  }
+
+  /// Only photo URLs are overlaid. Duplicated phones are ignored, so a
+  /// conflicting account cannot silently control someone's committee photo.
+  static List<CommitteeMemberModel> mergeBundledProfilePhotos(
+    List<CommitteeMemberModel> members,
+    Iterable<UserDirectoryModel> profiles,
+  ) {
+    final byPhone = <String, UserDirectoryModel>{};
+    final ambiguous = <String>{};
+    for (final profile in profiles) {
+      if (!profile.active || profile.photoUrl == null) continue;
+      if (byPhone.containsKey(profile.phone)) ambiguous.add(profile.phone);
+      byPhone[profile.phone] = profile;
+    }
+    return List<CommitteeMemberModel>.unmodifiable(members.map((member) {
+      final directory = member.directory;
+      if (directory == null || ambiguous.contains(directory.phone)) {
+        return member;
+      }
+      final profilePhoto = byPhone[directory.phone]?.photoUrl;
+      if (profilePhoto == null) return member;
+      return CommitteeMemberModel(
+        assignment: member.assignment,
+        directory: UserDirectoryModel(
+          id: directory.id,
+          name: directory.name,
+          phone: directory.phone,
+          bloodGroup: directory.bloodGroup,
+          profession: directory.profession,
+          photoUrl: profilePhoto,
+          active: directory.active,
+        ),
+      );
+    }));
   }
 
   Future<CommitteeTermModel?> getCurrentTerm() async {
