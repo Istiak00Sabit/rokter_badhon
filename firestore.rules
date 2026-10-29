@@ -133,9 +133,12 @@ service cloud.firestore {
         && after.diff(before).affectedKeys().hasAny(['access_role','active','login_enabled']);
     }
     match /registration_requests/{uid} {
-      allow get: if unlinkedOwn(uid)
+      // Developer admin can inspect terminal decisions for audit/history.
+      // Leaders keep pending-only review access; applicants only their own.
+      allow get: if unlinkedOwn(uid) || developerAdmin()
         || (admitted() && editorial() && resource.data.status == 'pending');
-      allow list: if admitted() && editorial() && resource.data.status == 'pending';
+      allow list: if developerAdmin()
+        || (admitted() && editorial() && resource.data.status == 'pending');
       allow create: if unlinkedOwn(uid)
         && request.resource.data.keys().hasAll(['auth_uid','name','phone','email','blood_group','profession','address','union', 'village',
           'status','requested_at','approved_by','approved_at','rejected_by','rejected_at','linked_user_id'])
