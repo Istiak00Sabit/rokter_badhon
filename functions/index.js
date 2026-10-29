@@ -117,10 +117,13 @@ export const adminManageUser = onCall({ region, timeoutSeconds: 60 }, (request) 
     const targetRole = oneOf(body.role, ['member', 'committee', 'executive', 'leader']);
     return assignAccessRole({ ...opts, targetRole });
   }
+  // A leader account follows the stricter developer-admin-only target path.
+  const target = await db.collection('users').doc(userId).get();
+  const leaderTarget = target.exists && target.data()?.access_role === 'leader';
   if (action === 'activate' || action === 'deactivate') {
-    return setUserActive({ ...opts, active: action === 'activate' });
+    return setUserActive({ ...opts, leaderTarget, active: action === 'activate' });
   }
-  return setLoginEnabled({ ...opts, enabled: action === 'enable_login' });
+  return setLoginEnabled({ ...opts, leaderTarget, enabled: action === 'enable_login' });
 }));
 
 // Profile photo must already have a verified HTTPS hosting URL.
