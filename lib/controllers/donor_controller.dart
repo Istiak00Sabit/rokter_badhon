@@ -28,6 +28,7 @@ class DonorController extends GetxController {
   final RxBool locationLoadFailed = false.obs;
   final RxBool isLoading = false.obs;
   final RxString errorCode = ''.obs;
+  final RxString formErrorCode = ''.obs;
   final RxList<DonorModel> donors = <DonorModel>[].obs;
   final RxBool isLoadingMore = false.obs;
   final RxBool hasMoreDonors = false.obs;
@@ -88,6 +89,7 @@ class DonorController extends GetxController {
     selectedGender.value = '';
     selectedUnion.value = '';
     editingDonorId.value = null;
+    formErrorCode.value = '';
   }
 
   void beginEdit(DonorModel donor) {
@@ -121,6 +123,232 @@ class DonorController extends GetxController {
         ? null
         : professionController.text,
   );
+
+  /// Client-side guidance only; Firestore Rules still enforce permissions.
+  String? _validateDonorForm() {
+    if (nameController.text.trim().isEmpty) return 'donor_name_required';
+    if (!RegExp(r'^01[3-9][0-9]{8}
+    final actor = _authController.currentUser.value;
+    if (!canCreate || actor == null) {
+      _showError('permission_denied');
+      return;
+    }
+    final fieldError = _validateDonorForm();
+    formErrorCode.value = fieldError ?? '';
+    if (fieldError != null) return;
+    try {
+      isLoading.value = true;
+      errorCode.value = '';
+      final submissionId = await _donorService.submitDonor(
+        input: _input(),
+        actorUserId: actor.id,
+        actorRole: actor.accessRole,
+      );
+      String feedback = 'donor_submitted'.tr;
+      if (actor.accessRole == AppConstants.roleDeveloperAdmin) {
+        try {
+          await _donorService.approveSubmittedDonor(
+            submissionId: submissionId,
+            actorUserId: actor.id,
+          );
+          feedback = 'donor_added_by_admin'.tr;
+        } on DonorServiceException catch (error) {
+          feedback = 'donor_admin_pending'.trParams({'reason': error.code.tr});
+        } on FirebaseException {
+          feedback = 'donor_admin_pending'.trParams({'reason': 'operation_failed'.tr});
+        }
+      }
+      clearForm();
+      Get.back();
+      Get.snackbar(
+        'success'.tr,
+        feedback,
+        duration: const Duration(seconds: 6),
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
+    } on DonorDataException {
+      _showError('invalid_input');
+    } on DonorServiceException catch (error) {
+      _showError(error.code);
+    } catch (_) {
+      _showError('operation_failed');
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> saveDonor() async {
+    final donorId = editingDonorId.value;
+    if (donorId == null) {
+      await addDonor();
+      return;
+    }
+    final actor = _authController.currentUser.value;
+    if (!canEdit || actor == null) {
+      _showError('permission_denied');
+      return;
+    }
+    final fieldError = _validateDonorForm();
+    formErrorCode.value = fieldError ?? '';
+    if (fieldError != null) return;
+    try {
+      isLoading.value = true;
+      errorCode.value = '';
+      await _donorService.editDonor(
+        donorId: donorId,
+        input: _input(),
+        actorUserId: actor.id,
+      );
+      clearForm();
+      Get.back();
+      Get.snackbar(
+        'success'.tr,
+        'donor_updated'.tr,
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
+    } on DonorDataException {
+      _showError('invalid_input');
+    } on DonorServiceException catch (error) {
+      _showError(error.code);
+    } catch (_) {
+      _showError('operation_failed');
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> searchDirectory(String term) async {
+    final normalized = term.trim();
+    if (indexedSearchTerm.value == normalized) {
+      await loadDonors();
+      return;
+    }
+    indexedSearchTerm.value = normalized;
+    await loadDonors();
+  }
+
+  Future<void> setDirectoryBloodGroup(String? bloodGroup) async {
+    final value = bloodGroup ?? '';
+    if (directoryBloodGroup.value == value) return;
+    directoryBloodGroup.value = value;
+    await loadDonors();
+  }
+
+  Future<void> loadDonors() async {
+    final generation = ++_directoryGeneration;
+    isLoading.value = true;
+    isLoadingMore.value = false;
+    errorCode.value = '';
+    pageErrorCode.value = '';
+    hasMoreDonors.value = false;
+    _directoryCursor = null;
+    donors.clear();
+    final filter = directoryBloodGroup.value;
+    try {
+      final term = indexedSearchTerm.value;
+      final page = term.isEmpty
+          ? await _donorService.getActiveDonorsPage(
+              bloodGroup: filter.isEmpty ? null : filter,
+            )
+          : await _donorService.searchActiveDonorsPage(
+              search: term,
+              bloodGroup: filter.isEmpty ? null : filter,
+            );
+      if (generation != _directoryGeneration) return;
+      donors.assignAll(page.items);
+      _directoryCursor = page.cursor;
+      hasMoreDonors.value = page.hasMore;
+    } on DonorDataException {
+      if (generation == _directoryGeneration) {
+        errorCode.value = 'malformed_data';
+      }
+    } on DonorServiceException catch (error) {
+      if (generation == _directoryGeneration) errorCode.value = error.code;
+    } catch (_) {
+      if (generation == _directoryGeneration) {
+        errorCode.value = 'operation_failed';
+      }
+    } finally {
+      if (generation == _directoryGeneration) isLoading.value = false;
+    }
+  }
+
+  Future<void> loadMoreDonors() async {
+    if (isLoading.value || isLoadingMore.value || !hasMoreDonors.value ||
+        _directoryCursor == null) {
+      return;
+    }
+    final generation = _directoryGeneration;
+    final cursor = _directoryCursor;
+    final filter = directoryBloodGroup.value;
+    isLoadingMore.value = true;
+    pageErrorCode.value = '';
+    try {
+      final term = indexedSearchTerm.value;
+      final page = term.isEmpty
+          ? await _donorService.getActiveDonorsPage(
+              bloodGroup: filter.isEmpty ? null : filter,
+              after: cursor,
+            )
+          : await _donorService.searchActiveDonorsPage(
+              search: term,
+              bloodGroup: filter.isEmpty ? null : filter,
+              after: cursor,
+            );
+      if (generation != _directoryGeneration) return;
+      final existing = donors.map((value) => value.id).toSet();
+      donors.addAll(page.items.where((value) => existing.add(value.id)));
+      _directoryCursor = page.cursor;
+      hasMoreDonors.value = page.hasMore;
+    } on DonorDataException {
+      if (generation == _directoryGeneration) {
+        pageErrorCode.value = 'malformed_data';
+      }
+    } on DonorServiceException catch (error) {
+      if (generation == _directoryGeneration) pageErrorCode.value = error.code;
+    } catch (_) {
+      if (generation == _directoryGeneration) {
+        pageErrorCode.value = 'operation_failed';
+      }
+    } finally {
+      if (generation == _directoryGeneration) isLoadingMore.value = false;
+    }
+  }
+
+  void _showError(String code) {
+    errorCode.value = code;
+    Get.snackbar(
+      'error'.tr,
+      (const {
+                'permission_denied',
+                'committee_assignment_required',
+                'invalid_input',
+                'network_unavailable',
+                'query_unavailable',
+                'malformed_data',
+                'duplicate_donor',
+                'donor_phone_change_locked',
+                'donor_missing',
+                'donor_inactive',
+              }.contains(code)
+              ? code
+              : 'operation_failed')
+          .tr,
+      backgroundColor: Colors.red,
+      colorText: Colors.white,
+    );
+  }
+}
+).hasMatch(phoneController.text.trim())) {
+      return 'donor_phone_invalid';
+    }
+    if (selectedBloodGroup.value.isEmpty) return 'donor_blood_group_required';
+    if (selectedUnion.value.isEmpty) return 'donor_union_required';
+    if (selectedVillage.value.isEmpty) return 'donor_village_required';
+    return null;
+  }
 
   Future<void> addDonor() async {
     final actor = _authController.currentUser.value;
