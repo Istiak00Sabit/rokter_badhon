@@ -285,11 +285,13 @@ class CommitteeRosterView extends StatelessWidget {
             color: AppColors.textDark,
           ),
         ),
-        Text(
-          '${roster.term.startYear}–${roster.term.endYear}',
-          textAlign: TextAlign.center,
-          style: const TextStyle(color: AppColors.textGrey),
-        ),
+        if (!roster.term.name.contains('${roster.term.startYear}') ||
+            !roster.term.name.contains('${roster.term.endYear}'))
+          Text(
+            '${roster.term.startYear}–${roster.term.endYear}',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: AppColors.textGrey),
+          ),
         const SizedBox(height: 18),
         Text(
           'committee_gallery'.tr,
