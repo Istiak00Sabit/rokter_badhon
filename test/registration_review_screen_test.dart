@@ -92,6 +92,34 @@ void main() {
     expect(find.text('registration_uid_copied'), findsOneWidget);
   });
 
+  testWidgets('reject dialog cancels safely with keyboard open and never changes pending data', (
+    tester,
+  ) async {
+    final service = _FakeRegistrationService(hasPending: true);
+    Get.put(
+      AdministrationController(service: service),
+      tag: 'registrations',
+    );
+    await tester.pumpWidget(
+      const GetMaterialApp(home: RegistrationReviewScreen()),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('reject'));
+    await tester.pumpAndSettle();
+    expect(find.byType(TextField), findsOneWidget);
+    await tester.enterText(find.byType(TextField), 'A reviewed rejection reason');
+    await tester.pump();
+
+    await tester.tap(find.text('cancel'));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('Synthetic Applicant'), findsOneWidget);
+    expect(find.text('reject'), findsOneWidget);
+    expect(service.calls, 1);
+  });
+
   testWidgets('query failures do not cause automatic retry loops', (
     tester,
   ) async {
