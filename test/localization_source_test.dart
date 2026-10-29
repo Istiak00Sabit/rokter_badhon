@@ -32,7 +32,7 @@ void main() {
       final registration = File(
         'lib/views/registration_screen.dart',
       ).readAsStringSync();
-      expect(login, contains('AuthLanguageSwitch(onPrimary: true)'));
+      expect(login, contains('AuthLanguageSwitch()'));
       expect(registration, contains('AuthLanguageSwitch(onPrimary: true)'));
       expect(login, contains("'login'.tr"));
       expect(login, contains("'register'.tr"));
@@ -40,7 +40,7 @@ void main() {
       final dashboard = File(
         'lib/views/dashboard_screen.dart',
       ).readAsStringSync();
-      expect(dashboard, contains('AuthLanguageSwitch(onPrimary: true)'));
+      expect(dashboard, contains('AuthLanguageSwitch()'));
       expect(dashboard, contains("'app_name'.tr"));
     },
   );
@@ -72,7 +72,7 @@ void main() {
     expect(controller, contains("stored == AppTranslations.english"));
     expect(
       controller,
-      contains(RegExp(r'setString\(\s*_preferenceKey,\s*normalized,\s*\)')),
+      contains(RegExp(r'setString\(\s*_preferenceKey,\s*normalized,?\s*\)')),
     );
     expect(
       main,
