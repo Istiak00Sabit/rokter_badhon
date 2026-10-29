@@ -71,9 +71,9 @@ class LoginScreen extends StatelessWidget {
                           const SizedBox(height: 6),
                           Text(
                             'org_location'.tr,
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 14,
-                              color: AppColors.white,
+                              color: AppColors.textGrey,
                             ),
                           ),
                         ],
