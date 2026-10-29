@@ -160,12 +160,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Text('register'.tr),
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.white,
+        backgroundColor: AppColors.surface,
+        foregroundColor: AppColors.textDark,
+        titleTextStyle: const TextStyle(color: AppColors.textDark, fontSize: 19, fontWeight: FontWeight.w700),
         actions: const [
           Padding(
             padding: EdgeInsets.only(right: 8),
-            child: AuthLanguageSwitch(onPrimary: true),
+            child: AuthLanguageSwitch(),
           ),
         ],
       ),
