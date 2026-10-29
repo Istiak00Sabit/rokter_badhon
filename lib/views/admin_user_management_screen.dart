@@ -34,7 +34,7 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
     if (busy || user.role == 'developer_admin') return;
     String action = 'role';
     String role = user.role;
-    final reasonController = TextEditingController();
+    String reasonText = '';
     final result = await showDialog<({String action, String role, String reason})>(
       context: context,
       builder: (dialog) => StatefulBuilder(
@@ -77,7 +77,7 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
                 ],
                 const SizedBox(height: 12),
                 TextField(
-                  controller: reasonController,
+                  onChanged: (value) => reasonText = value,
                   maxLength: 500,
                   minLines: 2,
                   maxLines: 3,
@@ -88,20 +88,25 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(dialog),
+              onPressed: () {
+                FocusManager.instance.primaryFocus?.unfocus();
+                Navigator.pop(dialog);
+              },
               child: Text('cancel'.tr),
             ),
             FilledButton(
-              onPressed: () => Navigator.pop(dialog, (
-                action: action, role: role, reason: reasonController.text.trim(),
-              )),
+              onPressed: () {
+                FocusManager.instance.primaryFocus?.unfocus();
+                Navigator.pop(dialog, (
+                  action: action, role: role, reason: reasonText.trim(),
+                ));
+              },
               child: Text('save'.tr),
             ),
           ],
         ),
       ),
     );
-    reasonController.dispose();
     if (result == null || !mounted) return;
     if (result.reason.length < 10) {
       ScaffoldMessenger.of(context).showSnackBar(
