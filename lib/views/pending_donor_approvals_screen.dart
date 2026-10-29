@@ -8,6 +8,7 @@ import '../localization/app_date_formatter.dart';
 import '../models/donor_submission_model.dart';
 import '../models/donor_model.dart';
 import '../services/donor_service.dart';
+import 'review_history_screen.dart';
 
 class PendingDonorApprovalsScreen extends StatefulWidget {
   const PendingDonorApprovalsScreen({super.key});
@@ -113,6 +114,7 @@ class _PendingDonorApprovalsScreenState
         submission: submission,
         actorUserId: actorId,
       ),
+      approved: true,
     );
   }
 
@@ -163,6 +165,7 @@ class _PendingDonorApprovalsScreenState
         actorUserId: actorId,
         reason: reason,
       ),
+      approved: false,
     );
   }
 
@@ -186,7 +189,7 @@ class _PendingDonorApprovalsScreenState
     );
   }
 
-  Future<void> _run(Future<void> Function() action) async {
+  Future<void> _run(Future<void> Function() action, {required bool approved}) async {
     if (_actionInProgress) return;
     setState(() => _actionInProgress = true);
     try {
@@ -194,7 +197,7 @@ class _PendingDonorApprovalsScreenState
       if (!mounted) return;
       setState(_reload);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('review_saved'.tr)),
+        SnackBar(content: Text(approved ? 'review_approved'.tr : 'review_rejected'.tr)),
       );
     } on DonorServiceException catch (error) {
       _showError(error.code);
@@ -209,7 +212,22 @@ class _PendingDonorApprovalsScreenState
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text('pending_donor_approvals'.tr)),
+    appBar: AppBar(
+      title: Text('pending_donor_approvals'.tr),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.history),
+          tooltip: 'review_history_title'.tr,
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => const ReviewHistoryScreen(
+                kind: ReviewHistoryKind.donor,
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
     body: FutureBuilder<List<DonorSubmissionModel>>(
       future: _pending,
       builder: (context, snapshot) {
