@@ -22,11 +22,12 @@ class AddDonorScreen extends StatelessWidget {
                 : 'edit_donor'.tr,
           ),
         ),
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.white,
+        backgroundColor: AppColors.surface,
+        foregroundColor: AppColors.textDark,
+        titleTextStyle: const TextStyle(color: AppColors.textDark, fontSize: 19, fontWeight: FontWeight.w700),
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.white),
+          icon: const Icon(Icons.arrow_back, color: AppColors.textDark),
           onPressed: () {
             controller.clearForm();
             Get.back();
