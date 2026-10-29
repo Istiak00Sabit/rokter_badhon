@@ -148,7 +148,7 @@ test('cloud Android UI acceptance starts isolated real Auth/Firestore emulators,
   assert.match(start, /audit-donor-registry --project-id/);
   assert.match(start, /GOOGLE_APPLICATION_CREDENTIALS/);
   assert.match(start, /GITHUB_ACTIONS/);
-  assert.match(ui, /"01000000000"/);
+  assert.match(ui, /"01700000000"/);
   assert.match(ui, /"123456"/);
   assert.match(ui, /"English"/);
   assert.match(ui, /"Sign in"/);
