@@ -101,7 +101,7 @@ service cloud.firestore {
     function adminBeforeAfter(id, after) {
       let before = resource.data;
       let op = after.get('last_admin_action_id', null);
-      return developerAdmin() && id != ownId() && validUser(before) && validUser(after)
+      return developerAdmin() && id != ownId()
         && before.access_role != 'developer_admin'
         && after.access_role in ['member','committee','executive','leader']
         && after.name == before.name && after.phone == before.phone
@@ -234,8 +234,7 @@ service cloud.firestore {
       let after = getAfter(userPath(id)).data;
       let before = get(userPath(id)).data;
       let op = after.get('last_admin_action_id', null);
-      return validUser(before) && validUser(after)
-        && after.active != before.active
+      return after.active != before.active
         && op is string && getAfter(adminActionPath(op)).data.user_id == id
         && getAfter(adminActionPath(op)).data.occurred_at == request.time
         && after.updated_by == ownId() && after.updated_at == request.time;
