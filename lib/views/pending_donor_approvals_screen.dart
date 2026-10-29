@@ -268,6 +268,18 @@ class _PendingDonorApprovalsScreenState
                     icon: const Icon(Icons.refresh),
                     label: Text('retry'.tr),
                   ),
+                  const SizedBox(height: 8),
+                  TextButton.icon(
+                    icon: const Icon(Icons.history),
+                    label: Text('review_history_title'.tr),
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const ReviewHistoryScreen(
+                          kind: ReviewHistoryKind.donor,
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
