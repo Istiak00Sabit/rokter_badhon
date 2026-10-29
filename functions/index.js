@@ -129,9 +129,25 @@ export const updateMyProfilePhoto = onCall({ region, timeoutSeconds: 60 }, (requ
   const actor = await admitted(request, ['developer_admin', 'leader', 'executive', 'committee', 'member']);
   const body = dataObject(request.data);
   const url = body.photoUrl;
-  if (url !== null && (typeof url !== 'string' || url.length > 2048 ||
-      !/^https:\/\/[^/]+/.test(url))) {
-    throw new HttpsError('invalid-argument', 'A valid HTTPS photo URL is required.');
+  if (url !== null) {
+    if (typeof url !== 'string' || url.length > 2048) {
+      throw new HttpsError('invalid-argument', 'Invalid photo URL.');
+    }
+    let hostname;
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol !== 'https:' || parsed.username || parsed.password) {
+        throw new Error('invalid');
+      }
+      hostname = parsed.hostname.toLowerCase();
+    } catch (_) {
+      throw new HttpsError('invalid-argument', 'A valid HTTPS image URL is required.');
+    }
+    const approvedHosts = (process.env.PROFILE_PHOTO_ALLOWED_HOSTS || '')
+      .split(',').map((item) => item.trim().toLowerCase()).filter(Boolean);
+    if (!approvedHosts.includes(hostname)) {
+      throw new HttpsError('failed-precondition', 'image_host_not_approved');
+    }
   }
   return updateOwnPhoto({
     ...dependencies(actor.uid, 'User-requested profile photo update'),
