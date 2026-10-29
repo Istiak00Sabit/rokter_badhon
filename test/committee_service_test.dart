@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:rokter_badhon/models/committee_assignment_model.dart';
 import 'package:rokter_badhon/models/committee_term_model.dart';
 import 'package:rokter_badhon/models/committee_media_model.dart';
+import 'package:rokter_badhon/models/committee_member_model.dart';
 import 'package:rokter_badhon/models/user_directory_model.dart';
 import 'package:rokter_badhon/services/committee_service.dart';
 
@@ -156,6 +157,68 @@ void main() {
       expect(CommitteeService.validateGallery('past-term', const []), isEmpty);
     },
   );
+
+  test('bundled JSON roster keeps names and positions while adding profile photos', () {
+    final original = CommitteeMemberModel(
+      assignment: assignment('2025-2027-001', userId: 'bundled-one', position: 'president'),
+      directory: const UserDirectoryModel(
+        id: 'bundled-one',
+        name: 'JSON committee member',
+        phone: '01712345678',
+        bloodGroup: 'O+',
+        profession: 'Teacher',
+        photoUrl: null,
+        active: true,
+      ),
+    );
+    const updatedProfile = UserDirectoryModel(
+      id: 'different-real-user-id',
+      name: 'Updated account name',
+      phone: '01712345678',
+      bloodGroup: 'AB-',
+      profession: 'Engineer',
+      photoUrl: 'https://example.test/photo.jpg',
+      active: true,
+    );
+    final roster = CommitteeService.mergeBundledProfilePhotos(
+      [original],
+      [updatedProfile],
+    );
+    expect(roster.single.assignment.id, original.assignment.id);
+    expect(roster.single.position, 'president');
+    expect(roster.single.directory?.name, 'JSON committee member');
+    expect(roster.single.directory?.bloodGroup, 'O+');
+    expect(roster.single.directory?.profession, 'Teacher');
+    expect(roster.single.directory?.photoUrl, 'https://example.test/photo.jpg');
+    expect(original.directory?.photoUrl, isNull);
+  });
+
+  test('no matching photo, inactive profiles and duplicate phones fail closed', () {
+    final member = CommitteeMemberModel(
+      assignment: assignment('2025-2027-002', userId: 'bundled-two'),
+      directory: const UserDirectoryModel(
+        id: 'bundled-two',
+        name: 'JSON source',
+        phone: '01712345678',
+        bloodGroup: 'A+',
+        profession: null,
+        photoUrl: null,
+        active: true,
+      ),
+    );
+    UserDirectoryModel profile(String id, {bool active = true}) => UserDirectoryModel(
+      id: id,
+      name: id,
+      phone: '01712345678',
+      bloodGroup: null,
+      profession: null,
+      photoUrl: 'https://example.test/$id.jpg',
+      active: active,
+    );
+    expect(CommitteeService.mergeBundledProfilePhotos([member], []).single.directory?.photoUrl, isNull);
+    expect(CommitteeService.mergeBundledProfilePhotos([member], [profile('disabled', active: false)]).single.directory?.photoUrl, isNull);
+    expect(CommitteeService.mergeBundledProfilePhotos([member], [profile('one'), profile('two')]).single.directory?.photoUrl, isNull);
+  });
 
   test(
     'directory mapping is display-only and preserves assignment position',
