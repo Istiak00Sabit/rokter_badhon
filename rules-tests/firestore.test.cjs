@@ -119,9 +119,10 @@ test('developer admin can approve one pending applicant atomically on Spark', as
   }));
   const client = db();
   await assertSucceeds(pendingApprovalBatch(client).commit());
-  const result = await env.withSecurityRulesDisabled(async ctx =>
-    getDoc(doc(ctx.firestore(), 'registration_requests/new-member')));
-  assert.equal(result.data().status, 'approved');
+  await env.withSecurityRulesDisabled(async ctx => {
+    const result = await getDoc(doc(ctx.firestore(), 'registration_requests/new-member'));
+    assert.equal(result.data().status, 'approved');
+  });
   assert.equal((await getDoc(doc(client, 'users/new-member'))).data().access_role, 'member');
   assert.equal((await getDoc(doc(client, 'auth_links/new-member'))).data().user_id, 'new-member');
   await assertFails(pendingApprovalBatch(client).commit());
