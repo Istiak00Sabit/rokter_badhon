@@ -14,6 +14,8 @@ const REQUEST_FIELDS = new Set([
   'blood_group',
   'profession',
   'address',
+  'union',
+  'village',
   'status',
   'requested_at',
   'approved_by',
@@ -154,6 +156,9 @@ export function parsePendingRequest(data, documentId) {
   string(data.blood_group, 'blood_group', { nullable: true });
   string(data.profession, 'profession', { nullable: true });
   string(data.address, 'address', { nullable: true });
+  string(data.union, 'union');
+  string(data.village, 'village');
+  if (!data.union.trim() || !data.village.trim()) fail('malformed', 'Union and village are required.');
   string(data.status, 'status');
   timestamp(data.requested_at, 'requested_at');
   string(data.approved_by, 'approved_by', { nullable: true });
