@@ -43,6 +43,8 @@ node_modules/
 **/*service-account-key*.json
 admin_script/serviceAccountKey.json
 tools/operator/.env*
+functions/.env*
+functions/.runtimeconfig.json
 tools/operator/credentials/
 tools/operator/.local/
 
