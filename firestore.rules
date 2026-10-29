@@ -5,6 +5,10 @@ service cloud.firestore {
     function linkPath() { return /databases/$(database)/documents/auth_links/$(request.auth.uid); }
     function userPath(id) { return /databases/$(database)/documents/users/$(id); }
     function directoryPath(id) { return /databases/$(database)/documents/user_directory/$(id); }
+    function registrationPath(uid) { return /databases/$(database)/documents/registration_requests/$(uid); }
+    function reviewPath(uid) { return /databases/$(database)/documents/registration_review_events/$(uid); }
+    function registrationPhonePath(phone) { return /databases/$(database)/documents/registration_phone_claims/$(phone); }
+    function adminActionPath(id) { return /databases/$(database)/documents/admin_actions/$(id); }
     function ownId() { return get(linkPath()).data.user_id; }
     function knownRole(role) {
       return role in ['developer_admin', 'leader', 'executive', 'committee', 'member'];
@@ -18,6 +22,7 @@ service cloud.firestore {
         && get(userPath(ownId())).data.login_enabled == true
         && knownRole(get(userPath(ownId())).data.access_role);
     }
+    function developerAdmin() { return admitted() && get(userPath(ownId())).data.access_role == 'developer_admin'; }
     function unlinkedOwn(uid) {
       return signedIn() && uid == request.auth.uid && !exists(linkPath());
     }
@@ -26,10 +31,10 @@ service cloud.firestore {
       return u.keys().hasAll(['name','phone','email','blood_group','profession','address','photo_url',
           'access_role','active','login_enabled','preferred_language','created_at','created_by','updated_at','updated_by'])
         && u.keys().hasOnly(['name','phone','email','blood_group','profession','address','photo_url',
-          'access_role','active','login_enabled','preferred_language','created_at','created_by','updated_at','updated_by'])
+          'access_role','active','login_enabled','preferred_language','created_at','created_by','updated_at','updated_by','last_admin_action_id'])
         && u.name is string && u.phone is string && nullableString(u.email)
         && nullableString(u.blood_group) && nullableString(u.profession) && nullableString(u.address)
-        && nullableString(u.preferred_language)
+        && nullableString(u.get('last_admin_action_id', null)) && nullableString(u.preferred_language)
         && (u.photo_url == null || (u.photo_url is string && u.photo_url.size() <= 2048 && u.photo_url.matches('https://[^/]+.*')))
         && knownRole(u.access_role) && u.active is bool && u.login_enabled is bool
         && u.created_at is timestamp && u.updated_at is timestamp
@@ -49,6 +54,83 @@ service cloud.firestore {
         && after.updated_at == request.time && after.updated_by == id
         && get(directoryPath(id)).data == projection(before)
         && getAfter(directoryPath(id)).data == projection(after);
+    }
+    // Spark-safe admission. Only an existing linked developer_admin can
+    // review an authenticated applicant's OWN request. Never mint new admins.
+    function approvedReview(uid) {
+      return get(registrationPath(uid)).data.status == 'pending'
+        && getAfter(registrationPath(uid)).data.status == 'approved'
+        && getAfter(registrationPath(uid)).data.linked_user_id == uid
+        && getAfter(registrationPath(uid)).data.approved_by == ownId()
+        && getAfter(registrationPath(uid)).data.approved_at == request.time;
+    }
+    function validNewMember(uid, u) {
+      let r = get(registrationPath(uid)).data;
+      return validUser(u) && approvedReview(uid)
+        && u.name == r.name && u.phone == r.phone && u.email == r.email
+        && u.blood_group == r.blood_group && u.profession == r.profession
+        && u.address == r.address && u.photo_url == null
+        && u.access_role == 'member' && u.active == true && u.login_enabled == true
+        && u.preferred_language == null && u.created_at == request.time
+        && u.updated_at == request.time && u.created_by == ownId()
+        && u.updated_by == ownId()
+        && u.get('last_admin_action_id', null) == null;
+    }
+    function admissionDocuments(uid) {
+      let r = get(registrationPath(uid)).data;
+      return r.phone.matches('01[3-9][0-9]{8}')
+        && getAfter(userPath(uid)).data.access_role == 'member'
+        && getAfter(userPath(uid)).data.phone == r.phone
+        && getAfter(directoryPath(uid)).data == projection(getAfter(userPath(uid)).data)
+        && getAfter(linkPathForUid(uid)).data.user_id == uid
+        && getAfter(linkPathForUid(uid)).data.active == true
+        && getAfter(registrationPhonePath(r.phone)).data.user_id == uid
+        && getAfter(reviewPath(uid)).data.action == 'approve';
+    }
+    function linkPathForUid(uid) { return /databases/$(database)/documents/auth_links/$(uid); }
+    function reviewEvent(uid, event) {
+      return event.keys().hasAll(['action','actor_user_id','reviewed_at','reason'])
+        && event.keys().hasOnly(['action','actor_user_id','reviewed_at','reason'])
+        && event.actor_user_id == ownId() && event.reviewed_at == request.time
+        && event.reason is string && event.reason.size() >= 10 && event.reason.size() <= 500
+        && event.action in ['approve','reject']
+        && get(registrationPath(uid)).data.status == 'pending'
+        && getAfter(registrationPath(uid)).data.status == (event.action == 'approve' ? 'approved' : 'rejected')
+        && (event.action != 'approve' || admissionDocuments(uid));
+    }
+    function adminBeforeAfter(id, after) {
+      let before = resource.data;
+      let op = after.get('last_admin_action_id', null);
+      return developerAdmin() && id != ownId() && validUser(before) && validUser(after)
+        && before.access_role != 'developer_admin'
+        && after.access_role in ['member','committee','executive','leader']
+        && after.name == before.name && after.phone == before.phone
+        && after.diff(before).affectedKeys().hasOnly(['access_role','active','login_enabled',
+          'updated_at','updated_by','last_admin_action_id'])
+        && after.diff(before).affectedKeys().hasAny(['access_role','active','login_enabled'])
+        && after.updated_at == request.time && after.updated_by == ownId()
+        && op is string && op.size() > 0 && op.size() <= 120
+        && op != before.get('last_admin_action_id', null)
+        && getAfter(adminActionPath(op)).data.user_id == id
+        && getAfter(adminActionPath(op)).data.actor_user_id == ownId()
+        && getAfter(adminActionPath(op)).data.occurred_at == request.time
+        && getAfter(directoryPath(id)).data == projection(after);
+    }
+    function adminActionValid(actionId, a) {
+      let id = a.user_id;
+      let before = get(userPath(id)).data;
+      let after = getAfter(userPath(id)).data;
+      return developerAdmin() && validId(id) && id != ownId()
+        && before.access_role != 'developer_admin'
+        && a.keys().hasAll(['user_id','actor_user_id','occurred_at','reason','before','after'])
+        && a.keys().hasOnly(['user_id','actor_user_id','occurred_at','reason','before','after'])
+        && a.actor_user_id == ownId() && a.occurred_at == request.time
+        && a.reason is string && a.reason.size() >= 10 && a.reason.size() <= 500
+        && a.before == {'access_role':before.access_role,'active':before.active,'login_enabled':before.login_enabled}
+        && a.after == {'access_role':after.access_role,'active':after.active,'login_enabled':after.login_enabled}
+        && after.get('last_admin_action_id', null) == actionId
+        && after.updated_at == request.time && after.updated_by == ownId()
+        && after.diff(before).affectedKeys().hasAny(['access_role','active','login_enabled']);
     }
     match /registration_requests/{uid} {
       allow get: if unlinkedOwn(uid)
@@ -71,19 +153,96 @@ service cloud.firestore {
         && request.resource.data.approved_by == null && request.resource.data.approved_at == null
         && request.resource.data.rejected_by == null && request.resource.data.rejected_at == null
         && request.resource.data.linked_user_id == null;
+      // Admin action and its immutable review event must be in one batch.
+      allow update: if developerAdmin() && uid != request.auth.uid
+        && resource.data.status == 'pending'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status','approved_by','approved_at','rejected_by','rejected_at','linked_user_id'])
+        && request.resource.data.status in ['approved','rejected']
+        && getAfter(reviewPath(uid)).data.action == (request.resource.data.status == 'approved' ? 'approve' : 'reject')
+        && getAfter(reviewPath(uid)).data.actor_user_id == ownId()
+        && getAfter(reviewPath(uid)).data.reviewed_at == request.time
+        && (
+          (request.resource.data.status == 'approved'
+            && request.resource.data.approved_by == ownId()
+            && request.resource.data.approved_at == request.time
+            && request.resource.data.linked_user_id == uid
+            && request.resource.data.rejected_by == null
+            && request.resource.data.rejected_at == null
+            && admissionDocuments(uid))
+          ||
+          (request.resource.data.status == 'rejected'
+            && request.resource.data.rejected_by == ownId()
+            && request.resource.data.rejected_at == request.time
+            && request.resource.data.approved_by == null
+            && request.resource.data.approved_at == null
+            && request.resource.data.linked_user_id == null)
+        );
+    }
+    match /registration_review_events/{uid} {
+      allow get: if developerAdmin();
+      allow create: if developerAdmin() && reviewEvent(uid, request.resource.data);
+    }
+    match /registration_phone_claims/{phone} {
+      allow get: if developerAdmin() && phone.matches('01[3-9][0-9]{8}');
+      allow create: if developerAdmin()
+        && phone.matches('01[3-9][0-9]{8}')
+        && request.resource.data.keys().hasAll(['user_id','claimed_at','claimed_by'])
+        && request.resource.data.keys().hasOnly(['user_id','claimed_at','claimed_by'])
+        && request.resource.data.user_id is string
+        && request.resource.data.claimed_at == request.time
+        && request.resource.data.claimed_by == ownId()
+        && approvedReview(request.resource.data.user_id)
+        && get(registrationPath(request.resource.data.user_id)).data.phone == phone
+        && getAfter(userPath(request.resource.data.user_id)).data.phone == phone;
     }
     match /auth_links/{uid} {
+      allow create: if developerAdmin() && uid != request.auth.uid
+        && request.resource.data.keys().hasAll(['user_id','active','created_at','created_by'])
+        && request.resource.data.keys().hasOnly(['user_id','active','created_at','created_by'])
+        && request.resource.data.user_id == uid
+        && request.resource.data.active == true
+        && request.resource.data.created_at == request.time
+        && request.resource.data.created_by == ownId()
+        && approvedReview(uid) && validNewMember(uid, getAfter(userPath(uid)).data);
       allow get: if signedIn() && uid == request.auth.uid;
     }
     match /users/{id} {
-      allow get: if admitted() && id == ownId();
-      allow update: if ownProfileChange(id, resource.data, request.resource.data);
+      allow get: if admitted() && (id == ownId() || developerAdmin());
+      allow list: if developerAdmin();
+      allow create: if developerAdmin() && id != request.auth.uid
+        && validNewMember(id, request.resource.data)
+        && admissionDocuments(id);
+      allow update: if ownProfileChange(id, resource.data, request.resource.data)
+        || adminBeforeAfter(id, request.resource.data);
     }
     match /user_directory/{id} {
       allow read: if admitted() && resource.data.active == true;
-      allow update: if ownProfileChange(id, get(userPath(id)).data, getAfter(userPath(id)).data)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','blood_group','profession'])
-        && request.resource.data.diff(resource.data).affectedKeys().hasAny(['name','blood_group','profession']);
+      allow create: if developerAdmin() && approvedReview(id)
+        && validNewMember(id, getAfter(userPath(id)).data)
+        && request.resource.data == projection(getAfter(userPath(id)).data);
+      allow update: if
+        (ownProfileChange(id, get(userPath(id)).data, getAfter(userPath(id)).data)
+          && request.resource.data == projection(getAfter(userPath(id)).data)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','blood_group','profession','photo_url']))
+        || (developerAdmin() && id != ownId()
+          && get(userPath(id)).data.access_role != 'developer_admin'
+          && request.resource.data == projection(getAfter(userPath(id)).data)
+          && adminBeforeAfterDirectory(id));
+    }
+    function adminBeforeAfterDirectory(id) {
+      let after = getAfter(userPath(id)).data;
+      let before = get(userPath(id)).data;
+      let op = after.get('last_admin_action_id', null);
+      return validUser(before) && validUser(after)
+        && after.active != before.active
+        && op is string && getAfter(adminActionPath(op)).data.user_id == id
+        && getAfter(adminActionPath(op)).data.occurred_at == request.time
+        && after.updated_by == ownId() && after.updated_at == request.time;
+    }
+    match /admin_actions/{operationId} {
+      allow create: if adminActionValid(operationId, request.resource.data);
+      allow get, list: if developerAdmin();
     }
     function roleIn(roles) { return get(userPath(ownId())).data.access_role in roles; }
 
