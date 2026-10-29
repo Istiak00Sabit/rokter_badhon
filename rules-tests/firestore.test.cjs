@@ -119,7 +119,8 @@ test('developer admin can approve one pending applicant atomically on Spark', as
   }));
   const client = db();
   await assertSucceeds(pendingApprovalBatch(client).commit());
-  const result = await getDoc(doc(client, 'registration_requests/new-member'));
+  const result = await env.withSecurityRulesDisabled(async ctx =>
+    getDoc(doc(ctx.firestore(), 'registration_requests/new-member')));
   assert.equal(result.data().status, 'approved');
   assert.equal((await getDoc(doc(client, 'users/new-member'))).data().access_role, 'member');
   assert.equal((await getDoc(doc(client, 'auth_links/new-member'))).data().user_id, 'new-member');
@@ -295,8 +296,10 @@ for (const role of ['developer_admin','leader','executive','committee','member']
     await seed('users/person-own', user({ access_role: role }));
     const c = db();
     await assertSucceeds(getDoc(doc(c, 'users/person-own')));
-    await assertFails(getDoc(doc(c, 'users/person-other')));
-    await assertFails(getDocs(collection(c, 'users')));
+    await (role === 'developer_admin' ? assertSucceeds : assertFails)(
+      getDoc(doc(c, 'users/person-other')));
+    await (role === 'developer_admin' ? assertSucceeds : assertFails)(
+      getDocs(collection(c, 'users')));
     await assertSucceeds(getDoc(doc(c, 'user_directory/person-other')));
     await assertSucceeds(getDocs(query(collection(c, 'user_directory'), where('active','==',true))));
     await assertFails(getDoc(doc(c, 'user_directory/inactive')));
@@ -453,9 +456,11 @@ test('developer_admin keeps authorized reads but cannot change account security 
   await assertSucceeds(getDoc(doc(c, 'audit_logs/record')));
 
   await assertFails(getDoc(doc(c, 'registration_requests/terminal')));
-  await assertFails(getDoc(doc(c, 'users/person-other')));
+  // A developer admin needs Users read access for role management, but
+  // cannot read another person's private AuthLink.
+  await assertSucceeds(getDoc(doc(c, 'users/person-other')));
   await assertFails(getDoc(doc(c, 'auth_links/auth-other')));
-  await assertFails(getDocs(collection(c, 'users')));
+  await assertSucceeds(getDocs(collection(c, 'users')));
   await assertFails(getDocs(collection(c, 'auth_links')));
   await assertFails(getDocs(collection(c, 'registration_requests')));
   await assertFails(setDoc(doc(c, 'auth_links/new'), { user_id: 'person-own', active: true }));
@@ -1264,7 +1269,8 @@ test('even developer_admin cannot create committee Users or assignments from Flu
     ended_at: null,
   });
   await assertFails(batch.commit());
-  await assertFails(getDoc(doc(client, 'users/' + memberId)));
+  const notCreated = await assertSucceeds(getDoc(doc(client, 'users/' + memberId)));
+  assert.equal(notCreated.exists(), false);
 
   await seed('users/person-own', user({ access_role: 'member' }));
   await assertFails(setDoc(doc(db(), 'committee_assignments/forged-member'), {
