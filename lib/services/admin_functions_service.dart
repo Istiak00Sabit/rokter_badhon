@@ -104,7 +104,7 @@ class AdminFunctionsService {
       'userId': userId,
       'action': action,
       'reason': reason,
-      if (role != null) 'role': role,
+      ?role: role,
     });
   }
 
