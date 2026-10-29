@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -181,6 +182,11 @@ class _FakeRegistrationService implements AdministrationService {
         ),
       ];
     }
+    return const <RegistrationRequestModel>[];
+  }
+
+  @override
+  Future<List<RegistrationRequestModel>> reviewedRegistrations({int limit = 50}) async {
     return const <RegistrationRequestModel>[];
   }
 
