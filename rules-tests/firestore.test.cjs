@@ -3,7 +3,7 @@ const { before, after, beforeEach, test } = require('node:test');
 const assert = require('node:assert/strict');
 const { initializeTestEnvironment, assertSucceeds, assertFails } = require('@firebase/rules-unit-testing');
 const { doc, collection, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where,
-  writeBatch, serverTimestamp, Timestamp, deleteField, orderBy, getCountFromServer, limit, startAfter, startAt, endAt, documentId } = require('firebase/firestore');
+  writeBatch, runTransaction, serverTimestamp, Timestamp, deleteField, orderBy, getCountFromServer, limit, startAfter, startAt, endAt, documentId } = require('firebase/firestore');
 
 const projectId = 'demo-rokter-badhon';
 let env;
@@ -709,6 +709,10 @@ for (const role of roles) {
     await expectRead(editorial, getDocs(query(collection(c, 'events'), where('active','==',false))));
     await assertSucceeds(getDoc(doc(c, 'donors/active')));
     await assertFails(getDoc(doc(c, 'donors/hidden')));
+    // Editorial reviewers may check a missing donor ID, but cannot read
+    // inactive donor records. Ordinary members cannot probe missing IDs.
+    await (editorial ? assertSucceeds : assertFails)(
+      getDoc(doc(c, 'donors/missing-before-review')));
     await assertFails(getDocs(collection(c, 'donors')));
     for (const [field, direction] of [['name','asc'],['total_donations','desc']])
       await assertSucceeds(getDocs(query(collection(c, 'donors'), where('active','==',true), orderBy(field,direction))));
@@ -903,6 +907,24 @@ test('a donor submission cannot be approved or rejected a second time', async ()
   assert.equal(persisted.data().donor_id, 'one-time');
 });
 
+test('developer admin can preflight a missing donor and phone key in a transaction', async () => {
+  await seed('users/person-own', user({ access_role: 'developer_admin' }));
+  await seedPendingSubmission('new-proposal');
+  const c = db();
+  const observed = await assertSucceeds(runTransaction(c, async transaction => {
+    const registry = await transaction.get(doc(c, 'system_config/donor_phone_registry'));
+    const submission = await transaction.get(doc(c, 'donor_submissions/new-proposal'));
+    const donor = await transaction.get(doc(c, 'donors/new-proposal'));
+    const key = await transaction.get(doc(c, 'donor_phone_keys/01700000000'));
+    return { ready: registry.data()?.ready, pending: submission.data()?.status,
+      hasDonor: donor.exists(), hasKey: key.exists() };
+  }));
+  assert.deepEqual(observed, {
+    ready: true, pending: 'pending', hasDonor: false, hasKey: false,
+  });
+  await assertFails(getDoc(doc(db('auth-other'), 'donors/new-proposal')));
+});
+
 test('developer_admin can approve a pending donor only through the same atomic guarded path', async () => {
   await seed('users/person-own', user({ access_role: 'developer_admin' }));
   await seedPendingSubmission('admin-approval');
@@ -943,14 +965,16 @@ test('phone registry missing or not ready blocks approval and phone reservation'
   await env.withSecurityRulesDisabled(c =>
     deleteDoc(doc(c.firestore(), 'system_config/donor_phone_registry')));
   await assertFails(approveDonor(db(), 'unready'));
-  await assertFails(getDoc(doc(db(), 'donors/unready')));
+  const absentDonor = await assertSucceeds(getDoc(doc(db(), 'donors/unready')));
+  assert.equal(absentDonor.exists(), false);
 });
 
 test('approval without a matching immutable phone key is rejected', async () => {
   await seed('users/person-own', user({ access_role: 'leader' }));
   await seedPendingSubmission('no-key');
   await assertFails(approveDonor(db(), 'no-key', {}, {}, { skipKey: true }));
-  await assertFails(getDoc(doc(db(), 'donors/no-key')));
+  const absentDonor = await assertSucceeds(getDoc(doc(db(), 'donors/no-key')));
+  assert.equal(absentDonor.exists(), false);
   await assertFails(setDoc(doc(db(), 'donor_phone_keys/01700000000'), {
     phone: '01700000000', donor_id: 'no-key',
     reserved_at: serverTimestamp(), reserved_by: 'person-own',
@@ -975,7 +999,8 @@ test('two distinct concurrent approvals for same phone allow only one reservatio
   assert.equal(key.data().donor_id, winner);
   assert.equal((await getDoc(doc(db(), `donor_submissions/${winner}`))).data().status, 'approved');
   assert.equal((await getDoc(doc(db(), `donor_submissions/${loser}`))).data().status, 'pending');
-  await assertFails(getDoc(doc(db(), `donors/${loser}`)));
+  const loserDonor = await assertSucceeds(getDoc(doc(db(), `donors/${loser}`)));
+  assert.equal(loserDonor.exists(), false);
   await assertFails(deleteDoc(doc(db(), 'donor_phone_keys/01700000000')));
   await assertFails(updateDoc(doc(db(), 'donor_phone_keys/01700000000'), { donor_id: loser }));
 });
@@ -999,7 +1024,8 @@ test('leader rejection remains reviewable and never creates an active donor', as
     status: 'rejected', rejected_by: 'person-own', rejected_at: serverTimestamp(), rejection_reason: 'Duplicate phone',
   }));
   assert.equal((await getDoc(doc(db(), 'donor_submissions/review'))).data().status, 'rejected');
-  await assertFails(getDoc(doc(db(), 'donors/review')));
+  const absentDonor = await assertSucceeds(getDoc(doc(db(), 'donors/review')));
+  assert.equal(absentDonor.exists(), false);
 });
 
 test('client cannot forge donor approval payload, actor, timestamp, or decision fields', async () => {
