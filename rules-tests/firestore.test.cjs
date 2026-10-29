@@ -82,6 +82,141 @@ test('registration wrong path, forged identity/state/time/decision and extra fie
   }
   await assertSucceeds(setDoc(doc(db('applicant', { email: null }), 'registration_requests/applicant'), request({ email: null })));
 });
+// Spark-only admission tests use real Firestore rules and synthetic identities.
+function pendingApprovalBatch(c, uid = 'new-member', phone = '01712345678') {
+  const userRef = doc(c, `users/${uid}`);
+  const member = user({
+    name: 'Synthetic Applicant', phone, email: 'applicant@example.test',
+    blood_group: 'A+', profession: 'Teacher', address: 'Address',
+    photo_url: null, access_role: 'member', active: true, login_enabled: true,
+    preferred_language: null, created_at: serverTimestamp(), created_by: 'person-own',
+    updated_at: serverTimestamp(), updated_by: 'person-own',
+  });
+  const batch = writeBatch(c);
+  batch.set(doc(c, `registration_review_events/${uid}`), {
+    action: 'approve', actor_user_id: 'person-own', reviewed_at: serverTimestamp(),
+    reason: 'Identity and local phone reviewed.',
+  });
+  batch.set(userRef, member);
+  batch.set(doc(c, `user_directory/${uid}`), projection(member));
+  batch.set(doc(c, `auth_links/${uid}`), {
+    user_id: uid, active: true, created_at: serverTimestamp(), created_by: 'person-own',
+  });
+  batch.set(doc(c, `registration_phone_claims/${phone}`), {
+    user_id: uid, claimed_at: serverTimestamp(), claimed_by: 'person-own',
+  });
+  batch.update(doc(c, `registration_requests/${uid}`), {
+    status: 'approved', approved_by: 'person-own', approved_at: serverTimestamp(),
+    linked_user_id: uid,
+  });
+  return batch;
+}
+
+test('developer admin can approve one pending applicant atomically on Spark', async () => {
+  await seed('users/person-own', user({ access_role: 'developer_admin' }));
+  await seed('registration_requests/new-member', request({
+    auth_uid: 'new-member', phone: '01712345678', requested_at: stamp,
+  }));
+  const client = db();
+  await assertSucceeds(pendingApprovalBatch(client).commit());
+  const result = await getDoc(doc(client, 'registration_requests/new-member'));
+  assert.equal(result.data().status, 'approved');
+  assert.equal((await getDoc(doc(client, 'users/new-member'))).data().access_role, 'member');
+  assert.equal((await getDoc(doc(client, 'auth_links/new-member'))).data().user_id, 'new-member');
+  await assertFails(pendingApprovalBatch(client).commit());
+});
+
+test('registration review rejects non-admin callers and client-side admin elevation', async () => {
+  await seed('registration_requests/new-member', request({
+    auth_uid: 'new-member', phone: '01712345678', requested_at: stamp,
+  }));
+  await assertFails(pendingApprovalBatch(db()).commit());
+  await seed('users/person-own', user({ access_role: 'developer_admin' }));
+  const client = db();
+  const roleBatch = pendingApprovalBatch(client);
+  // A second review cannot repeat an already claimed phone identity.
+  await assertSucceeds(roleBatch.commit());
+  await seed('registration_requests/second-member', request({
+    auth_uid: 'second-member', phone: '01712345678', requested_at: stamp,
+  }));
+  await assertFails(pendingApprovalBatch(client, 'second-member').commit());
+  // No ordinary applicant may modify the admitted User to become admin.
+  await assertFails(updateDoc(doc(db('new-member'), 'users/new-member'), {
+    access_role: 'developer_admin', ...metadata(),
+  }));
+});
+
+test('developer admin can reject a registration with immutable review evidence', async () => {
+  await seed('users/person-own', user({ access_role: 'developer_admin' }));
+  await seed('registration_requests/rejected-member', request({
+    auth_uid: 'rejected-member', phone: '01712345678', requested_at: stamp,
+  }));
+  const client = db();
+  const b = writeBatch(client);
+  b.set(doc(client, 'registration_review_events/rejected-member'), {
+    action: 'reject', actor_user_id: 'person-own',
+    reviewed_at: serverTimestamp(), reason: 'Identity could not be confirmed.',
+  });
+  b.update(doc(client, 'registration_requests/rejected-member'), {
+    status: 'rejected', rejected_by: 'person-own', rejected_at: serverTimestamp(),
+  });
+  await assertSucceeds(b.commit());
+  await assertFails(setDoc(doc(client, 'registration_review_events/rejected-member'), {
+    action: 'approve',
+  }));
+});
+
+test('audited admin changes role and active flag but cannot promote to developer admin', async () => {
+  await seed('users/person-own', user({ access_role: 'developer_admin' }));
+  const client = db();
+  const role = writeBatch(client);
+  role.update(doc(client, 'users/person-other'), {
+    access_role: 'committee', updated_by: 'person-own',
+    updated_at: serverTimestamp(), last_admin_action_id: 'audit-role-1',
+  });
+  role.set(doc(client, 'admin_actions/audit-role-1'), {
+    user_id: 'person-other', actor_user_id: 'person-own',
+    occurred_at: serverTimestamp(), reason: 'Reviewed committee appointment.',
+    before: { access_role: 'member', active: true, login_enabled: true },
+    after: { access_role: 'committee', active: true, login_enabled: true },
+  });
+  await assertSucceeds(role.commit());
+  const disable = writeBatch(client);
+  disable.update(doc(client, 'users/person-other'), {
+    active: false, updated_by: 'person-own',
+    updated_at: serverTimestamp(), last_admin_action_id: 'audit-disable-2',
+  });
+  disable.update(doc(client, 'user_directory/person-other'), { active: false });
+  disable.set(doc(client, 'admin_actions/audit-disable-2'), {
+    user_id: 'person-other', actor_user_id: 'person-own',
+    occurred_at: serverTimestamp(), reason: 'Account suspension reviewed.',
+    before: { access_role: 'committee', active: true, login_enabled: true },
+    after: { access_role: 'committee', active: false, login_enabled: true },
+  });
+  await assertSucceeds(disable.commit());
+  assert.equal((await getDoc(doc(client, 'users/person-other'))).data().active, false);
+  await assertFails(updateDoc(doc(client, 'users/person-other'), {
+    access_role: 'developer_admin', last_admin_action_id: 'forged',
+    updated_by: 'person-own', updated_at: serverTimestamp(),
+  }));
+});
+
+test('non-admin never controls audited User role changes', async () => {
+  const client = db();
+  const b = writeBatch(client);
+  b.update(doc(client, 'users/person-other'), {
+    access_role: 'leader', updated_by: 'person-own',
+    updated_at: serverTimestamp(), last_admin_action_id: 'forged-1',
+  });
+  b.set(doc(client, 'admin_actions/forged-1'), {
+    user_id: 'person-other', actor_user_id: 'person-own',
+    occurred_at: serverTimestamp(), reason: 'Not an authorized appointment.',
+    before: { access_role: 'member', active: true, login_enabled: true },
+    after: { access_role: 'leader', active: true, login_enabled: true },
+  });
+  await assertFails(b.commit());
+});
+
 test('registration overwrite/update/delete/list/other read denied', async () => {
   const c = db('applicant'); const ref = doc(c, 'registration_requests/applicant');
   await assertSucceeds(setDoc(ref, request()));
