@@ -8,6 +8,7 @@ import '../controllers/localization_controller.dart';
 import '../localization/app_translations.dart';
 import '../localization/app_date_formatter.dart';
 import '../models/profile_update.dart';
+import '../services/admin_functions_service.dart';
 import '../models/user_model.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -215,6 +216,15 @@ class ProfileScreen extends StatelessWidget {
                     ),
 
                     const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () => _editPhotoLink(context, authController, user),
+                        icon: const Icon(Icons.image_outlined),
+                        label: Text('profile_photo_link'.tr),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
 
                     _languageSelector(),
 
@@ -296,6 +306,67 @@ class ProfileScreen extends StatelessWidget {
         );
       }),
     );
+  }
+
+  Future<void> _editPhotoLink(
+    BuildContext context,
+    AuthController controller,
+    UserModel user,
+  ) async {
+    final link = TextEditingController(text: user.photoUrl ?? '');
+    final selected = await showDialog<String>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: Text('profile_photo_link'.tr),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('profile_photo_url_note'.tr),
+            const SizedBox(height: 8),
+            TextField(
+              controller: link,
+              keyboardType: TextInputType.url,
+              decoration: InputDecoration(labelText: 'profile_photo_link'.tr),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialog),
+            child: Text('cancel'.tr),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialog, link.text.trim()),
+            child: Text('save'.tr),
+          ),
+        ],
+      ),
+    );
+    link.dispose();
+    if (selected == null || !context.mounted) return;
+    if (selected.isNotEmpty &&
+        (Uri.tryParse(selected)?.scheme != 'https' ||
+            Uri.tryParse(selected)?.host.isEmpty != false)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('profile_photo_url_note'.tr)),
+      );
+      return;
+    }
+    try {
+      await AdminFunctionsService().updateProfilePhoto(
+        selected.isEmpty ? null : selected,
+      );
+      await controller.restoreSession();
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('profile_photo_updated'.tr)),
+      );
+    } on AdminCallException catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('admin_action_failed'.trParams({'code': error.code}))),
+      );
+    }
   }
 
   Future<void> _editProfile(
