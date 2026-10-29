@@ -155,9 +155,7 @@ class CommitteeService {
       for (final doc in snapshot.docs) {
         try {
           final profile = UserDirectoryModel.fromMap(doc.data(), doc.id);
-          if (phones.contains(profile.phone) &&
-              profile.active &&
-              profile.photoUrl != null) {
+          if (phones.contains(profile.phone) && profile.active) {
             matches.add(profile);
           }
         } on FormatException {
@@ -179,7 +177,7 @@ class CommitteeService {
     final byPhone = <String, UserDirectoryModel>{};
     final ambiguous = <String>{};
     for (final profile in profiles) {
-      if (!profile.active || profile.photoUrl == null) continue;
+      if (!profile.active) continue;
       if (byPhone.containsKey(profile.phone)) ambiguous.add(profile.phone);
       byPhone[profile.phone] = profile;
     }
