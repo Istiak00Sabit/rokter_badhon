@@ -49,8 +49,8 @@ service cloud.firestore {
     function ownProfileChange(id, before, after) {
       return admitted() && id == ownId() && validUser(before) && validUser(after)
         && after.diff(before).affectedKeys().hasOnly(['name','email','blood_group','profession',
-          'address','preferred_language','updated_at','updated_by'])
-        && after.diff(before).affectedKeys().hasAny(['name','email','blood_group','profession','address','preferred_language'])
+          'address','photo_url','preferred_language','updated_at','updated_by'])
+        && after.diff(before).affectedKeys().hasAny(['name','email','blood_group','profession','address','photo_url','preferred_language'])
         && after.updated_at == request.time && after.updated_by == id
         && get(directoryPath(id)).data == projection(before)
         && getAfter(directoryPath(id)).data == projection(after);
