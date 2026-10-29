@@ -6,6 +6,7 @@ import '../constants/app_colors.dart';
 import '../controllers/administration_controller.dart';
 import '../localization/app_date_formatter.dart';
 import '../services/admin_functions_service.dart';
+import 'review_history_screen.dart';
 
 class RegistrationReviewScreen extends StatefulWidget {
   const RegistrationReviewScreen({super.key});
@@ -88,7 +89,7 @@ class _RegistrationReviewScreenState extends State<RegistrationReviewScreen> {
       await controller.loadPending();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('review_saved'.tr)),
+        SnackBar(content: Text(approve ? 'review_approved'.tr : 'review_rejected'.tr)),
       );
     } on AdminCallException catch (error) {
       if (!mounted) return;
@@ -107,6 +108,19 @@ class _RegistrationReviewScreenState extends State<RegistrationReviewScreen> {
         title: Text('pending_registrations'.tr),
         backgroundColor: AppColors.surface,
         foregroundColor: AppColors.textDark,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.history),
+            tooltip: 'review_history_title'.tr,
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const ReviewHistoryScreen(
+                  kind: ReviewHistoryKind.registration,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
       body: Column(
         children: [
