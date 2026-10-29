@@ -1,42 +1,83 @@
-# Developer Admin backend — owner deployment checklist
+# Spark-first real application: admin approval and account management
 
-The Flutter screens and callable server sources live in PR #2. They cannot activate on production through `git pull` alone.
+The real Flutter app uses Firebase Authentication + Firestore Security Rules
+and **no paid deployed Cloud Functions** for everyday user approval and role
+management. Changes were implemented on PR #2 (draft) and require owner
+review and Firestore Rules publishing before they work against the existing
+Firebase project.
 
-## Prerequisites
-- Firebase project: `rokterbadhon-b247b`
-- Authorized owner reviews the target, deployed rules, real developer-admin `auth_links` and `users` state and Firebase Auth identity first.
-- Firebase **Blaze** billing must be explicitly enabled for Cloud Functions. Spark does not deploy Cloud Functions. Billing may incur charges; configure limits/alerts as appropriate.
-- Cloud Functions region: `asia-south1`. New admin code is in `functions/`.
-- For optional photos, provide an approved image hosting service, and configure `PROFILE_PHOTO_ALLOWED_HOSTS` as an exact comma-separated list of hostnames (without schemes). An empty setting intentionally rejects photo changes.
-- The code does not include an upload service. It only saves a vetted HTTPS URL to existing `users.photo_url` and `user_directory.photo_url`.
+## What works without upgrading billing
+- Firebase Auth registers accounts using their private phone-derived
+  email/password identity. Applicants can submit their own pending request.
+- A pre-existing *properly admitted* `developer_admin` reviews a request
+  and atomically creates six related documents: an ordinary Member in
+  `users/{authUid}`, `auth_links/{authUid}`, `user_directory/{authUid}`,
+  `registration_phone_claims/{phone}`, an immutable
+  `registration_review_events/{authUid}`, and approval fields on the request.
+  Reject creates only review evidence and changes the request status.
+- Existing User roles (member, committee, executive, leader), active flag,
+  login flag can be updated by developer admin via a Firestore batch
+  containing `admin_actions/{operationId}` audit evidence. Direct user
+  mutation without this evidence is denied. Developer admins cannot be
+  created, promoted, deactivated or modified from this UI; actors cannot
+  change their own privileged account.
+- Profile photos may be linked to a publicly reachable HTTPS image URL using
+  Firestore's existing User + Directory projection. There is no built-in
+  upload/Storage hosting on Spark.
+- Official committee roster names/positions/order always come from bundled
+  JSON; a verified matching active User Directory may supply a profile photo.
+- Donor submission and donor approval continue to use the separate
+  phone-registry transactional uniqueness workflow, not the registration
+  phone claims.
 
-## Deployment after owner review
+## Owner steps
+1. **Backup your live Firestore Rules** before any changes.
+2. Review `firestore.rules` on the PR branch, and test it against the
+   **demo emulator only**. The GitHub Actions backend job runs those tests.
+3. After approving the results, publish `firestore.rules` in Firebase
+   Console for **rokterbadhon-b247b**. Publishing is a live permission change.
+   Git commits and `flutter run` do NOT publish Rules.
+4. Ensure existing developer admin's authenticated Firebase UID is mapped by
+   `auth_links/{authUid}` to an active `users/{id}` with
+   `access_role: developer_admin` and `login_enabled: true`.
+   Do not create an admin using client-supplied roles.
+5. Pull the PR branch and run `flutter pub get` / `flutter run` on a real
+   device, or install the locally built APK. No Blaze deployment is necessary.
+6. Before testing approval of a **real identity**, manually verify applicant
+   identity and phone ownership. Never approve synthetic/fake accounts in
+   production.
 
-From the **PR branch**, with Firebase CLI access, run:
+## Legacy accounts and duplicate phone safety
+The newly admitted User ID equals the applicant Auth UID. A reviewed
+registration whose phone already appears in `users`, or a claimed phone,
+is rejected by the client preflight. The deterministic
+`registration_phone_claims/{phone}` write prevents two concurrent
+new approvals of the same phone. Historical/legacy profiles might lack
+claims: review/reconcile old users before onboarding, and never treat client
+preflight as an authorization proof. Linking an applicant to an existing
+User (committee import, historical users) is a separate audited, trusted
+operator workflow, intentionally not auto-done here.
 
-```bash
-git switch fix/admin-registration-village-language-20261026
-git pull origin fix/admin-registration-village-language-20261026
-npm install --prefix functions
-firebase login
-firebase use rokterbadhon-b247b
-firebase deploy --only functions:admin --project rokterbadhon-b247b
-flutter pub get
-flutter run
-```
+## Donor registry safety
+Donor approval requires an independently audited migration and
+`system_config/donor_phone_registry` set ready. **Do not set it to true
+without reviewing all existing donor records, including inactive records.**
+The emulator demo seed is strictly local and must never be run against
+production. Existing donor approval also requires published latest Rules.
 
-Do not deploy the functions if the Firebase project is still Spark, the protected operator identity is not verified, or owner consent for billing/deployment is missing. Running `firebase deploy` affects production.
-
-## What the callable API does
-- `adminReviewRegistration`: only an admitted, active **developer_admin** may approve or reject pending registration after a reason. An approval creates Member User, directory, AuthLink, decision and audit in the existing trusted transaction.
-- `adminListUsers`: developer admin can read the first 80 User summaries (not full data); pagination is a known follow-up.
-- `adminManageUser`: role member/committee/executive/leader, active state or login state through audited authorization; never changes a developer admin or self.
-- `updateMyProfilePhoto`: any admitted account can save or clear its own approved HTTPS photo URL with an audit record.
-
-App Check enforcement needs approved real-device provider configuration and testing before production rollout. Firebase Auth, active AuthLink and current User role are checked server-side even before that deployment gate.
-
-## Limits
-- Committee **membership, position and ordering remain in bundled JSON**, with no Firestore committee roster writes. Any roster changes require an app release updating JSON. Member/Committee application roles are distinct from the JSON list.
-- The donor phone registry must be reconciled/marked ready through the separate reviewed trusted operator workflow. Do not set `system_config/donor_phone_registry.ready` manually.
-- The callables do **not** create new developer admins.
-- Live production end-to-end approval, mobile App Check, image upload, donor phone migration, and release signing are not claimed done.
+## What is deliberately not promised
+- Firestore Rules cannot invoke Firebase Admin SDK to delete/disable
+  authentication identities, reset another user's password, or force-verify
+  phone ownership. Deactivation/login controls act as app-level admission
+  gates, not Firebase Auth account disablement.
+- Committee membership JSON cannot be remotely edited on one device and
+  instantly distributed to other installs; changing roles in User records
+  does not edit the official JSON roster.
+- Firestore Spark free usage quotas apply. There is no unlimited free usage,
+  and no hosting of profile images included.
+- Untrusted clients cannot provision developer_admin.
+- The dormant `functions/` source is preserved for a possible future
+  opted-in Blaze migration, but `firebase.json` contains **no functions
+  deploy target**. Do not deploy Functions for Spark testing.
+- User list currently pages only first 80 profiles; improved pagination
+  and live device acceptance remain necessary before release.
