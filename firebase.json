@@ -21,11 +21,5 @@
         }
       }
     }
-  },
-  "functions": [
-    {
-      "source": "functions",
-      "codebase": "admin"
-    }
-  ]
+  }
 }
