@@ -33,7 +33,7 @@ void main() {
         'lib/views/registration_screen.dart',
       ).readAsStringSync();
       expect(login, contains('AuthLanguageSwitch()'));
-      expect(registration, contains('AuthLanguageSwitch(onPrimary: true)'));
+      expect(registration, contains('AuthLanguageSwitch()'));
       expect(login, contains("'login'.tr"));
       expect(login, contains("'register'.tr"));
       expect(registration, contains("'register'.tr"));
