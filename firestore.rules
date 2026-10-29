@@ -218,7 +218,14 @@ service cloud.firestore {
         && (resource.data.active == true || (resource.data.active == false && editorial()));
     }
     match /donors/{id} {
-      allow read: if admitted() && resource.data.active == true;
+      // Ordinary members can view active donors only. Approval transactions
+      // must check that a proposed donor document does NOT already exist.
+      // Permit that negative get only to a verified editorial account.
+      // A missing document returns exists=false, never any private data.
+      allow get: if admitted() && (
+        (resource != null && resource.data.active == true)
+        || (resource == null && editorial()));
+      allow list: if admitted() && resource.data.active == true;
       allow create: if admitted() && editorial() && validDonor(request.resource.data)
         && donorMatchesSubmission(request.resource.data,
           getAfter(/databases/$(database)/documents/donor_submissions/$(id)).data, id);
