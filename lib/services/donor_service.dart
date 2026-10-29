@@ -205,6 +205,33 @@ class DonorService {
     return (await getPendingSubmissionsPage()).items;
   }
 
+  /// Historical donor decisions remain in Firestore with their status,
+  /// reviewer and rejection reason; they are not live donors when rejected.
+  Future<List<DonorSubmissionModel>> getReviewedSubmissions({
+    int limit = 50,
+  }) async {
+    if (limit < 1 || limit > 100) {
+      throw const DonorServiceException('invalid_limit');
+    }
+    try {
+      final snapshot = await _firestore
+          .collection(AppConstants.donorSubmissionsCollection)
+          .where('status', whereIn: ['approved', 'rejected'])
+          .limit(limit)
+          .get();
+      final items = snapshot.docs
+          .map((doc) => DonorSubmissionModel.fromMap(doc.data(), doc.id))
+          .toList(growable: false);
+      items.sort((a, b) => (b.approvedAt ?? b.rejectedAt ?? b.submittedAt)
+          .compareTo(a.approvedAt ?? a.rejectedAt ?? a.submittedAt));
+      return items;
+    } on DonorDataException {
+      rethrow;
+    } on FirebaseException catch (error) {
+      throw DonorServiceException(_safeCode(error.code));
+    }
+  }
+
   Future<void> approveSubmission({
     required DonorSubmissionModel submission,
     required String actorUserId,
