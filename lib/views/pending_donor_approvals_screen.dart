@@ -86,11 +86,17 @@ class _PendingDonorApprovalsScreenState
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () {
+              FocusManager.instance.primaryFocus?.unfocus();
+              Navigator.pop(context, false);
+            },
             child: Text('cancel'.tr),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () {
+              FocusManager.instance.primaryFocus?.unfocus();
+              Navigator.pop(context, true);
+            },
             child: Text('approve'.tr),
           ),
         ],
@@ -125,17 +131,27 @@ class _PendingDonorApprovalsScreenState
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              FocusManager.instance.primaryFocus?.unfocus();
+              Navigator.pop(context);
+            },
             child: Text('cancel'.tr),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(context, reasonText.trim()),
+            onPressed: () {
+              FocusManager.instance.primaryFocus?.unfocus();
+              Navigator.pop(context, reasonText.trim());
+            },
             child: Text('reject'.tr),
           ),
         ],
       ),
     );
-    if (reason == null || reason.isEmpty || !mounted) return;
+    if (reason == null || !mounted) return;
+    if (reason.isEmpty) {
+      _showError('review_reason_required');
+      return;
+    }
     final actorId = _actorId;
     if (actorId == null) {
       _showError('session_unavailable');
@@ -216,7 +232,29 @@ class _PendingDonorApprovalsScreenState
           );
         }
         final items = _items;
-        if (items.isEmpty) return Center(child: Text('no_pending_donors'.tr));
+        if (items.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.task_alt, size: 48, color: AppColors.success),
+                  const SizedBox(height: 12),
+                  Text('no_pending_donors'.tr, textAlign: TextAlign.center),
+                  const SizedBox(height: 8),
+                  Text('review_history_hint'.tr, textAlign: TextAlign.center),
+                  const SizedBox(height: 16),
+                  OutlinedButton.icon(
+                    onPressed: _actionInProgress ? null : () => setState(_reload),
+                    icon: const Icon(Icons.refresh),
+                    label: Text('retry'.tr),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
         return RefreshIndicator(
           onRefresh: () async {
             setState(_reload);
