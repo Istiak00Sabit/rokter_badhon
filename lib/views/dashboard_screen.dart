@@ -34,60 +34,33 @@ class DashboardScreen extends StatelessWidget {
             slivers: [
               // App Bar
               SliverAppBar(
-                expandedHeight: 170,
+                toolbarHeight: 64,
                 floating: false,
                 pinned: true,
                 backgroundColor: AppColors.surface,
                 foregroundColor: AppColors.textDark,
                 automaticallyImplyLeading: false,
-                title: Text('app_name'.tr),
+                titleSpacing: 16,
+                title: Row(
+                  children: [
+                    const Icon(Icons.water_drop, color: AppColors.primary, size: 22),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'app_name'.tr,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ],
+                ),
                 actions: const [
                   Padding(
                     padding: EdgeInsets.only(right: 12),
                     child: Center(child: AuthLanguageSwitch()),
                   ),
                 ],
-                flexibleSpace: FlexibleSpaceBar(
-                  background: Container(
-                    decoration: const BoxDecoration(color: AppColors.surface),
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 60, 20, 20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          Text(
-                            'greeting'.tr,
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: AppColors.textGrey,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Obx(
-                            () => Text(
-                              controller.currentUser.value?.name ??
-                                  'unknown'.tr,
-                              style: const TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.textDark,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'org_location'.tr,
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: AppColors.textGrey,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
               ),
 
               SliverToBoxAdapter(
@@ -119,7 +92,7 @@ class DashboardScreen extends StatelessWidget {
                         physics: const NeverScrollableScrollPhysics(),
                         crossAxisSpacing: 12,
                         mainAxisSpacing: 12,
-                        childAspectRatio: 1.5,
+                        mainAxisExtent: 156,
                         children: [
                           // Total donors card
                           GestureDetector(
@@ -413,7 +386,7 @@ class DashboardScreen extends StatelessWidget {
     required Color color,
   }) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(14),
@@ -423,7 +396,7 @@ class DashboardScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Icon(icon, color: color, size: 28),
+          Icon(icon, color: color, size: 26),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -437,6 +410,8 @@ class DashboardScreen extends StatelessWidget {
               ),
               Text(
                 title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontSize: 12, color: AppColors.textGrey),
               ),
               if (error != null)
