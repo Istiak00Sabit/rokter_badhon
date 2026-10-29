@@ -124,7 +124,8 @@ test('developer admin can approve one pending applicant atomically on Spark', as
     assert.equal(result.data().status, 'approved');
   });
   assert.equal((await getDoc(doc(client, 'users/new-member'))).data().access_role, 'member');
-  assert.equal((await getDoc(doc(client, 'auth_links/new-member'))).data().user_id, 'new-member');
+  // AuthLinks are private to the matching Firebase Auth UID, even for admins.
+  assert.equal((await getDoc(doc(db('new-member'), 'auth_links/new-member'))).data().user_id, 'new-member');
   await assertFails(pendingApprovalBatch(client).commit());
 });
 
