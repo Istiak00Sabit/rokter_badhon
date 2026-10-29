@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import '../constants/app_colors.dart';
 import '../controllers/administration_controller.dart';
 import '../localization/app_date_formatter.dart';
+import '../services/admin_functions_service.dart';
 
 class RegistrationReviewScreen extends StatefulWidget {
   const RegistrationReviewScreen({super.key});
@@ -16,6 +17,8 @@ class RegistrationReviewScreen extends StatefulWidget {
 
 class _RegistrationReviewScreenState extends State<RegistrationReviewScreen> {
   late final AdministrationController controller;
+  final AdminFunctionsService backend = AdminFunctionsService();
+  bool saving = false;
 
   @override
   void initState() {
@@ -28,6 +31,68 @@ class _RegistrationReviewScreenState extends State<RegistrationReviewScreen> {
         ? Get.find<AdministrationController>(tag: 'registrations')
         : Get.put(AdministrationController(), tag: 'registrations');
     controller.loadPending();
+  }
+
+  Future<void> _review(String uid, bool approve) async {
+    if (saving) return;
+    final reason = TextEditingController();
+    final confirmedReason = await showDialog<String>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: Text(approve ? 'approve'.tr : 'reject'.tr),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('registration_review_reason_hint'.tr),
+            TextField(
+              controller: reason,
+              maxLength: 500,
+              minLines: 2,
+              maxLines: 3,
+              decoration: InputDecoration(labelText: 'rejection_reason'.tr),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialog),
+            child: Text('cancel'.tr),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialog, reason.text.trim()),
+            child: Text(approve ? 'approve'.tr : 'reject'.tr),
+          ),
+        ],
+      ),
+    );
+    reason.dispose();
+    if (confirmedReason == null || !mounted) return;
+    if (confirmedReason.length < 10) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('admin_reason_required'.tr)),
+      );
+      return;
+    }
+    setState(() => saving = true);
+    try {
+      await backend.decideRegistration(
+        applicantUid: uid,
+        approve: approve,
+        reason: confirmedReason,
+      );
+      await controller.loadPending();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('review_saved'.tr)),
+      );
+    } on AdminCallException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('admin_action_failed'.trParams({'code': error.code}))),
+      );
+    } finally {
+      if (mounted) setState(() => saving = false);
+    }
   }
 
   @override
@@ -47,7 +112,7 @@ class _RegistrationReviewScreenState extends State<RegistrationReviewScreen> {
               children: [
                 const Icon(Icons.verified_user_outlined, size: 20),
                 const SizedBox(width: 8),
-                Expanded(child: Text('registration_operator_only'.tr)),
+                Expanded(child: Text('registration_admin_actions_note'.tr)),
               ],
             ),
           ),
@@ -79,7 +144,9 @@ class _RegistrationReviewScreenState extends State<RegistrationReviewScreen> {
             itemBuilder: (_, index) {
               final item = controller.pending[index];
               return Card(
-                child: ListTile(
+                child: Column(
+                  children: [
+                    ListTile(
                   onTap: () async {
                     await Clipboard.setData(ClipboardData(text: item.authUid));
                     if (!context.mounted) return;
@@ -97,6 +164,24 @@ class _RegistrationReviewScreenState extends State<RegistrationReviewScreen> {
                   ),
                   isThreeLine: true,
                   trailing: Text(AppDateFormatter.short(item.requestedAt)),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+                      child: Row(
+                        children: [
+                          Expanded(child: OutlinedButton(
+                            onPressed: saving ? null : () => _review(item.authUid, false),
+                            child: Text('reject'.tr),
+                          )),
+                          const SizedBox(width: 8),
+                          Expanded(child: FilledButton(
+                            onPressed: saving ? null : () => _review(item.authUid, true),
+                            child: Text('approve'.tr),
+                          )),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               );
             },
