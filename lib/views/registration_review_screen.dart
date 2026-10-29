@@ -152,6 +152,7 @@ class _RegistrationReviewScreenState extends State<RegistrationReviewScreen> {
           return _Message(
             text: 'no_pending_registrations'.tr,
             retry: controller.loadPending,
+            showHistory: true,
           );
         }
         return RefreshIndicator(
@@ -217,7 +218,8 @@ class _RegistrationReviewScreenState extends State<RegistrationReviewScreen> {
 class _Message extends StatelessWidget {
   final String text;
   final Future<void> Function() retry;
-  const _Message({required this.text, required this.retry});
+  final bool showHistory;
+  const _Message({required this.text, required this.retry, this.showHistory = false});
   @override
   Widget build(BuildContext context) => Center(
     child: Padding(
@@ -225,9 +227,23 @@ class _Message extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          if (showHistory) const Icon(Icons.task_alt, size: 48, color: AppColors.success),
+          if (showHistory) const SizedBox(height: 12),
           Text(text, textAlign: TextAlign.center),
           const SizedBox(height: 12),
           OutlinedButton(onPressed: retry, child: Text('retry'.tr)),
+          if (showHistory) ...[
+            const SizedBox(height: 8),
+            Text('review_history_hint'.tr, textAlign: TextAlign.center),
+            const SizedBox(height: 8),
+            TextButton.icon(
+              icon: const Icon(Icons.history),
+              label: Text('review_history_title'.tr),
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(
+                builder: (_) => const ReviewHistoryScreen(kind: ReviewHistoryKind.registration),
+              )),
+            ),
+          ],
         ],
       ),
     ),
