@@ -19,6 +19,33 @@ class AdministrationService {
     } on FormatException { rethrow; } on FirebaseException catch (error) { throw AdministrationServiceException(_code(error)); }
   }
 
+  /// Rejected and approved applications stay in Firestore for review/audit.
+  /// They are hidden from the pending queue, not deleted.
+  Future<List<RegistrationRequestModel>> reviewedRegistrations({
+    int limit = 50,
+  }) async {
+    if (limit < 1 || limit > 100) {
+      throw const AdministrationServiceException('invalid_limit');
+    }
+    try {
+      final snapshot = await _firestore
+          .collection('registration_requests')
+          .where('status', whereIn: ['approved', 'rejected'])
+          .limit(limit)
+          .get();
+      final items = snapshot.docs
+          .map((doc) => RegistrationRequestModel.fromMap(doc.data(), doc.id))
+          .toList(growable: false);
+      items.sort((a, b) => (b.approvedAt ?? b.rejectedAt ?? b.requestedAt)
+          .compareTo(a.approvedAt ?? a.rejectedAt ?? a.requestedAt));
+      return items;
+    } on FormatException {
+      rethrow;
+    } on FirebaseException catch (error) {
+      throw AdministrationServiceException(_code(error));
+    }
+  }
+
   Future<List<AuditLogModel>> auditLogs({int limit = 100}) async {
     if (limit < 1 || limit > 200) throw const AdministrationServiceException('invalid_limit');
     try {
