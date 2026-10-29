@@ -91,7 +91,7 @@ test('legacy President title and missing security state grant no operator author
   );
 });
 
-test('Free V1 source has no hosted execution, scheduler, Storage, or upload dependency', () => {
+test('V2 uses protected callable admin functions with no Storage, scheduler or upload dependency', () => {
   const firebase = JSON.parse(readFileSync(source('firebase.json'), 'utf8'));
   const rootPackage = JSON.parse(readFileSync(source('package.json'), 'utf8'));
   const pubspec = readFileSync(source('pubspec.yaml'), 'utf8');
@@ -102,13 +102,16 @@ test('Free V1 source has no hosted execution, scheduler, Storage, or upload depe
     pubspec,
   ].join('\n');
 
-  assert.deepEqual(Object.keys(firebase).sort(), ['firestore', 'flutter']);
+  assert.deepEqual(Object.keys(firebase).sort(), ['firestore', 'flutter', 'functions']);
+  assert.equal(firebase.functions[0].source, 'functions');
+  assert.equal(firebase.functions[0].codebase, 'admin');
+  assert.match(pubspec, /cloud_functions/);
   assert.equal(firebase.firestore.rules, 'firestore.rules');
   assert.equal(firebase.firestore.indexes, 'firestore.indexes.json');
   assert.deepEqual(Object.keys(rootPackage.scripts), ['test:rules']);
   assert.doesNotMatch(
     trackedConfig,
-    /firebase_storage|image_picker|cloud_functions|firebase_functions|cloud_run|pubsub|scheduler/i,
+    /firebase_storage|image_picker|cloud_run|pubsub|scheduler/i,
   );
 });
 
