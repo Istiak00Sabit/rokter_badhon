@@ -313,7 +313,7 @@ class ProfileScreen extends StatelessWidget {
     AuthController controller,
     UserModel user,
   ) async {
-    final link = TextEditingController(text: user.photoUrl ?? '');
+    String selectedValue = user.photoUrl ?? '';
     final selected = await showDialog<String>(
       context: context,
       builder: (dialog) => AlertDialog(
@@ -323,8 +323,9 @@ class ProfileScreen extends StatelessWidget {
           children: [
             Text('profile_photo_url_note'.tr),
             const SizedBox(height: 8),
-            TextField(
-              controller: link,
+            TextFormField(
+              initialValue: selectedValue,
+              onChanged: (value) => selectedValue = value,
               keyboardType: TextInputType.url,
               decoration: InputDecoration(labelText: 'profile_photo_link'.tr),
             ),
@@ -332,17 +333,22 @@ class ProfileScreen extends StatelessWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(dialog),
+            onPressed: () {
+              FocusManager.instance.primaryFocus?.unfocus();
+              Navigator.pop(dialog);
+            },
             child: Text('cancel'.tr),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(dialog, link.text.trim()),
+            onPressed: () {
+              FocusManager.instance.primaryFocus?.unfocus();
+              Navigator.pop(dialog, selectedValue.trim());
+            },
             child: Text('save'.tr),
           ),
         ],
       ),
     );
-    link.dispose();
     if (selected == null || !context.mounted) return;
     if (selected.isNotEmpty &&
         (Uri.tryParse(selected)?.scheme != 'https' ||
