@@ -23,19 +23,15 @@ class CommitteeController extends GetxController {
     isLoading.value = true;
     errorMessage.value = null;
     try {
-      final results = await Future.wait<dynamic>([
-        service.getCurrentTerm(),
-        service.getPastTerms(),
-      ]);
-      final currentTerm = results[0] as CommitteeTermModel?;
-      pastTerms.assignAll(results[1] as List<CommitteeTermModel>);
-      if (needsBundledPreview(currentTerm)) {
-        currentRoster.value = await service.getBundledOfficialRoster();
-      } else {
-        // Once the server has an active committee term it is authoritative.
-        // Never silently replace an empty/partially configured live term
-        // with the 51 bundled profiles; those are *preview*, not synced data.
-        currentRoster.value = await service.getCurrentRoster(currentTerm!);
+      // The official 2025–2027 roster is always the bundled JSON.
+      // Firestore only supplies optional public profile photos, never the
+      // committee membership, position or ordering.
+      currentRoster.value = await service.getBundledOfficialRoster();
+      try {
+        pastTerms.assignAll(await service.getPastTerms());
+      } catch (_) {
+        // Historical Firestore terms are optional and must not hide JSON.
+        pastTerms.clear();
       }
     } catch (_) {
       currentRoster.value = null;
