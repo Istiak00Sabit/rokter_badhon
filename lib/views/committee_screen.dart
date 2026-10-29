@@ -35,7 +35,7 @@ class _CommitteeScreenState extends State<CommitteeScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text('current_committee'.tr),
+        title: Text('committee'.tr),
         backgroundColor: AppColors.surface,
         foregroundColor: AppColors.textDark,
         centerTitle: true,
@@ -66,7 +66,7 @@ class _CommitteeScreenState extends State<CommitteeScreen> {
               RBPageIntro(
                 title: 'current_committee'.tr,
                 eyebrow: 'org_location'.tr,
-                subtitle: roster == null ? 'no_current_committee'.tr : roster.term.name,
+                subtitle: 'org_location'.tr,
               ),
               const SizedBox(height: 18),
               Row(
@@ -258,13 +258,16 @@ class CommitteeRosterView extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(14),
-          child: SizedBox(
-            height: 170,
-            child: _CommitteeImage(url: roster.term.groupPhotoUrl, group: true),
+        if (roster.term.groupPhotoUrl?.isNotEmpty == true) ...[
+          ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: SizedBox(
+              height: 170,
+              child: _CommitteeImage(url: roster.term.groupPhotoUrl, group: true),
+            ),
           ),
-        ),
+          const SizedBox(height: 14),
+        ],
         if (roster.isBundledPreview) ...[
           const SizedBox(height: 12),
           Text(
@@ -273,7 +276,6 @@ class CommitteeRosterView extends StatelessWidget {
             style: const TextStyle(color: AppColors.textGrey),
           ),
         ],
-        const SizedBox(height: 14),
         Text(
           roster.term.name,
           textAlign: TextAlign.center,
