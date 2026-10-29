@@ -123,6 +123,13 @@ jobs:
           bash -n tools/release/android_smoke.sh
           python3 -m py_compile tools/release/android_ui_acceptance.py
           python3 -m unittest discover -s tools/release -p 'test_*.py' -v
+      - name: Check admin callable syntax and audited operator policy parity
+        run: |
+          node --check functions/index.js
+          for name in admission account policy auth_identity; do
+            node --check "functions/src/$name.js"
+            cmp "functions/src/$name.js" "tools/operator/src/$name.js"
+          done
       - name: Install operator dependencies
         run: npm --prefix tools/operator ci
       - name: Run operator tests
