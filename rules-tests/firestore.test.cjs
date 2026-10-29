@@ -237,9 +237,11 @@ for (const role of ['developer_admin','leader','executive','committee','member']
     const c = db(); const allowed = role === 'developer_admin' || role === 'leader';
     await (allowed ? assertSucceeds : assertFails)(getDoc(doc(c, 'registration_requests/pending-review')));
     await (allowed ? assertSucceeds : assertFails)(getDocs(query(collection(c, 'registration_requests'), where('status','==','pending'))));
-    await assertFails(getDoc(doc(c, 'registration_requests/rejected-review')));
-    await assertFails(getDocs(query(collection(c, 'registration_requests'), where('status','==','rejected'))));
-    await assertFails(getDocs(collection(c, 'registration_requests')));
+    const historyAccess = role === 'developer_admin' ? assertSucceeds : assertFails;
+    await historyAccess(getDoc(doc(c, 'registration_requests/rejected-review')));
+    await historyAccess(getDocs(query(collection(c, 'registration_requests'),
+      where('status','==','rejected'))));
+    await historyAccess(getDocs(collection(c, 'registration_requests')));
   });
 }
 for (const link of [{ active: true, user_id: 'person-own' }, { active: false, user_id: 'person-own' }, { active: true, user_id: 'missing' }, {}]) {
@@ -457,14 +459,14 @@ test('developer_admin keeps authorized reads but cannot change account security 
   await assertSucceeds(getDoc(doc(c, 'user_directory/person-other')));
   await assertSucceeds(getDoc(doc(c, 'audit_logs/record')));
 
-  await assertFails(getDoc(doc(c, 'registration_requests/terminal')));
+  await assertSucceeds(getDoc(doc(c, 'registration_requests/terminal')));
   // A developer admin needs Users read access for role management, but
   // cannot read another person's private AuthLink.
   await assertSucceeds(getDoc(doc(c, 'users/person-other')));
   await assertFails(getDoc(doc(c, 'auth_links/auth-other')));
   await assertSucceeds(getDocs(collection(c, 'users')));
   await assertFails(getDocs(collection(c, 'auth_links')));
-  await assertFails(getDocs(collection(c, 'registration_requests')));
+  await assertSucceeds(getDocs(collection(c, 'registration_requests')));
   await assertFails(setDoc(doc(c, 'auth_links/new'), { user_id: 'person-own', active: true }));
   await assertFails(updateDoc(doc(c, 'auth_links/auth-own'), { user_id: 'person-other' }));
   await assertFails(deleteDoc(doc(c, 'auth_links/auth-own')));
