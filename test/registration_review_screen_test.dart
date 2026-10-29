@@ -47,7 +47,7 @@ void main() {
     expect(service.calls, 2);
   });
 
-  testWidgets('pending request is review-only and its UID can be copied', (
+  testWidgets('pending request offers guarded review actions and its UID can be copied', (
     tester,
   ) async {
     final service = _FakeRegistrationService(hasPending: true);
@@ -62,12 +62,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(service.calls, 1);
-    expect(find.text('registration_operator_only'), findsOneWidget);
+    expect(find.text('registration_admin_actions_note'), findsOneWidget);
     expect(find.text('Synthetic Applicant'), findsOneWidget);
-    // No direct approve or reject controls: privileged changes require
-    // operator authentication and an audited trusted transaction.
-    expect(find.text('approve'), findsNothing);
-    expect(find.text('reject'), findsNothing);
+    // Only the trusted callable performs privileged writes.
+    expect(find.text('approve'), findsOneWidget);
+    expect(find.text('reject'), findsOneWidget);
 
     String? copiedUid;
     tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
