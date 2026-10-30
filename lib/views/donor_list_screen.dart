@@ -6,6 +6,7 @@ import '../controllers/donor_controller.dart';
 import '../models/donor_model.dart';
 import '../localization/app_date_formatter.dart';
 import 'add_donor_screen.dart';
+import 'record_donation_screen.dart';
 import '../widgets/roktobadhon_design.dart';
 
 class DonorListScreen extends StatefulWidget {
@@ -507,7 +508,19 @@ class _DonorListScreenState extends State<DonorListScreen> {
               ),
             ),
 
-            // Call icon
+            // Only an authorized reviewer can create a verified donation
+            // and advance the donor's lifetime counter.
+            if (controller.canEdit)
+              IconButton(
+                tooltip: 'record_donation_title'.tr,
+                icon: const Icon(Icons.volunteer_activism_outlined,
+                    color: AppColors.success),
+                onPressed: () async {
+                  await Get.to(() => RecordDonationScreen(donor: donor));
+                  if (mounted) controller.loadDonors();
+                },
+              ),
+            // Edit donor profile
             if (controller.canEdit)
               IconButton(
                 tooltip: 'edit_donor'.tr,
