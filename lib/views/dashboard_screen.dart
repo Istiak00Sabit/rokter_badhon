@@ -16,6 +16,7 @@ import '../views/admin_user_management_screen.dart';
 import '../views/audit_log_screen.dart';
 import '../views/pending_donor_approvals_screen.dart';
 import '../widgets/auth_language_switch.dart';
+import '../widgets/dashboard_top_donors.dart';
 import '../widgets/roktobadhon_design.dart';
 
 class DashboardScreen extends StatelessWidget {
@@ -180,6 +181,8 @@ class DashboardScreen extends StatelessWidget {
                         ],
                       ),
 
+                      const SizedBox(height: 24),
+                      const DashboardTopDonors(),
                       const SizedBox(height: 24),
 
                       // Quick actions
