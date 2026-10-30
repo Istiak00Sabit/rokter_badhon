@@ -930,7 +930,7 @@ test('verified donation increments lifetime total atomically and cannot be doubl
   });
   await assertSucceeds(first.commit());
   assert.equal((await getDoc(doc(client, 'donors/active'))).data().total_donations, 1);
-  await assertFails(first.commit());
+  await assertFails(setDoc(doc(client, 'donations/log-1'), newDonation()));
   await assertFails(updateDoc(doc(client, 'donors/active'), {
     total_donations: 2, ...metadata(),
   }));
