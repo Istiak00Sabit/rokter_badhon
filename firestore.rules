@@ -299,6 +299,8 @@ service cloud.firestore {
         && after.updated_at == request.time && after.updated_by == ownId();
     }
     function validDonation(id, d) {
+      let before = get(donorPath(d.donor_id)).data;
+      let after = getAfter(donorPath(d.donor_id)).data;
       return d.keys().hasAll(['donor_id','donor_name_snapshot','blood_group_snapshot',
           'donation_date','location','hospital','recipient_name','recipient_contact',
           'recorded_by','created_at','updated_at'])
@@ -307,23 +309,20 @@ service cloud.firestore {
           'recorded_by','created_at','updated_at'])
         && d.donor_id is string && d.donor_id.size() > 0
         && !d.donor_id.matches('.*[/].*')
-        && d.donor_name_snapshot is string && d.blood_group_snapshot is string
-        && nullableString(d.location) && nullableString(d.hospital)
-        && nullableString(d.recipient_name) && nullableString(d.recipient_contact)
         && d.donation_date is timestamp && d.donation_date <= request.time
         && d.created_at == request.time && d.updated_at == null
         && d.recorded_by == ownId()
-        && get(donorPath(d.donor_id)).data.active == true
-        && d.donor_name_snapshot == get(donorPath(d.donor_id)).data.name
-        && d.blood_group_snapshot == get(donorPath(d.donor_id)).data.blood_group
-        && (get(donorPath(d.donor_id)).data.last_donated_at == null ||
-            d.donation_date > get(donorPath(d.donor_id)).data.last_donated_at)
-        && getAfter(donorPath(d.donor_id)).data.total_donations ==
-          get(donorPath(d.donor_id)).data.total_donations + 1
-        && getAfter(donorPath(d.donor_id)).data.latest_donation_id == id
-        && getAfter(donorPath(d.donor_id)).data.last_donated_at == d.donation_date
-        && getAfter(donorPath(d.donor_id)).data.updated_by == ownId()
-        && getAfter(donorPath(d.donor_id)).data.updated_at == request.time;
+        && nullableString(d.location) && nullableString(d.hospital)
+        && nullableString(d.recipient_name) && nullableString(d.recipient_contact)
+        && before.active == true && after.active == true
+        && d.donor_name_snapshot == before.name
+        && d.blood_group_snapshot == before.blood_group
+        && (before.last_donated_at == null ||
+            d.donation_date > before.last_donated_at)
+        && after.total_donations == before.total_donations + 1
+        && after.latest_donation_id == id
+        && after.last_donated_at == d.donation_date
+        && after.updated_by == ownId() && after.updated_at == request.time;
     }
     function validDonorPayload(d) {
       return (
@@ -436,14 +435,16 @@ service cloud.firestore {
       allow create: if admitted() && editorial() && validDonor(request.resource.data)
         && donorMatchesSubmission(request.resource.data,
           getAfter(/databases/$(database)/documents/donor_submissions/$(id)).data, id);
-      allow update: if admitted() && history() && resource.data.active == true
-        && validDonor(resource.data) && validDonor(request.resource.data)
-        && request.resource.data.phone == resource.data.phone
+      allow update: if (admitted() && history() && resource.data.active == true
+        // Fast negative check prevents evaluation of full donor validation
+        // for a donation counter update (Firestore rule expression limit).
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','blood_group',
           'gender','photo_url','village','union','upazila','district','profession','updated_at','updated_by'])
         && request.resource.data.diff(resource.data).affectedKeys().hasAny(['name','blood_group',
           'gender','photo_url','village','union','upazila','district','profession'])
-        && request.resource.data.updated_at == request.time && request.resource.data.updated_by == ownId()
+        && validDonor(resource.data) && validDonor(request.resource.data)
+        && request.resource.data.phone == resource.data.phone
+        && request.resource.data.updated_at == request.time && request.resource.data.updated_by == ownId())
         || donorDonationIncrement(id);
     }
     match /donor_submissions/{id} {
