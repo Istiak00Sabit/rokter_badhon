@@ -908,6 +908,71 @@ for (const role of roles) {
     }
   });
 }
+test('verified donation increments lifetime total atomically and cannot be double recorded', async () => {
+  await seedBusiness();
+  await seed('users/person-own', user({ access_role: 'developer_admin' }));
+  const client = db();
+  const donationTime = Timestamp.fromMillis(1700000000000);
+  function newDonation(overrides = {}) {
+    return {
+      donor_id: 'active', donor_name_snapshot: 'Synthetic Donor',
+      blood_group_snapshot: 'A+', donation_date: donationTime,
+      location: 'Clinic', hospital: 'Test Hospital',
+      recipient_name: null, recipient_contact: null, recorded_by: 'person-own',
+      created_at: serverTimestamp(), updated_at: null, ...overrides,
+    };
+  }
+  const first = writeBatch(client);
+  first.set(doc(client, 'donations/log-1'), newDonation());
+  first.update(doc(client, 'donors/active'), {
+    total_donations: 1, last_donated_at: donationTime, latest_donation_id: 'log-1',
+    ...metadata(),
+  });
+  await assertSucceeds(first.commit());
+  assert.equal((await getDoc(doc(client, 'donors/active'))).data().total_donations, 1);
+  await assertFails(first.commit());
+  await assertFails(updateDoc(doc(client, 'donors/active'), {
+    total_donations: 2, ...metadata(),
+  }));
+  await assertFails(setDoc(doc(client, 'donations/forged'),
+    newDonation({ created_at: serverTimestamp() })));
+  const later = Timestamp.fromMillis(1700000000000 + 86400000);
+  const next = writeBatch(client);
+  next.set(doc(client, 'donations/log-2'),
+    newDonation({donation_date: later}));
+  next.update(doc(client, 'donors/active'), {
+    total_donations: 2, last_donated_at: later, latest_donation_id: 'log-2',
+    ...metadata(),
+  });
+  await assertSucceeds(next.commit());
+  assert.equal((await getDoc(doc(client, 'donors/active'))).data().total_donations, 2);
+  const fake = writeBatch(client);
+  fake.set(doc(client, 'donations/log-3'),
+    newDonation({ donation_date: later, recorded_by: 'person-other' }));
+  fake.update(doc(client, 'donors/active'), {
+    total_donations: 3, last_donated_at: later, latest_donation_id: 'log-3',
+    ...metadata(),
+  });
+  await assertFails(fake.commit());
+});
+
+test('members cannot write donation history or increment donor rankings', async () => {
+  await seedBusiness();
+  const client = db();
+  const record = writeBatch(client);
+  record.set(doc(client, 'donations/untrusted'), {
+    donor_id: 'active', donor_name_snapshot: 'Synthetic Donor',
+    blood_group_snapshot: 'A+', donation_date: stamp,
+    location: null, hospital: null, recipient_name: null, recipient_contact: null,
+    recorded_by: 'person-own', created_at: serverTimestamp(), updated_at: null,
+  });
+  record.update(doc(client, 'donors/active'), {
+    total_donations: 1, last_donated_at: stamp,
+    latest_donation_id: 'untrusted', ...metadata(),
+  });
+  await assertFails(record.commit());
+});
+
 test('leader cannot fabricate donors directly; existing donor edits remain constrained', async () => {
   await seed('users/person-own', user({ access_role: 'leader' }));
   const ref = doc(db(), 'donors/new');
