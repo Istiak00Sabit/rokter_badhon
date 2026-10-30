@@ -42,6 +42,7 @@ class UserModel {
   final String? createdBy;
   final DateTime updatedAt;
   final String? updatedBy;
+  final String? lastAdminActionId;
 
   const UserModel({
     required this.id,
@@ -60,6 +61,7 @@ class UserModel {
     required this.createdBy,
     required this.updatedAt,
     required this.updatedBy,
+    this.lastAdminActionId,
   });
 
   bool get hasRecognizedAccessRole => allowedAccessRoles.contains(accessRole);
@@ -83,6 +85,7 @@ class UserModel {
       createdBy: _nullableString(map, 'created_by'),
       updatedAt: _requiredTimestamp(map, 'updated_at').toDate(),
       updatedBy: _nullableString(map, 'updated_by'),
+      lastAdminActionId: _nullableString(map, 'last_admin_action_id'),
     );
   }
 
@@ -103,6 +106,7 @@ class UserModel {
     Object? createdBy = _unchanged,
     DateTime? updatedAt,
     Object? updatedBy = _unchanged,
+    Object? lastAdminActionId = _unchanged,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -135,6 +139,9 @@ class UserModel {
       updatedBy: identical(updatedBy, _unchanged)
           ? this.updatedBy
           : updatedBy as String?,
+      lastAdminActionId: identical(lastAdminActionId, _unchanged)
+          ? this.lastAdminActionId
+          : lastAdminActionId as String?,
     );
   }
 
@@ -154,6 +161,7 @@ class UserModel {
     'created_by': createdBy,
     'updated_at': Timestamp.fromDate(updatedAt),
     'updated_by': updatedBy,
+    if (lastAdminActionId != null) 'last_admin_action_id': lastAdminActionId,
   };
 
   static const Object _unchanged = Object();
@@ -165,7 +173,8 @@ void _requireExactFields(
   String model,
 ) {
   final keys = map.keys.toSet();
-  if (keys.length != fields.length || !keys.containsAll(fields)) {
+  final permitted = {...fields, 'last_admin_action_id'};
+  if (!keys.containsAll(fields) || !permitted.containsAll(keys)) {
     throw FormatException('$model has missing or unapproved fields.');
   }
 }

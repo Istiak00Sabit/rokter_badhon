@@ -83,6 +83,8 @@ class DonorModel {
   final bool active;
   final DateTime? lastDonatedAt;
   final int totalDonations;
+  /// Optional audit pointer; absent in legacy donor documents.
+  final String? latestDonationId;
   final DateTime createdAt;
   final String createdBy;
   final DateTime updatedAt;
@@ -104,6 +106,7 @@ class DonorModel {
     required this.active,
     required this.lastDonatedAt,
     required this.totalDonations,
+    this.latestDonationId,
     required this.createdAt,
     required this.createdBy,
     required this.updatedAt,
@@ -115,7 +118,8 @@ class DonorModel {
       throw const DonorDataException('Invalid donor document ID.');
     }
     final keys = map.keys.toSet();
-    if (keys.length != fields.length || !keys.containsAll(fields)) {
+    if (!keys.containsAll(fields) ||
+        keys.difference({...fields, 'latest_donation_id'}).isNotEmpty) {
       throw const DonorDataException('Donor has missing or unapproved fields.');
     }
     final total = map['total_donations'];
@@ -143,6 +147,7 @@ class DonorModel {
         'last_donated_at',
       ),
       totalDonations: total,
+      latestDonationId: _optionalId(map['latest_donation_id'], 'latest_donation_id'),
       createdAt: _requiredTimestamp(map['created_at'], 'created_at'),
       createdBy: _requiredId(map['created_by'], 'created_by'),
       updatedAt: _requiredTimestamp(map['updated_at'], 'updated_at'),

@@ -12,9 +12,12 @@ import '../views/member_list_screen.dart';
 import '../views/notice_screen.dart';
 import '../views/ranklist_screen.dart';
 import '../views/registration_review_screen.dart';
+import '../views/admin_user_management_screen.dart';
 import '../views/audit_log_screen.dart';
 import '../views/pending_donor_approvals_screen.dart';
 import '../widgets/auth_language_switch.dart';
+import '../widgets/dashboard_top_donors.dart';
+import '../widgets/roktobadhon_design.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -33,76 +36,55 @@ class DashboardScreen extends StatelessWidget {
             slivers: [
               // App Bar
               SliverAppBar(
-                expandedHeight: 160,
+                toolbarHeight: 64,
                 floating: false,
                 pinned: true,
-                backgroundColor: AppColors.primary,
+                backgroundColor: AppColors.surface,
+                foregroundColor: AppColors.textDark,
                 automaticallyImplyLeading: false,
-                title: Text('app_name'.tr),
+                titleSpacing: 16,
+                title: Row(
+                  children: [
+                    const Icon(Icons.water_drop, color: AppColors.primary, size: 22),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'app_name'.tr,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ],
+                ),
                 actions: const [
                   Padding(
                     padding: EdgeInsets.only(right: 12),
-                    child: Center(child: AuthLanguageSwitch(onPrimary: true)),
+                    child: Center(child: AuthLanguageSwitch()),
                   ),
                 ],
-                flexibleSpace: FlexibleSpaceBar(
-                  background: Container(
-                    decoration: const BoxDecoration(color: AppColors.primary),
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 60, 20, 20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          Text(
-                            'greeting'.tr,
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: AppColors.white.withValues(alpha: 0.8),
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Obx(
-                            () => Text(
-                              controller.currentUser.value?.name ??
-                                  'unknown'.tr,
-                              style: const TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.white,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'org_location'.tr,
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: AppColors.white.withValues(alpha: 0.8),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
               ),
 
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Summary section title
-                      Text(
-                        'dashboard_summary'.tr,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textDark,
-                        ),
+                      // Community-first introduction and live metrics.
+                      RBPageIntro(
+                        title: 'greeting'.tr,
+                        eyebrow: 'org_location'.tr,
+                        subtitle: controller.currentUser.value?.name ?? 'app_name'.tr,
                       ),
+                      const SizedBox(height: 20),
+                      RBInfoStrip(
+                        icon: Icons.favorite_outline,
+                        title: 'app_name'.tr,
+                        subtitle: 'tagline'.tr,
+                      ),
+                      const SizedBox(height: 22),
+                      RBSectionHeader(title: 'dashboard_summary'.tr),
                       const SizedBox(height: 12),
 
                       // Stats grid - 2x2
@@ -112,7 +94,7 @@ class DashboardScreen extends StatelessWidget {
                         physics: const NeverScrollableScrollPhysics(),
                         crossAxisSpacing: 12,
                         mainAxisSpacing: 12,
-                        childAspectRatio: 1.5,
+                        mainAxisExtent: 156,
                         children: [
                           // Total donors card
                           GestureDetector(
@@ -200,16 +182,11 @@ class DashboardScreen extends StatelessWidget {
                       ),
 
                       const SizedBox(height: 24),
+                      const DashboardTopDonors(),
+                      const SizedBox(height: 24),
 
                       // Quick actions
-                      Text(
-                        'quick_actions'.tr,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textDark,
-                        ),
-                      ),
+                      RBSectionHeader(title: 'quick_actions'.tr),
                       const SizedBox(height: 12),
 
                       Row(
@@ -309,6 +286,17 @@ class DashboardScreen extends StatelessWidget {
                             ] else
                               const Spacer(),
                           ],
+                        ),
+                      ],
+
+                      if (controller.currentUser.value?.accessRole ==
+                          'developer_admin') ...[
+                        const SizedBox(height: 12),
+                        _buildActionButton(
+                          title: 'admin_user_management'.tr,
+                          icon: Icons.admin_panel_settings_outlined,
+                          onTap: () =>
+                              Get.to(() => const AdminUserManagementScreen()),
                         ),
                       ],
 
@@ -413,23 +401,17 @@ class DashboardScreen extends StatelessWidget {
     required Color color,
   }) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Icon(icon, color: color, size: 28),
+          Icon(icon, color: color, size: 26),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -443,6 +425,8 @@ class DashboardScreen extends StatelessWidget {
               ),
               Text(
                 title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontSize: 12, color: AppColors.textGrey),
               ),
               if (error != null)
@@ -509,16 +493,9 @@ class DashboardScreen extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.primaryLight),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.border),
         ),
         child: Row(
           children: [

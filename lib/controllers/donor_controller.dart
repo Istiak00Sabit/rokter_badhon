@@ -23,10 +23,12 @@ class DonorController extends GetxController {
   final RxString selectedBloodGroup = ''.obs;
   final RxString selectedGender = ''.obs;
   final RxString selectedUnion = ''.obs;
+  final RxString selectedVillage = ''.obs;
   final RxBool locationsReady = false.obs;
   final RxBool locationLoadFailed = false.obs;
   final RxBool isLoading = false.obs;
   final RxString errorCode = ''.obs;
+  final RxString formErrorCode = ''.obs;
   final RxList<DonorModel> donors = <DonorModel>[].obs;
   final RxBool isLoadingMore = false.obs;
   final RxBool hasMoreDonors = false.obs;
@@ -81,11 +83,13 @@ class DonorController extends GetxController {
     nameController.clear();
     phoneController.clear();
     villageController.clear();
+    selectedVillage.value = '';
     professionController.clear();
     selectedBloodGroup.value = '';
     selectedGender.value = '';
     selectedUnion.value = '';
     editingDonorId.value = null;
+    formErrorCode.value = '';
   }
 
   void beginEdit(DonorModel donor) {
@@ -97,6 +101,7 @@ class DonorController extends GetxController {
     nameController.text = donor.name;
     phoneController.text = donor.phone;
     villageController.text = donor.village ?? '';
+    selectedVillage.value = donor.village ?? '';
     professionController.text = donor.profession ?? '';
     selectedBloodGroup.value = donor.bloodGroup;
     selectedGender.value = donor.gender ?? '';
@@ -108,9 +113,9 @@ class DonorController extends GetxController {
     phone: phoneController.text,
     bloodGroup: selectedBloodGroup.value,
     gender: selectedGender.value.isEmpty ? null : selectedGender.value,
-    village: villageController.text.trim().isEmpty
+    village: selectedVillage.value.trim().isEmpty
         ? null
-        : villageController.text,
+        : selectedVillage.value,
     union: selectedUnion.value.isEmpty ? null : selectedUnion.value,
     upazila: AppConstants.upazila,
     district: AppConstants.district,
@@ -119,33 +124,55 @@ class DonorController extends GetxController {
         : professionController.text,
   );
 
+  /// Client-side guidance only. Firestore Rules still enforce permissions.
+  String? _validateDonorForm() {
+    if (nameController.text.trim().isEmpty) return 'donor_name_required';
+    if (!RegExp(r'^01[3-9][0-9]{8}$').hasMatch(phoneController.text.trim())) {
+      return 'donor_phone_invalid';
+    }
+    if (selectedBloodGroup.value.isEmpty) return 'donor_blood_group_required';
+    if (selectedUnion.value.isEmpty) return 'donor_union_required';
+    if (selectedVillage.value.isEmpty) return 'donor_village_required';
+    return null;
+  }
+
   Future<void> addDonor() async {
     final actor = _authController.currentUser.value;
     if (!canCreate || actor == null) {
       _showError('permission_denied');
       return;
     }
-    if (nameController.text.trim().isEmpty ||
-        phoneController.text.trim().isEmpty ||
-        selectedBloodGroup.value.isEmpty ||
-        selectedUnion.value.isEmpty ||
-        villageController.text.trim().isEmpty) {
-      _showError('invalid_input');
-      return;
-    }
+    final fieldError = _validateDonorForm();
+    formErrorCode.value = fieldError ?? '';
+    if (fieldError != null) return;
     try {
       isLoading.value = true;
       errorCode.value = '';
-      await _donorService.submitDonor(
+      final submissionId = await _donorService.submitDonor(
         input: _input(),
         actorUserId: actor.id,
         actorRole: actor.accessRole,
       );
+      String feedback = 'donor_submitted'.tr;
+      if (actor.accessRole == AppConstants.roleDeveloperAdmin) {
+        try {
+          await _donorService.approveSubmittedDonor(
+            submissionId: submissionId,
+            actorUserId: actor.id,
+          );
+          feedback = 'donor_added_by_admin'.tr;
+        } on DonorServiceException catch (error) {
+          feedback = 'donor_admin_pending'.trParams({'reason': error.code.tr});
+        } on FirebaseException {
+          feedback = 'donor_admin_pending'.trParams({'reason': 'operation_failed'.tr});
+        }
+      }
       clearForm();
       Get.back();
       Get.snackbar(
         'success'.tr,
-        'donor_submitted'.tr,
+        feedback,
+        duration: const Duration(seconds: 6),
         backgroundColor: Colors.green,
         colorText: Colors.white,
       );
@@ -171,14 +198,9 @@ class DonorController extends GetxController {
       _showError('permission_denied');
       return;
     }
-    if (nameController.text.trim().isEmpty ||
-        phoneController.text.trim().isEmpty ||
-        selectedBloodGroup.value.isEmpty ||
-        selectedUnion.value.isEmpty ||
-        villageController.text.trim().isEmpty) {
-      _showError('invalid_input');
-      return;
-    }
+    final fieldError = _validateDonorForm();
+    formErrorCode.value = fieldError ?? '';
+    if (fieldError != null) return;
     try {
       isLoading.value = true;
       errorCode.value = '';

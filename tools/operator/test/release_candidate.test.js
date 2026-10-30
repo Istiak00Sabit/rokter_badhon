@@ -91,7 +91,7 @@ test('legacy President title and missing security state grant no operator author
   );
 });
 
-test('Free V1 source has no hosted execution, scheduler, Storage, or upload dependency', () => {
+test('Spark-first app has no hosted execution, Storage or upload dependency', () => {
   const firebase = JSON.parse(readFileSync(source('firebase.json'), 'utf8'));
   const rootPackage = JSON.parse(readFileSync(source('package.json'), 'utf8'));
   const pubspec = readFileSync(source('pubspec.yaml'), 'utf8');

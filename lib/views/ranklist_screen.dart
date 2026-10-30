@@ -46,7 +46,8 @@ class _RanklistScreenState extends State<RanklistScreen> {
         .get();
     return snapshot.docs
         .map((doc) => DonorModel.fromMap(doc.data(), doc.id))
-        .toList();
+        .where((donor) => donor.totalDonations > 0)
+        .toList(growable: false);
   }
 
   @override
@@ -55,8 +56,8 @@ class _RanklistScreenState extends State<RanklistScreen> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Text('ranklist'.tr),
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.white,
+        backgroundColor: AppColors.surface,
+        foregroundColor: AppColors.textDark,
         centerTitle: true,
       ),
       body: FutureBuilder<List<DonorModel>>(
@@ -114,6 +115,12 @@ class _RanklistScreenState extends State<RanklistScreen> {
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
+                Text(
+                  'donor_rank_recorded_hint'.tr,
+                  style: const TextStyle(
+                    color: AppColors.textGrey, fontSize: 12),
+                ),
+                const SizedBox(height: 12),
                 // Top 3 podium
                 if (donors.length >= 3) _buildPodium(donors),
                 const SizedBox(height: 16),

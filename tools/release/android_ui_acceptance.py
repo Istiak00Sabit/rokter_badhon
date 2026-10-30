@@ -12,7 +12,7 @@ import time
 import xml.etree.ElementTree as ET
 
 PACKAGE = "com.example.rokter_badhon"
-PHONE = "01000000000"  # Public emulator-only synthetic identity
+PHONE = "01700000000"  # Public emulator-only synthetic identity
 PASSWORD = "123456"
 
 

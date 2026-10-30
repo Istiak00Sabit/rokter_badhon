@@ -11,6 +11,7 @@ import '../models/committee_media_model.dart';
 import '../models/committee_term_model.dart';
 import '../services/committee_service.dart';
 import 'member_list_screen.dart';
+import '../widgets/roktobadhon_design.dart';
 
 class CommitteeScreen extends StatefulWidget {
   const CommitteeScreen({super.key});
@@ -34,9 +35,9 @@ class _CommitteeScreenState extends State<CommitteeScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text('current_committee'.tr),
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.white,
+        title: Text('committee'.tr),
+        backgroundColor: AppColors.surface,
+        foregroundColor: AppColors.textDark,
         centerTitle: true,
         automaticallyImplyLeading: false,
       ),
@@ -60,8 +61,14 @@ class _CommitteeScreenState extends State<CommitteeScreen> {
           color: AppColors.primary,
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
             children: [
+              RBPageIntro(
+                title: 'current_committee'.tr,
+                eyebrow: 'org_location'.tr,
+                subtitle: 'org_location'.tr,
+              ),
+              const SizedBox(height: 18),
               Row(
                 children: [
                   Expanded(
@@ -124,8 +131,8 @@ class PastCommitteesScreen extends StatelessWidget {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Text('past_committees'.tr),
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.white,
+        backgroundColor: AppColors.surface,
+        foregroundColor: AppColors.textDark,
       ),
       body: Obx(() {
         final terms = controller.pastTerms;
@@ -203,8 +210,8 @@ class _PastCommitteeDetailScreenState extends State<PastCommitteeDetailScreen> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Text(widget.term.name),
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.white,
+        backgroundColor: AppColors.surface,
+        foregroundColor: AppColors.textDark,
       ),
       body: FutureBuilder<CommitteeRoster>(
         future: roster,
@@ -251,13 +258,16 @@ class CommitteeRosterView extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(14),
-          child: SizedBox(
-            height: 170,
-            child: _CommitteeImage(url: roster.term.groupPhotoUrl, group: true),
+        if (roster.term.groupPhotoUrl?.isNotEmpty == true) ...[
+          ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: SizedBox(
+              height: 170,
+              child: _CommitteeImage(url: roster.term.groupPhotoUrl, group: true),
+            ),
           ),
-        ),
+          const SizedBox(height: 14),
+        ],
         if (roster.isBundledPreview) ...[
           const SizedBox(height: 12),
           Text(
@@ -266,7 +276,6 @@ class CommitteeRosterView extends StatelessWidget {
             style: const TextStyle(color: AppColors.textGrey),
           ),
         ],
-        const SizedBox(height: 14),
         Text(
           roster.term.name,
           textAlign: TextAlign.center,
@@ -276,11 +285,13 @@ class CommitteeRosterView extends StatelessWidget {
             color: AppColors.textDark,
           ),
         ),
-        Text(
-          '${roster.term.startYear}–${roster.term.endYear}',
-          textAlign: TextAlign.center,
-          style: const TextStyle(color: AppColors.textGrey),
-        ),
+        if (!roster.term.name.contains('${roster.term.startYear}') ||
+            !roster.term.name.contains('${roster.term.endYear}'))
+          Text(
+            '${roster.term.startYear}–${roster.term.endYear}',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: AppColors.textGrey),
+          ),
         const SizedBox(height: 18),
         Text(
           'committee_gallery'.tr,
@@ -290,7 +301,7 @@ class CommitteeRosterView extends StatelessWidget {
         _CommitteeGallery(roster: roster, service: service),
         const SizedBox(height: 18),
         if (roster.members.isEmpty)
-          _EmptyCommittee(message: 'no_assignments'.tr)
+          RBEmptyPanel(title: 'no_assignments'.tr, icon: Icons.groups_outlined)
         else
           ...roster.members.map(_CommitteeMemberCard.new),
       ],
@@ -452,16 +463,17 @@ class _CommitteeMemberCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final directory = member.directory;
     return Card(
-      color: AppColors.white,
+      color: AppColors.surface,
       margin: const EdgeInsets.only(bottom: 10),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Row(
           children: [
-            ClipOval(
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
               child: SizedBox(
-                width: 52,
-                height: 52,
+                width: 54,
+                height: 58,
                 child: _CommitteeImage(url: directory?.photoUrl),
               ),
             ),

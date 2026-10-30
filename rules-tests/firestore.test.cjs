@@ -3,7 +3,7 @@ const { before, after, beforeEach, test } = require('node:test');
 const assert = require('node:assert/strict');
 const { initializeTestEnvironment, assertSucceeds, assertFails } = require('@firebase/rules-unit-testing');
 const { doc, collection, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where,
-  writeBatch, serverTimestamp, Timestamp, deleteField, orderBy, getCountFromServer, limit, startAfter, startAt, endAt, documentId } = require('firebase/firestore');
+  writeBatch, runTransaction, serverTimestamp, Timestamp, deleteField, orderBy, getCountFromServer, limit, startAfter, startAt, endAt, documentId } = require('firebase/firestore');
 
 const projectId = 'demo-rokter-badhon';
 let env;
@@ -82,6 +82,144 @@ test('registration wrong path, forged identity/state/time/decision and extra fie
   }
   await assertSucceeds(setDoc(doc(db('applicant', { email: null }), 'registration_requests/applicant'), request({ email: null })));
 });
+// Spark-only admission tests use real Firestore rules and synthetic identities.
+function pendingApprovalBatch(c, uid = 'new-member', phone = '01712345678') {
+  const userRef = doc(c, `users/${uid}`);
+  const member = user({
+    name: 'Synthetic Applicant', phone, email: 'applicant@example.test',
+    blood_group: 'A+', profession: 'Teacher', address: 'Address',
+    photo_url: null, access_role: 'member', active: true, login_enabled: true,
+    preferred_language: null, created_at: serverTimestamp(), created_by: 'person-own',
+    updated_at: serverTimestamp(), updated_by: 'person-own',
+  });
+  const batch = writeBatch(c);
+  batch.set(doc(c, `registration_review_events/${uid}`), {
+    action: 'approve', actor_user_id: 'person-own', reviewed_at: serverTimestamp(),
+    reason: 'Identity and local phone reviewed.',
+  });
+  batch.set(userRef, member);
+  batch.set(doc(c, `user_directory/${uid}`), projection(member));
+  batch.set(doc(c, `auth_links/${uid}`), {
+    user_id: uid, active: true, created_at: serverTimestamp(), created_by: 'person-own',
+  });
+  batch.set(doc(c, `registration_phone_claims/${phone}`), {
+    user_id: uid, claimed_at: serverTimestamp(), claimed_by: 'person-own',
+  });
+  batch.update(doc(c, `registration_requests/${uid}`), {
+    status: 'approved', approved_by: 'person-own', approved_at: serverTimestamp(),
+    linked_user_id: uid,
+  });
+  return batch;
+}
+
+test('developer admin can approve one pending applicant atomically on Spark', async () => {
+  await seed('users/person-own', user({ access_role: 'developer_admin' }));
+  await seed('registration_requests/new-member', request({
+    auth_uid: 'new-member', phone: '01712345678', requested_at: stamp,
+  }));
+  const client = db();
+  await assertSucceeds(pendingApprovalBatch(client).commit());
+  await env.withSecurityRulesDisabled(async ctx => {
+    const result = await getDoc(doc(ctx.firestore(), 'registration_requests/new-member'));
+    assert.equal(result.data().status, 'approved');
+  });
+  assert.equal((await getDoc(doc(client, 'users/new-member'))).data().access_role, 'member');
+  // AuthLinks are private to the matching Firebase Auth UID, even for admins.
+  assert.equal((await getDoc(doc(db('new-member'), 'auth_links/new-member'))).data().user_id, 'new-member');
+  await assertFails(pendingApprovalBatch(client).commit());
+});
+
+test('registration review rejects non-admin callers and client-side admin elevation', async () => {
+  await seed('registration_requests/new-member', request({
+    auth_uid: 'new-member', phone: '01712345678', requested_at: stamp,
+  }));
+  await assertFails(pendingApprovalBatch(db()).commit());
+  await seed('users/person-own', user({ access_role: 'developer_admin' }));
+  const client = db();
+  const roleBatch = pendingApprovalBatch(client);
+  // A second review cannot repeat an already claimed phone identity.
+  await assertSucceeds(roleBatch.commit());
+  await seed('registration_requests/second-member', request({
+    auth_uid: 'second-member', phone: '01712345678', requested_at: stamp,
+  }));
+  await assertFails(pendingApprovalBatch(client, 'second-member').commit());
+  // No ordinary applicant may modify the admitted User to become admin.
+  await assertFails(updateDoc(doc(db('new-member'), 'users/new-member'), {
+    access_role: 'developer_admin', ...metadata(),
+  }));
+});
+
+test('developer admin can reject a registration with immutable review evidence', async () => {
+  await seed('users/person-own', user({ access_role: 'developer_admin' }));
+  await seed('registration_requests/rejected-member', request({
+    auth_uid: 'rejected-member', phone: '01712345678', requested_at: stamp,
+  }));
+  const client = db();
+  const b = writeBatch(client);
+  b.set(doc(client, 'registration_review_events/rejected-member'), {
+    action: 'reject', actor_user_id: 'person-own',
+    reviewed_at: serverTimestamp(), reason: 'Identity could not be confirmed.',
+  });
+  b.update(doc(client, 'registration_requests/rejected-member'), {
+    status: 'rejected', rejected_by: 'person-own', rejected_at: serverTimestamp(),
+  });
+  await assertSucceeds(b.commit());
+  await assertFails(setDoc(doc(client, 'registration_review_events/rejected-member'), {
+    action: 'approve',
+  }));
+});
+
+test('audited admin changes role and active flag but cannot promote to developer admin', async () => {
+  await seed('users/person-own', user({ access_role: 'developer_admin' }));
+  const client = db();
+  const role = writeBatch(client);
+  role.update(doc(client, 'users/person-other'), {
+    access_role: 'committee', updated_by: 'person-own',
+    updated_at: serverTimestamp(), last_admin_action_id: 'audit-role-1',
+  });
+  role.set(doc(client, 'admin_actions/audit-role-1'), {
+    user_id: 'person-other', actor_user_id: 'person-own',
+    occurred_at: serverTimestamp(), reason: 'Reviewed committee appointment.',
+    before: { access_role: 'member', active: true, login_enabled: true },
+    after: { access_role: 'committee', active: true, login_enabled: true },
+  });
+  await assertSucceeds(role.commit());
+  const disable = writeBatch(client);
+  disable.update(doc(client, 'users/person-other'), {
+    active: false, updated_by: 'person-own',
+    updated_at: serverTimestamp(), last_admin_action_id: 'audit-disable-2',
+  });
+  disable.update(doc(client, 'user_directory/person-other'), { active: false });
+  disable.set(doc(client, 'admin_actions/audit-disable-2'), {
+    user_id: 'person-other', actor_user_id: 'person-own',
+    occurred_at: serverTimestamp(), reason: 'Account suspension reviewed.',
+    before: { access_role: 'committee', active: true, login_enabled: true },
+    after: { access_role: 'committee', active: false, login_enabled: true },
+  });
+  await assertSucceeds(disable.commit());
+  assert.equal((await getDoc(doc(client, 'users/person-other'))).data().active, false);
+  await assertFails(updateDoc(doc(client, 'users/person-other'), {
+    access_role: 'developer_admin', last_admin_action_id: 'forged',
+    updated_by: 'person-own', updated_at: serverTimestamp(),
+  }));
+});
+
+test('non-admin never controls audited User role changes', async () => {
+  const client = db();
+  const b = writeBatch(client);
+  b.update(doc(client, 'users/person-other'), {
+    access_role: 'leader', updated_by: 'person-own',
+    updated_at: serverTimestamp(), last_admin_action_id: 'forged-1',
+  });
+  b.set(doc(client, 'admin_actions/forged-1'), {
+    user_id: 'person-other', actor_user_id: 'person-own',
+    occurred_at: serverTimestamp(), reason: 'Not an authorized appointment.',
+    before: { access_role: 'member', active: true, login_enabled: true },
+    after: { access_role: 'leader', active: true, login_enabled: true },
+  });
+  await assertFails(b.commit());
+});
+
 test('registration overwrite/update/delete/list/other read denied', async () => {
   const c = db('applicant'); const ref = doc(c, 'registration_requests/applicant');
   await assertSucceeds(setDoc(ref, request()));
@@ -99,9 +237,11 @@ for (const role of ['developer_admin','leader','executive','committee','member']
     const c = db(); const allowed = role === 'developer_admin' || role === 'leader';
     await (allowed ? assertSucceeds : assertFails)(getDoc(doc(c, 'registration_requests/pending-review')));
     await (allowed ? assertSucceeds : assertFails)(getDocs(query(collection(c, 'registration_requests'), where('status','==','pending'))));
-    await assertFails(getDoc(doc(c, 'registration_requests/rejected-review')));
-    await assertFails(getDocs(query(collection(c, 'registration_requests'), where('status','==','rejected'))));
-    await assertFails(getDocs(collection(c, 'registration_requests')));
+    const historyAccess = role === 'developer_admin' ? assertSucceeds : assertFails;
+    await historyAccess(getDoc(doc(c, 'registration_requests/rejected-review')));
+    await historyAccess(getDocs(query(collection(c, 'registration_requests'),
+      where('status','==','rejected'))));
+    await historyAccess(getDocs(collection(c, 'registration_requests')));
   });
 }
 for (const link of [{ active: true, user_id: 'person-own' }, { active: false, user_id: 'person-own' }, { active: true, user_id: 'missing' }, {}]) {
@@ -160,8 +300,10 @@ for (const role of ['developer_admin','leader','executive','committee','member']
     await seed('users/person-own', user({ access_role: role }));
     const c = db();
     await assertSucceeds(getDoc(doc(c, 'users/person-own')));
-    await assertFails(getDoc(doc(c, 'users/person-other')));
-    await assertFails(getDocs(collection(c, 'users')));
+    await (role === 'developer_admin' ? assertSucceeds : assertFails)(
+      getDoc(doc(c, 'users/person-other')));
+    await (role === 'developer_admin' ? assertSucceeds : assertFails)(
+      getDocs(collection(c, 'users')));
     await assertSucceeds(getDoc(doc(c, 'user_directory/person-other')));
     await assertSucceeds(getDocs(query(collection(c, 'user_directory'), where('active','==',true))));
     await assertFails(getDoc(doc(c, 'user_directory/inactive')));
@@ -317,12 +459,14 @@ test('developer_admin keeps authorized reads but cannot change account security 
   await assertSucceeds(getDoc(doc(c, 'user_directory/person-other')));
   await assertSucceeds(getDoc(doc(c, 'audit_logs/record')));
 
-  await assertFails(getDoc(doc(c, 'registration_requests/terminal')));
-  await assertFails(getDoc(doc(c, 'users/person-other')));
+  await assertSucceeds(getDoc(doc(c, 'registration_requests/terminal')));
+  // A developer admin needs Users read access for role management, but
+  // cannot read another person's private AuthLink.
+  await assertSucceeds(getDoc(doc(c, 'users/person-other')));
   await assertFails(getDoc(doc(c, 'auth_links/auth-other')));
-  await assertFails(getDocs(collection(c, 'users')));
+  await assertSucceeds(getDocs(collection(c, 'users')));
   await assertFails(getDocs(collection(c, 'auth_links')));
-  await assertFails(getDocs(collection(c, 'registration_requests')));
+  await assertSucceeds(getDocs(collection(c, 'registration_requests')));
   await assertFails(setDoc(doc(c, 'auth_links/new'), { user_id: 'person-own', active: true }));
   await assertFails(updateDoc(doc(c, 'auth_links/auth-own'), { user_id: 'person-other' }));
   await assertFails(deleteDoc(doc(c, 'auth_links/auth-own')));
@@ -709,6 +853,10 @@ for (const role of roles) {
     await expectRead(editorial, getDocs(query(collection(c, 'events'), where('active','==',false))));
     await assertSucceeds(getDoc(doc(c, 'donors/active')));
     await assertFails(getDoc(doc(c, 'donors/hidden')));
+    // Editorial reviewers may check a missing donor ID, but cannot read
+    // inactive donor records. Ordinary members cannot probe missing IDs.
+    await (editorial ? assertSucceeds : assertFails)(
+      getDoc(doc(c, 'donors/missing-before-review')));
     await assertFails(getDocs(collection(c, 'donors')));
     for (const [field, direction] of [['name','asc'],['total_donations','desc']])
       await assertSucceeds(getDocs(query(collection(c, 'donors'), where('active','==',true), orderBy(field,direction))));
@@ -760,6 +908,71 @@ for (const role of roles) {
     }
   });
 }
+test('verified donation increments lifetime total atomically and cannot be double recorded', async () => {
+  await seedBusiness();
+  await seed('users/person-own', user({ access_role: 'developer_admin' }));
+  const client = db();
+  const donationTime = Timestamp.fromMillis(1700000000000);
+  function newDonation(overrides = {}) {
+    return {
+      donor_id: 'active', donor_name_snapshot: 'Synthetic Donor',
+      blood_group_snapshot: 'A+', donation_date: donationTime,
+      location: 'Clinic', hospital: 'Test Hospital',
+      recipient_name: null, recipient_contact: null, recorded_by: 'person-own',
+      created_at: serverTimestamp(), updated_at: null, ...overrides,
+    };
+  }
+  const first = writeBatch(client);
+  first.set(doc(client, 'donations/log-1'), newDonation());
+  first.update(doc(client, 'donors/active'), {
+    total_donations: 1, last_donated_at: donationTime, latest_donation_id: 'log-1',
+    ...metadata(),
+  });
+  await assertSucceeds(first.commit());
+  assert.equal((await getDoc(doc(client, 'donors/active'))).data().total_donations, 1);
+  await assertFails(setDoc(doc(client, 'donations/log-1'), newDonation()));
+  await assertFails(updateDoc(doc(client, 'donors/active'), {
+    total_donations: 2, ...metadata(),
+  }));
+  await assertFails(setDoc(doc(client, 'donations/forged'),
+    newDonation({ created_at: serverTimestamp() })));
+  const later = Timestamp.fromMillis(1700000000000 + 86400000);
+  const next = writeBatch(client);
+  next.set(doc(client, 'donations/log-2'),
+    newDonation({donation_date: later}));
+  next.update(doc(client, 'donors/active'), {
+    total_donations: 2, last_donated_at: later, latest_donation_id: 'log-2',
+    ...metadata(),
+  });
+  await assertSucceeds(next.commit());
+  assert.equal((await getDoc(doc(client, 'donors/active'))).data().total_donations, 2);
+  const fake = writeBatch(client);
+  fake.set(doc(client, 'donations/log-3'),
+    newDonation({ donation_date: later, recorded_by: 'person-other' }));
+  fake.update(doc(client, 'donors/active'), {
+    total_donations: 3, last_donated_at: later, latest_donation_id: 'log-3',
+    ...metadata(),
+  });
+  await assertFails(fake.commit());
+});
+
+test('members cannot write donation history or increment donor rankings', async () => {
+  await seedBusiness();
+  const client = db();
+  const record = writeBatch(client);
+  record.set(doc(client, 'donations/untrusted'), {
+    donor_id: 'active', donor_name_snapshot: 'Synthetic Donor',
+    blood_group_snapshot: 'A+', donation_date: stamp,
+    location: null, hospital: null, recipient_name: null, recipient_contact: null,
+    recorded_by: 'person-own', created_at: serverTimestamp(), updated_at: null,
+  });
+  record.update(doc(client, 'donors/active'), {
+    total_donations: 1, last_donated_at: stamp,
+    latest_donation_id: 'untrusted', ...metadata(),
+  });
+  await assertFails(record.commit());
+});
+
 test('leader cannot fabricate donors directly; existing donor edits remain constrained', async () => {
   await seed('users/person-own', user({ access_role: 'leader' }));
   const ref = doc(db(), 'donors/new');
@@ -903,6 +1116,24 @@ test('a donor submission cannot be approved or rejected a second time', async ()
   assert.equal(persisted.data().donor_id, 'one-time');
 });
 
+test('developer admin can preflight a missing donor and phone key in a transaction', async () => {
+  await seed('users/person-own', user({ access_role: 'developer_admin' }));
+  await seedPendingSubmission('new-proposal');
+  const c = db();
+  const observed = await assertSucceeds(runTransaction(c, async transaction => {
+    const registry = await transaction.get(doc(c, 'system_config/donor_phone_registry'));
+    const submission = await transaction.get(doc(c, 'donor_submissions/new-proposal'));
+    const donor = await transaction.get(doc(c, 'donors/new-proposal'));
+    const key = await transaction.get(doc(c, 'donor_phone_keys/01700000000'));
+    return { ready: registry.data()?.ready, pending: submission.data()?.status,
+      hasDonor: donor.exists(), hasKey: key.exists() };
+  }));
+  assert.deepEqual(observed, {
+    ready: true, pending: 'pending', hasDonor: false, hasKey: false,
+  });
+  await assertFails(getDoc(doc(db('auth-other'), 'donors/new-proposal')));
+});
+
 test('developer_admin can approve a pending donor only through the same atomic guarded path', async () => {
   await seed('users/person-own', user({ access_role: 'developer_admin' }));
   await seedPendingSubmission('admin-approval');
@@ -943,14 +1174,16 @@ test('phone registry missing or not ready blocks approval and phone reservation'
   await env.withSecurityRulesDisabled(c =>
     deleteDoc(doc(c.firestore(), 'system_config/donor_phone_registry')));
   await assertFails(approveDonor(db(), 'unready'));
-  await assertFails(getDoc(doc(db(), 'donors/unready')));
+  const absentDonor = await assertSucceeds(getDoc(doc(db(), 'donors/unready')));
+  assert.equal(absentDonor.exists(), false);
 });
 
 test('approval without a matching immutable phone key is rejected', async () => {
   await seed('users/person-own', user({ access_role: 'leader' }));
   await seedPendingSubmission('no-key');
   await assertFails(approveDonor(db(), 'no-key', {}, {}, { skipKey: true }));
-  await assertFails(getDoc(doc(db(), 'donors/no-key')));
+  const absentDonor = await assertSucceeds(getDoc(doc(db(), 'donors/no-key')));
+  assert.equal(absentDonor.exists(), false);
   await assertFails(setDoc(doc(db(), 'donor_phone_keys/01700000000'), {
     phone: '01700000000', donor_id: 'no-key',
     reserved_at: serverTimestamp(), reserved_by: 'person-own',
@@ -975,7 +1208,8 @@ test('two distinct concurrent approvals for same phone allow only one reservatio
   assert.equal(key.data().donor_id, winner);
   assert.equal((await getDoc(doc(db(), `donor_submissions/${winner}`))).data().status, 'approved');
   assert.equal((await getDoc(doc(db(), `donor_submissions/${loser}`))).data().status, 'pending');
-  await assertFails(getDoc(doc(db(), `donors/${loser}`)));
+  const loserDonor = await assertSucceeds(getDoc(doc(db(), `donors/${loser}`)));
+  assert.equal(loserDonor.exists(), false);
   await assertFails(deleteDoc(doc(db(), 'donor_phone_keys/01700000000')));
   await assertFails(updateDoc(doc(db(), 'donor_phone_keys/01700000000'), { donor_id: loser }));
 });
@@ -999,7 +1233,8 @@ test('leader rejection remains reviewable and never creates an active donor', as
     status: 'rejected', rejected_by: 'person-own', rejected_at: serverTimestamp(), rejection_reason: 'Duplicate phone',
   }));
   assert.equal((await getDoc(doc(db(), 'donor_submissions/review'))).data().status, 'rejected');
-  await assertFails(getDoc(doc(db(), 'donors/review')));
+  const absentDonor = await assertSucceeds(getDoc(doc(db(), 'donors/review')));
+  assert.equal(absentDonor.exists(), false);
 });
 
 test('client cannot forge donor approval payload, actor, timestamp, or decision fields', async () => {
@@ -1103,7 +1338,8 @@ test('even developer_admin cannot create committee Users or assignments from Flu
     ended_at: null,
   });
   await assertFails(batch.commit());
-  await assertFails(getDoc(doc(client, 'users/' + memberId)));
+  const notCreated = await assertSucceeds(getDoc(doc(client, 'users/' + memberId)));
+  assert.equal(notCreated.exists(), false);
 
   await seed('users/person-own', user({ access_role: 'member' }));
   await assertFails(setDoc(doc(db(), 'committee_assignments/forged-member'), {

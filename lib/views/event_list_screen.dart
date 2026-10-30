@@ -29,8 +29,8 @@ class _EventListScreenState extends State<EventListScreen> {
     backgroundColor: AppColors.background,
     appBar: AppBar(
       title: Text('events'.tr),
-      backgroundColor: AppColors.primary,
-      foregroundColor: AppColors.white,
+      backgroundColor: AppColors.surface,
+      foregroundColor: AppColors.textDark,
     ),
     body: Obx(() {
       if (controller.isLoading.value) {
@@ -55,7 +55,7 @@ class _EventListScreenState extends State<EventListScreen> {
         color: AppColors.primary,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 28),
           children: [
             ...controller.activeEvents.map(
               (event) => _EventCard(

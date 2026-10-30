@@ -6,6 +6,7 @@ import '../constants/app_constants.dart';
 import '../controllers/blood_request_controller.dart';
 import '../localization/app_date_formatter.dart';
 import '../models/blood_request_model.dart';
+import '../widgets/roktobadhon_design.dart';
 
 class BloodRequestScreen extends StatefulWidget {
   const BloodRequestScreen({super.key});
@@ -27,8 +28,8 @@ class _BloodRequestScreenState extends State<BloodRequestScreen> {
     backgroundColor: AppColors.background,
     appBar: AppBar(
       title: Text('blood_requests'.tr),
-      backgroundColor: AppColors.primary,
-      foregroundColor: AppColors.white,
+      backgroundColor: AppColors.surface,
+      foregroundColor: AppColors.textDark,
       automaticallyImplyLeading: false,
     ),
     floatingActionButton: FloatingActionButton.extended(
@@ -36,8 +37,8 @@ class _BloodRequestScreenState extends State<BloodRequestScreen> {
         await Get.to(() => CreateBloodRequestScreen(controller: controller));
         // Successful submission already refreshes the list in create().
       },
-      backgroundColor: AppColors.primary,
-      foregroundColor: AppColors.white,
+      backgroundColor: AppColors.surface,
+      foregroundColor: AppColors.textDark,
       icon: const Icon(Icons.add),
       label: Text('new_request'.tr),
     ),
@@ -57,10 +58,14 @@ class _BloodRequestScreenState extends State<BloodRequestScreen> {
         onRefresh: controller.load,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 88),
           children: [
+            RBPageIntro(title: 'blood_requests'.tr, eyebrow: 'org_location'.tr, subtitle: 'tagline'.tr),
+            const SizedBox(height: 16),
+            RBSectionHeader(title: 'blood_requests'.tr),
+            const SizedBox(height: 10),
             if (controller.active.isEmpty)
-              _Empty(text: 'no_active_requests'.tr)
+              RBEmptyPanel(title: 'no_active_requests'.tr, icon: Icons.favorite_border)
             else
               ...controller.active.map((value) => _RequestCard(value: value)),
             if (controller.activeHasMore.value ||
@@ -133,19 +138,10 @@ class _RequestCard extends StatelessWidget {
   const _RequestCard({required this.value});
   @override
   Widget build(BuildContext context) => Card(
-    color: AppColors.white,
+    color: AppColors.surface,
     margin: const EdgeInsets.only(bottom: 10),
     child: ListTile(
-      leading: CircleAvatar(
-        backgroundColor: AppColors.primaryLight,
-        child: Text(
-          value.bloodGroup,
-          style: const TextStyle(
-            color: AppColors.primary,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
+      leading: RBBloodBadge(group: value.bloodGroup),
       title: Text(
         value.patientName ?? 'patient_unavailable'.tr,
         style: const TextStyle(fontWeight: FontWeight.bold),
@@ -229,14 +225,18 @@ class _CreateBloodRequestScreenState extends State<CreateBloodRequestScreen> {
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
       title: Text('new_blood_request'.tr),
-      backgroundColor: AppColors.primary,
-      foregroundColor: AppColors.white,
+      backgroundColor: AppColors.surface,
+      foregroundColor: AppColors.textDark,
     ),
     body: Form(
       key: formKey,
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 36),
         children: [
+          RBPageIntro(title: 'new_blood_request'.tr, eyebrow: 'org_location'.tr, subtitle: 'tagline'.tr),
+          const SizedBox(height: 22),
+          RBSectionHeader(title: 'blood_group'.tr),
+          const SizedBox(height: 12),
           DropdownButtonFormField<String>(
             initialValue: bloodGroup,
             items: AppConstants.bloodGroups
@@ -247,6 +247,8 @@ class _CreateBloodRequestScreenState extends State<CreateBloodRequestScreen> {
             onChanged: (value) => setState(() => bloodGroup = value!),
             decoration: InputDecoration(labelText: 'blood_group'.tr),
           ),
+          const SizedBox(height: 24),
+          RBSectionHeader(title: 'patient_name_optional'.tr),
           _field(patient, 'patient_name_optional'.tr, required: false),
           _field(hospital, 'hospital'.tr),
           _field(location, 'location'.tr),
@@ -294,18 +296,6 @@ class _CreateBloodRequestScreenState extends State<CreateBloodRequestScreen> {
       validator: (value) => required && (value == null || value.trim().isEmpty)
           ? 'required'.tr
           : null,
-    ),
-  );
-}
-
-class _Empty extends StatelessWidget {
-  final String text;
-  const _Empty({required this.text});
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.all(32),
-    child: Center(
-      child: Text(text, style: const TextStyle(color: AppColors.textGrey)),
     ),
   );
 }

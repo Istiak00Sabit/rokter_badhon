@@ -9,6 +9,7 @@ import '../models/registration_request_model.dart';
 import '../services/auth_services.dart';
 import '../controllers/auth_controller.dart';
 import '../widgets/auth_language_switch.dart';
+import '../widgets/roktobadhon_design.dart';
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
@@ -65,24 +66,29 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       _loading = true;
       _message = null;
     });
-    final result = await _authService.register(
-      name: _name.text,
-      phone: _phone.text,
-      email: _email.text,
-      password: _password.text,
-      bloodGroup: _bloodGroup.text,
-      profession: _profession.text,
-      address: _address.text,
-      union: _selectedArea,
-      village: _selectedLocality,
-    );
-    if (!mounted) return;
-    setState(() {
-      _loading = false;
-      _message = _registrationMessage(result);
-    });
-    if (result.requestSubmitted && _authService.currentUser != null) {
-      await _refreshStatus();
+    try {
+      final result = await _authService.register(
+        name: _name.text,
+        phone: _phone.text,
+        email: _email.text,
+        password: _password.text,
+        bloodGroup: _bloodGroup.text,
+        profession: _profession.text,
+        address: _address.text,
+        union: _selectedArea,
+        village: _selectedLocality,
+      );
+      if (!mounted) return;
+      setState(() => _message = _registrationMessage(result));
+      if (result.requestSubmitted && _authService.currentUser != null) {
+        await _refreshStatus();
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() => _message = AuthService.mapRegistrationSubmissionError(error));
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -154,12 +160,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Text('register'.tr),
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.white,
+        backgroundColor: AppColors.surface,
+        foregroundColor: AppColors.textDark,
+        titleTextStyle: const TextStyle(color: AppColors.textDark, fontSize: 19, fontWeight: FontWeight.w700),
         actions: const [
           Padding(
             padding: EdgeInsets.only(right: 8),
-            child: AuthLanguageSwitch(onPrimary: true),
+            child: AuthLanguageSwitch(),
           ),
         ],
       ),
@@ -168,6 +175,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            RBPageIntro(title: 'register'.tr, eyebrow: 'org_location'.tr, subtitle: 'tagline'.tr),
+            const SizedBox(height: 22),
             if (!_locationsReady)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 48),
@@ -189,7 +198,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             if (_locationsReady && !signedIn) ...[
               _field(_name, 'name'.tr),
               _field(_phone, 'phone'.tr, type: TextInputType.phone),
-              _field(_email, 'email'.tr, type: TextInputType.emailAddress),
+              _field(_email, 'email_optional'.tr, type: TextInputType.emailAddress),
               _buildDropdownField(
                 label: 'blood_group'.tr,
                 value: _bloodGroup.text.isEmpty ? null : _bloodGroup.text,
@@ -226,7 +235,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   setState(() => _selectedLocality = value);
                 },
               ),
-              _field(_address, 'address'.tr),
+              _field(_address, 'address_optional'.tr),
               _field(_password, 'password'.tr, obscure: true),
               _field(
                 _passwordConfirmation,
@@ -263,7 +272,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 const SizedBox(height: 16),
                 _field(_name, 'name'.tr),
                 _field(_phone, 'phone'.tr, type: TextInputType.phone),
-                _field(_email, 'email'.tr, type: TextInputType.emailAddress),
+                _field(_email, 'email_optional'.tr, type: TextInputType.emailAddress),
                 _buildDropdownField(
                   label: 'blood_group'.tr,
                   value: _bloodGroup.text.isEmpty ? null : _bloodGroup.text,
@@ -300,7 +309,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     setState(() => _selectedLocality = value);
                   },
                 ),
-                _field(_address, 'address'.tr),
+                _field(_address, 'address_optional'.tr),
                 ElevatedButton(
                   onPressed: _loading ? null : _submitForExistingAccount,
                   child: Text('retry_submission'.tr),
@@ -388,7 +397,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: DropdownButtonFormField<T>(
-        initialValue: value,
+        key: ValueKey('registration-$label-${_selectedArea ?? 'none'}'),
+        initialValue: items.contains(value) ? value : null,
+        isExpanded: true,
+        menuMaxHeight: 320,
         decoration: InputDecoration(
           labelText: label,
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -397,7 +409,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             .map(
               (item) => DropdownMenuItem<T>(
                 value: item,
-                child: Text(itemLabel?.call(item) ?? item.toString()),
+                child: Text(itemLabel?.call(item) ?? item.toString(), overflow: TextOverflow.ellipsis, maxLines: 1),
               ),
             )
             .toList(),

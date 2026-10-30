@@ -8,6 +8,7 @@ import '../localization/app_date_formatter.dart';
 import '../models/donor_submission_model.dart';
 import '../models/donor_model.dart';
 import '../services/donor_service.dart';
+import 'review_history_screen.dart';
 
 class PendingDonorApprovalsScreen extends StatefulWidget {
   const PendingDonorApprovalsScreen({super.key});
@@ -86,11 +87,17 @@ class _PendingDonorApprovalsScreenState
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () {
+              FocusManager.instance.primaryFocus?.unfocus();
+              Navigator.pop(context, false);
+            },
             child: Text('cancel'.tr),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () {
+              FocusManager.instance.primaryFocus?.unfocus();
+              Navigator.pop(context, true);
+            },
             child: Text('approve'.tr),
           ),
         ],
@@ -107,6 +114,7 @@ class _PendingDonorApprovalsScreenState
         submission: submission,
         actorUserId: actorId,
       ),
+      approved: true,
     );
   }
 
@@ -125,17 +133,27 @@ class _PendingDonorApprovalsScreenState
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              FocusManager.instance.primaryFocus?.unfocus();
+              Navigator.pop(context);
+            },
             child: Text('cancel'.tr),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(context, reasonText.trim()),
+            onPressed: () {
+              FocusManager.instance.primaryFocus?.unfocus();
+              Navigator.pop(context, reasonText.trim());
+            },
             child: Text('reject'.tr),
           ),
         ],
       ),
     );
-    if (reason == null || reason.isEmpty || !mounted) return;
+    if (reason == null || !mounted) return;
+    if (reason.isEmpty) {
+      _showError('review_reason_required');
+      return;
+    }
     final actorId = _actorId;
     if (actorId == null) {
       _showError('session_unavailable');
@@ -147,6 +165,7 @@ class _PendingDonorApprovalsScreenState
         actorUserId: actorId,
         reason: reason,
       ),
+      approved: false,
     );
   }
 
@@ -170,7 +189,7 @@ class _PendingDonorApprovalsScreenState
     );
   }
 
-  Future<void> _run(Future<void> Function() action) async {
+  Future<void> _run(Future<void> Function() action, {required bool approved}) async {
     if (_actionInProgress) return;
     setState(() => _actionInProgress = true);
     try {
@@ -178,7 +197,7 @@ class _PendingDonorApprovalsScreenState
       if (!mounted) return;
       setState(_reload);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('review_saved'.tr)),
+        SnackBar(content: Text(approved ? 'review_approved'.tr : 'review_rejected'.tr)),
       );
     } on DonorServiceException catch (error) {
       _showError(error.code);
@@ -193,7 +212,22 @@ class _PendingDonorApprovalsScreenState
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text('pending_donor_approvals'.tr)),
+    appBar: AppBar(
+      title: Text('pending_donor_approvals'.tr),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.history),
+          tooltip: 'review_history_title'.tr,
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => const ReviewHistoryScreen(
+                kind: ReviewHistoryKind.donor,
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
     body: FutureBuilder<List<DonorSubmissionModel>>(
       future: _pending,
       builder: (context, snapshot) {
@@ -216,7 +250,41 @@ class _PendingDonorApprovalsScreenState
           );
         }
         final items = _items;
-        if (items.isEmpty) return Center(child: Text('no_pending_donors'.tr));
+        if (items.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.task_alt, size: 48, color: AppColors.success),
+                  const SizedBox(height: 12),
+                  Text('no_pending_donors'.tr, textAlign: TextAlign.center),
+                  const SizedBox(height: 8),
+                  Text('review_history_hint'.tr, textAlign: TextAlign.center),
+                  const SizedBox(height: 16),
+                  OutlinedButton.icon(
+                    onPressed: _actionInProgress ? null : () => setState(_reload),
+                    icon: const Icon(Icons.refresh),
+                    label: Text('retry'.tr),
+                  ),
+                  const SizedBox(height: 8),
+                  TextButton.icon(
+                    icon: const Icon(Icons.history),
+                    label: Text('review_history_title'.tr),
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const ReviewHistoryScreen(
+                          kind: ReviewHistoryKind.donor,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
         return RefreshIndicator(
           onRefresh: () async {
             setState(_reload);

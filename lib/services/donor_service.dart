@@ -43,6 +43,23 @@ class DonorService {
   DonorService({FirebaseFirestore? firestore})
     : _firestore = firestore ?? FirebaseFirestore.instance;
 
+  /// Live top-three, sourced only from active donor records with a
+  /// positive recorded donation count. Never guess historic donations.
+  /// Firestore's existing active + total_donations index is used.
+  Stream<List<DonorModel>> watchTopDonors() {
+    return _firestore
+        .collection(AppConstants.donorsCollection)
+        .where('active', isEqualTo: true)
+        .orderBy('total_donations', descending: true)
+        .limit(3)
+        .snapshots()
+        .map((snapshot) => List<DonorModel>.unmodifiable(
+              snapshot.docs
+                  .map((doc) => DonorModel.fromMap(doc.data(), doc.id))
+                  .where((donor) => donor.totalDonations > 0),
+            ));
+  }
+
   /// Detect already-active records with the same exact stored phone.
   /// This is a safety preflight, NOT a transactional uniqueness constraint
   /// across distinct simultaneous submissions. A trusted phone-identity index
@@ -143,6 +160,31 @@ class DonorService {
     }
   }
 
+  /// Approve an already saved submission through the existing audited flow.
+  /// When approval fails, the original submission stays pending.
+  Future<void> approveSubmittedDonor({
+    required String submissionId,
+    required String actorUserId,
+  }) async {
+    _validateId(submissionId, 'submission');
+    try {
+      final snapshot = await _firestore
+          .collection(AppConstants.donorSubmissionsCollection)
+          .doc(submissionId)
+          .get();
+      final data = snapshot.data();
+      if (data == null) {
+        throw const DonorServiceException('submission_missing');
+      }
+      await approveSubmission(
+        submission: DonorSubmissionModel.fromMap(data, snapshot.id),
+        actorUserId: actorUserId,
+      );
+    } on FirebaseException catch (error) {
+      throw DonorServiceException(_safeCode(error.code));
+    }
+  }
+
   /// Fetch a bounded page rather than all applications in one read.
   /// The [after] snapshot is from the previous ordered page.
   Future<PendingDonorPage> getPendingSubmissionsPage({
@@ -178,6 +220,33 @@ class DonorService {
   // Kept for non-paginated callers; explicit limit prevents unbounded reads.
   Future<List<DonorSubmissionModel>> getPendingSubmissions() async {
     return (await getPendingSubmissionsPage()).items;
+  }
+
+  /// Historical donor decisions remain in Firestore with their status,
+  /// reviewer and rejection reason; they are not live donors when rejected.
+  Future<List<DonorSubmissionModel>> getReviewedSubmissions({
+    int limit = 50,
+  }) async {
+    if (limit < 1 || limit > 100) {
+      throw const DonorServiceException('invalid_limit');
+    }
+    try {
+      final snapshot = await _firestore
+          .collection(AppConstants.donorSubmissionsCollection)
+          .where('status', whereIn: ['approved', 'rejected'])
+          .limit(limit)
+          .get();
+      final items = snapshot.docs
+          .map((doc) => DonorSubmissionModel.fromMap(doc.data(), doc.id))
+          .toList(growable: false);
+      items.sort((a, b) => (b.approvedAt ?? b.rejectedAt ?? b.submittedAt)
+          .compareTo(a.approvedAt ?? a.rejectedAt ?? a.submittedAt));
+      return items;
+    } on DonorDataException {
+      rethrow;
+    } on FirebaseException catch (error) {
+      throw DonorServiceException(_safeCode(error.code));
+    }
   }
 
   Future<void> approveSubmission({

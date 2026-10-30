@@ -12,7 +12,7 @@ export const LOCAL_TEST_ADMIN = Object.freeze({
   email: 'a@a.com',
   password: '123456',
   name: 'Local Test Admin',
-  phone: '01000000000',
+  phone: '01700000000',
 });
 
 const LOCAL_INTERNAL_EMAIL = internalAuthEmailForPhone(LOCAL_TEST_ADMIN.phone);

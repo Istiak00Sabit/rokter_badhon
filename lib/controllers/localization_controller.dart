@@ -62,11 +62,12 @@ class LocalizationController extends GetxController {
     locale.value = nextLocale;
 
 
-    // Save selected language
-    await _preferences.setString(
-      _preferenceKey,
-      normalized,
-    );
+    // Update the current language even if local preference storage fails.
+    try {
+      await _preferences.setString(_preferenceKey, normalized);
+    } catch (_) {
+      // Retry persistence on the next language selection.
+    }
 
 
     // Get.updateLocale rebuilds the root navigator. Calling it synchronously

@@ -18,8 +18,8 @@ class AuditLogScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text('audit_history'.tr),
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.white,
+        backgroundColor: AppColors.surface,
+        foregroundColor: AppColors.textDark,
       ),
       body: Obx(() {
         if (controller.isLoading.value) {

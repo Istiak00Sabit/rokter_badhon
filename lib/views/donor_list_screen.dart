@@ -6,6 +6,8 @@ import '../controllers/donor_controller.dart';
 import '../models/donor_model.dart';
 import '../localization/app_date_formatter.dart';
 import 'add_donor_screen.dart';
+import 'record_donation_screen.dart';
+import '../widgets/roktobadhon_design.dart';
 
 class DonorListScreen extends StatefulWidget {
   const DonorListScreen({super.key});
@@ -55,8 +57,8 @@ class _DonorListScreenState extends State<DonorListScreen> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Text('donors'.tr),
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.white,
+        backgroundColor: AppColors.surface,
+        foregroundColor: AppColors.textDark,
         centerTitle: true,
         automaticallyImplyLeading: false,
         actions: [
@@ -93,10 +95,19 @@ class _DonorListScreenState extends State<DonorListScreen> {
         children: [
           // Search + Filter section
           Container(
-            color: AppColors.white,
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            color: AppColors.background,
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                RBPageIntro(title: 'donors'.tr, eyebrow: 'org_location'.tr, subtitle: 'search_donors'.tr),
+                const SizedBox(height: 14),
+                Obx(() => RBInfoStrip(
+                  icon: Icons.water_drop_outlined,
+                  title: selectedFilter.value == 'all' ? 'all_blood_groups'.tr : selectedFilter.value,
+                  subtitle: 'donors_loaded_count'.trParams({'count': '${controller.donors.length}'}),
+                )),
+                const SizedBox(height: 14),
                 // Search bar
                 TextField(
                   controller: searchController,
@@ -294,7 +305,7 @@ class _DonorListScreenState extends State<DonorListScreen> {
                 color: AppColors.primary,
                 child: ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
+                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 110),
                   children: [
                     if (searchQuery.value.isNotEmpty ||
                         controller.hasMoreDonors.value)
@@ -378,40 +389,18 @@ class _DonorListScreenState extends State<DonorListScreen> {
   Widget _buildDonorCard(DonorModel donor, DonorController controller) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.border),
       ),
       child: Padding(
         padding: const EdgeInsets.all(14),
-        child: Row(
+        child: Column(
           children: [
+            Row(
+              children: [
             // Blood group badge
-            Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                color: AppColors.primaryLight,
-                shape: BoxShape.circle,
-                border: Border.all(color: AppColors.primary, width: 1.5),
-              ),
-              child: Center(
-                child: Text(
-                  donor.bloodGroup,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.primary,
-                  ),
-                ),
-              ),
-            ),
+            RBBloodBadge(group: donor.bloodGroup, large: true),
 
             const SizedBox(width: 14),
 
@@ -521,7 +510,7 @@ class _DonorListScreenState extends State<DonorListScreen> {
               ),
             ),
 
-            // Call icon
+            // Edit donor profile
             if (controller.canEdit)
               IconButton(
                 tooltip: 'edit_donor'.tr,
@@ -557,6 +546,21 @@ class _DonorListScreenState extends State<DonorListScreen> {
                 ),
               ),
             ),
+              ],
+            ),
+            if (controller.canEdit)
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  icon: const Icon(Icons.volunteer_activism_outlined,
+                    size: 18, color: AppColors.success),
+                  label: Text('record_donation_title'.tr),
+                  onPressed: () async {
+                    await Get.to(() => RecordDonationScreen(donor: donor));
+                    if (mounted) controller.loadDonors();
+                  },
+                ),
+              ),
           ],
         ),
       ),

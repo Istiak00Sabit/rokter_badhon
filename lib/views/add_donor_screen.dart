@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../constants/app_colors.dart';
+import '../widgets/roktobadhon_design.dart';
 import '../constants/app_constants.dart';
 import '../controllers/donor_controller.dart';
 
@@ -21,11 +22,12 @@ class AddDonorScreen extends StatelessWidget {
                 : 'edit_donor'.tr,
           ),
         ),
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.white,
+        backgroundColor: AppColors.surface,
+        foregroundColor: AppColors.textDark,
+        titleTextStyle: const TextStyle(color: AppColors.textDark, fontSize: 19, fontWeight: FontWeight.w700),
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.white),
+          icon: const Icon(Icons.arrow_back, color: AppColors.textDark),
           onPressed: () {
             controller.clearForm();
             Get.back();
@@ -33,10 +35,12 @@ class AddDonorScreen extends StatelessWidget {
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 36),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            RBPageIntro(title: 'add_donor'.tr, eyebrow: 'org_location'.tr),
+            const SizedBox(height: 18),
             // Header info card
             Container(
               width: double.infinity,
@@ -81,6 +85,7 @@ class AddDonorScreen extends StatelessWidget {
               hint: 'enter_name'.tr,
               icon: Icons.person_outline,
             ),
+            _validationHint(controller, 'donor_name_required'),
             const SizedBox(height: 14),
 
             // Phone is an immutable identity once approved. Changing it
@@ -93,6 +98,7 @@ class AddDonorScreen extends StatelessWidget {
               keyboardType: TextInputType.phone,
               readOnly: controller.editingDonorId.value != null,
             )),
+            _validationHint(controller, 'donor_phone_invalid'),
             const SizedBox(height: 14),
 
             // Blood Group
@@ -104,9 +110,13 @@ class AddDonorScreen extends StatelessWidget {
                     ? null
                     : controller.selectedBloodGroup.value,
                 items: AppConstants.bloodGroups,
-                onChanged: (val) => controller.selectedBloodGroup.value = val!,
+                onChanged: (val) {
+                  controller.selectedBloodGroup.value = val ?? '';
+                  controller.formErrorCode.value = '';
+                },
               ),
             ),
+            _validationHint(controller, 'donor_blood_group_required'),
             const SizedBox(height: 14),
 
             // Gender
@@ -119,7 +129,10 @@ class AddDonorScreen extends StatelessWidget {
                     : controller.selectedGender.value,
                 items: AppConstants.genders,
                 itemLabel: AppConstants.genderLabel,
-                onChanged: (val) => controller.selectedGender.value = val!,
+                onChanged: (val) {
+                  controller.selectedGender.value = val ?? '';
+                  controller.formErrorCode.value = '';
+                },
               ),
             ),
 
@@ -161,20 +174,27 @@ class AddDonorScreen extends StatelessWidget {
                     itemLabel: AppConstants.locationAreaLabel,
                     onChanged: (val) {
                       controller.selectedUnion.value = val!;
+                      controller.formErrorCode.value = '';
                       controller.villageController.clear();
+                      controller.selectedVillage.value = '';
                     },
                   ),
+                  _validationHint(controller, 'donor_union_required'),
                   const SizedBox(height: 14),
                   _buildDropdown<String>(
                     label: isMunicipality ? 'mahalla'.tr : 'village'.tr,
                     icon: Icons.home_outlined,
-                    value: localities.contains(controller.villageController.text)
-                        ? controller.villageController.text
+                    value: localities.contains(controller.selectedVillage.value)
+                        ? controller.selectedVillage.value
                         : null,
                     items: localities,
-                    onChanged: (val) =>
-                        controller.villageController.text = val ?? '',
+                    onChanged: (val) {
+                      controller.selectedVillage.value = val ?? '';
+                      controller.villageController.text = val ?? '';
+                      controller.formErrorCode.value = '';
+                    },
                   ),
+                  _validationHint(controller, 'donor_village_required'),
                   const SizedBox(height: 14),
                 ],
               );
@@ -211,6 +231,14 @@ class AddDonorScreen extends StatelessWidget {
 
             const SizedBox(height: 32),
 
+            // A failed local validation is shown next to its field, not as a keyboard-obscured snackbar.
+            Obx(() => controller.formErrorCode.value.isEmpty
+                ? const SizedBox.shrink()
+                : Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Text(controller.formErrorCode.value.tr,
+                        style: const TextStyle(color: AppColors.error, fontSize: 12)),
+                  )),
             // Submit button
             Obx(
               () => SizedBox(
@@ -259,6 +287,18 @@ class AddDonorScreen extends StatelessWidget {
     );
   }
 
+  Widget _validationHint(DonorController controller, String code) => Obx(
+    () => controller.formErrorCode.value == code
+        ? Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(
+              code.tr,
+              style: const TextStyle(color: AppColors.error, fontSize: 12),
+            ),
+          )
+        : const SizedBox.shrink(),
+  );
+
   Widget _sectionTitle(String title) {
     return Row(
       children: [
@@ -293,6 +333,7 @@ class AddDonorScreen extends StatelessWidget {
   }) {
     return TextField(
       controller: controller,
+      onChanged: (_) => Get.find<DonorController>().formErrorCode.value = '',
       keyboardType: keyboardType,
       readOnly: readOnly,
       decoration: InputDecoration(
@@ -337,6 +378,8 @@ class AddDonorScreen extends StatelessWidget {
         child: DropdownButton<T>(
           value: value,
           isExpanded: true,
+          isDense: true,
+          menuMaxHeight: 320,
           hint: Row(
             children: [
               Icon(icon, color: AppColors.primary, size: 20),
@@ -356,7 +399,7 @@ class AddDonorScreen extends StatelessWidget {
                     children: [
                       Icon(icon, color: AppColors.primary, size: 18),
                       const SizedBox(width: 12),
-                      Text(itemLabel?.call(item) ?? item.toString()),
+                      Expanded(child: Text(itemLabel?.call(item) ?? item.toString(), maxLines: 1, overflow: TextOverflow.ellipsis)),
                     ],
                   ),
                 ),

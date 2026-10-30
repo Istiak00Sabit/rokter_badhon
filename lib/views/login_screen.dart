@@ -24,12 +24,12 @@ class LoginScreen extends StatelessWidget {
         child: SingleChildScrollView(
           child: Column(
             children: [
-              // Top red section
+              // Welcome header based on the new warm community palette.
               Container(
                 width: double.infinity,
-                height: 280,
+                height: 248,
                 decoration: const BoxDecoration(
-                  color: AppColors.primary,
+                  color: AppColors.surface,
                   borderRadius: BorderRadius.only(
                     bottomLeft: Radius.circular(40),
                     bottomRight: Radius.circular(40),
@@ -40,7 +40,7 @@ class LoginScreen extends StatelessWidget {
                     const Positioned(
                       top: 12,
                       right: 12,
-                      child: AuthLanguageSwitch(onPrimary: true),
+                      child: AuthLanguageSwitch(),
                     ),
                     Center(
                       child: Column(
@@ -50,13 +50,13 @@ class LoginScreen extends StatelessWidget {
                             width: 90,
                             height: 90,
                             decoration: BoxDecoration(
-                              color: AppColors.white.withValues(alpha: 0.2),
+                              color: AppColors.mutedRed,
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(
                               Icons.water_drop,
                               size: 50,
-                              color: AppColors.white,
+                              color: AppColors.primary,
                             ),
                           ),
                           const SizedBox(height: 16),
@@ -65,15 +65,15 @@ class LoginScreen extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 28,
                               fontWeight: FontWeight.bold,
-                              color: AppColors.white,
+                              color: AppColors.textDark,
                             ),
                           ),
                           const SizedBox(height: 6),
                           Text(
                             'org_location'.tr,
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 14,
-                              color: AppColors.white,
+                              color: AppColors.textGrey,
                             ),
                           ),
                         ],
@@ -113,12 +113,12 @@ class LoginScreen extends StatelessWidget {
                       // Phone field
                       TextField(
                         controller: phoneController,
-                        keyboardType: TextInputType.emailAddress,
-                        autofillHints: const [AutofillHints.email],
+                        keyboardType: TextInputType.phone,
+                        autofillHints: const [AutofillHints.telephoneNumber],
                         decoration: InputDecoration(
-                          labelText: 'email_or_phone'.tr,
+                          labelText: 'phone_login'.tr,
                           prefixIcon: const Icon(
-                            Icons.alternate_email,
+                            Icons.phone_android,
                             color: AppColors.primary,
                           ),
                           border: OutlineInputBorder(

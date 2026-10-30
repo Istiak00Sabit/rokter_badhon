@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../constants/app_colors.dart';
 import '../controllers/auth_controller.dart';
+import '../controllers/committee_controller.dart';
 import '../models/auth_session.dart';
 import 'committee_screen.dart';
 import 'blood_request_screen.dart';
@@ -89,16 +90,31 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
           index: navController.currentIndex.value,
           children: _screens,
         ),
-        bottomNavigationBar: BottomNavigationBar(
+        bottomNavigationBar: Container(
+          decoration: const BoxDecoration(
+            color: Color(0xFFF7F3EE),
+            border: Border(top: BorderSide(color: Color(0xFFE9E3DD), width: 2)),
+          ),
+          child: BottomNavigationBar(
           type: BottomNavigationBarType.fixed,
           selectedItemColor: AppColors.primary,
+          selectedFontSize: 11,
+          unselectedFontSize: 10,
+          iconSize: 23,
           unselectedItemColor: AppColors.textGrey,
-          backgroundColor: AppColors.white,
-          elevation: 8,
+          backgroundColor: const Color(0xFFF7F3EE),
+          elevation: 0,
           currentIndex: navController.currentIndex.value,
-          onTap: navController.changePage,
+          onTap: (index) {
+            navController.changePage(index);
+            // IndexedStack keeps tabs mounted. Reload profile photo URLs when
+            // returning to Committee so changes appear without app restart.
+            if (index == 3 && Get.isRegistered<CommitteeController>()) {
+              Get.find<CommitteeController>().loadCommittee();
+            }
+          },
           selectedLabelStyle: const TextStyle(
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w700,
             fontSize: 12,
           ),
           unselectedLabelStyle: const TextStyle(fontSize: 11),
@@ -129,6 +145,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
               label: 'profile'.tr,
             ),
           ],
+          ),
         ),
       ),
     );

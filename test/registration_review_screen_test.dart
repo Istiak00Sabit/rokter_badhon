@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -47,7 +48,7 @@ void main() {
     expect(service.calls, 2);
   });
 
-  testWidgets('pending request is review-only and its UID can be copied', (
+  testWidgets('pending request offers guarded review actions and its UID can be copied', (
     tester,
   ) async {
     final service = _FakeRegistrationService(hasPending: true);
@@ -62,12 +63,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(service.calls, 1);
-    expect(find.text('registration_operator_only'), findsOneWidget);
+    expect(find.text('registration_admin_actions_note'), findsOneWidget);
     expect(find.text('Synthetic Applicant'), findsOneWidget);
-    // No direct approve or reject controls: privileged changes require
-    // operator authentication and an audited trusted transaction.
-    expect(find.text('approve'), findsNothing);
-    expect(find.text('reject'), findsNothing);
+    // Only the trusted callable performs privileged writes.
+    expect(find.text('approve'), findsOneWidget);
+    expect(find.text('reject'), findsOneWidget);
 
     String? copiedUid;
     tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
@@ -91,6 +91,34 @@ void main() {
     await tester.pumpAndSettle();
     expect(copiedUid, 'synthetic-uid');
     expect(find.text('registration_uid_copied'), findsOneWidget);
+  });
+
+  testWidgets('reject dialog cancels safely with keyboard open and never changes pending data', (
+    tester,
+  ) async {
+    final service = _FakeRegistrationService(hasPending: true);
+    Get.put(
+      AdministrationController(service: service),
+      tag: 'registrations',
+    );
+    await tester.pumpWidget(
+      const GetMaterialApp(home: RegistrationReviewScreen()),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('reject'));
+    await tester.pumpAndSettle();
+    expect(find.byType(TextField), findsOneWidget);
+    await tester.enterText(find.byType(TextField), 'A reviewed rejection reason');
+    await tester.pump();
+
+    await tester.tap(find.text('cancel'));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('Synthetic Applicant'), findsOneWidget);
+    expect(find.text('reject'), findsOneWidget);
+    expect(service.calls, 1);
   });
 
   testWidgets('query failures do not cause automatic retry loops', (
@@ -154,6 +182,11 @@ class _FakeRegistrationService implements AdministrationService {
         ),
       ];
     }
+    return const <RegistrationRequestModel>[];
+  }
+
+  @override
+  Future<List<RegistrationRequestModel>> reviewedRegistrations({int limit = 50}) async {
     return const <RegistrationRequestModel>[];
   }
 

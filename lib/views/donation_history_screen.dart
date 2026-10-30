@@ -26,8 +26,8 @@ class _DonationHistoryScreenState extends State<DonationHistoryScreen> {
     backgroundColor: AppColors.background,
     appBar: AppBar(
       title: Text('donation_history'.tr),
-      backgroundColor: AppColors.primary,
-      foregroundColor: AppColors.white,
+      backgroundColor: AppColors.surface,
+      foregroundColor: AppColors.textDark,
     ),
     body: Obx(() {
       if (controller.isLoading.value) {

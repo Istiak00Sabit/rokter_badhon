@@ -8,6 +8,7 @@ import '../controllers/localization_controller.dart';
 import '../localization/app_translations.dart';
 import '../localization/app_date_formatter.dart';
 import '../models/profile_update.dart';
+import '../services/admin_functions_service.dart';
 import '../models/user_model.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -51,12 +52,12 @@ class ProfileScreen extends StatelessWidget {
                 width: double.infinity,
 
                 decoration: const BoxDecoration(
-                  color: AppColors.primary,
+                  color: AppColors.surface,
 
                   borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(30),
+                    bottomLeft: Radius.circular(20),
 
-                    bottomRight: Radius.circular(30),
+                    bottomRight: Radius.circular(20),
                   ),
                 ),
 
@@ -70,11 +71,11 @@ class ProfileScreen extends StatelessWidget {
                       height: 90,
 
                       decoration: BoxDecoration(
-                        color: AppColors.white.withValues(alpha: 0.2),
+                        color: AppColors.mutedRed,
 
                         shape: BoxShape.circle,
 
-                        border: Border.all(color: AppColors.white, width: 2),
+                        border: Border.all(color: AppColors.border, width: 2),
                       ),
 
                       clipBehavior: Clip.antiAlias,
@@ -91,7 +92,7 @@ class ProfileScreen extends StatelessWidget {
 
                         fontWeight: FontWeight.bold,
 
-                        color: AppColors.white,
+                        color: AppColors.textDark,
                       ),
                     ),
 
@@ -132,7 +133,7 @@ class ProfileScreen extends StatelessWidget {
               // DETAILS
               // =============================================
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 24),
 
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -215,6 +216,15 @@ class ProfileScreen extends StatelessWidget {
                     ),
 
                     const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () => _editPhotoLink(context, authController, user),
+                        icon: const Icon(Icons.image_outlined),
+                        label: Text('profile_photo_link'.tr),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
 
                     _languageSelector(),
 
@@ -296,6 +306,73 @@ class ProfileScreen extends StatelessWidget {
         );
       }),
     );
+  }
+
+  Future<void> _editPhotoLink(
+    BuildContext context,
+    AuthController controller,
+    UserModel user,
+  ) async {
+    String selectedValue = user.photoUrl ?? '';
+    final selected = await showDialog<String>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: Text('profile_photo_link'.tr),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('profile_photo_url_note'.tr),
+            const SizedBox(height: 8),
+            TextFormField(
+              initialValue: selectedValue,
+              onChanged: (value) => selectedValue = value,
+              keyboardType: TextInputType.url,
+              decoration: InputDecoration(labelText: 'profile_photo_link'.tr),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              FocusManager.instance.primaryFocus?.unfocus();
+              Navigator.pop(dialog);
+            },
+            child: Text('cancel'.tr),
+          ),
+          FilledButton(
+            onPressed: () {
+              FocusManager.instance.primaryFocus?.unfocus();
+              Navigator.pop(dialog, selectedValue.trim());
+            },
+            child: Text('save'.tr),
+          ),
+        ],
+      ),
+    );
+    if (selected == null || !context.mounted) return;
+    if (selected.isNotEmpty &&
+        (Uri.tryParse(selected)?.scheme != 'https' ||
+            Uri.tryParse(selected)?.host.isEmpty != false)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('profile_photo_url_note'.tr)),
+      );
+      return;
+    }
+    try {
+      await AdminFunctionsService().updateProfilePhoto(
+        selected.isEmpty ? null : selected,
+      );
+      await controller.restoreSession();
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('profile_photo_updated'.tr)),
+      );
+    } on AdminCallException catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('admin_action_failed'.trParams({'code': error.code}))),
+      );
+    }
   }
 
   Future<void> _editProfile(
@@ -381,6 +458,11 @@ class ProfileScreen extends StatelessWidget {
     final controller = Get.find<LocalizationController>();
     return Obx(
       () => SegmentedButton<String>(
+        style: const ButtonStyle(
+          visualDensity: VisualDensity.compact,
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          padding: WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 8)),
+        ),
         segments: [
           ButtonSegment(
             value: AppTranslations.bangla,

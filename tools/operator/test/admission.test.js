@@ -159,6 +159,8 @@ function pendingRequest(changes = {}) {
     blood_group: 'A+',
     profession: 'Teacher',
     address: 'Address',
+    union: 'Jamuria',
+    village: 'Madhya Karna',
     status: 'pending',
     requested_at: TIME,
     approved_by: null,
