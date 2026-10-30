@@ -43,6 +43,23 @@ class DonorService {
   DonorService({FirebaseFirestore? firestore})
     : _firestore = firestore ?? FirebaseFirestore.instance;
 
+  /// Live top-three, sourced only from active donor records with a
+  /// positive recorded donation count. Never guess historic donations.
+  /// Firestore's existing active + total_donations index is used.
+  Stream<List<DonorModel>> watchTopDonors() {
+    return _firestore
+        .collection(AppConstants.donorsCollection)
+        .where('active', isEqualTo: true)
+        .orderBy('total_donations', descending: true)
+        .limit(3)
+        .snapshots()
+        .map((snapshot) => List<DonorModel>.unmodifiable(
+              snapshot.docs
+                  .map((doc) => DonorModel.fromMap(doc.data(), doc.id))
+                  .where((donor) => donor.totalDonations > 0),
+            ));
+  }
+
   /// Detect already-active records with the same exact stored phone.
   /// This is a safety preflight, NOT a transactional uniqueness constraint
   /// across distinct simultaneous submissions. A trusted phone-identity index
