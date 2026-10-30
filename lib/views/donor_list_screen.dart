@@ -395,8 +395,10 @@ class _DonorListScreenState extends State<DonorListScreen> {
       ),
       child: Padding(
         padding: const EdgeInsets.all(14),
-        child: Row(
+        child: Column(
           children: [
+            Row(
+              children: [
             // Blood group badge
             RBBloodBadge(group: donor.bloodGroup, large: true),
 
@@ -508,18 +510,6 @@ class _DonorListScreenState extends State<DonorListScreen> {
               ),
             ),
 
-            // Only an authorized reviewer can create a verified donation
-            // and advance the donor's lifetime counter.
-            if (controller.canEdit)
-              IconButton(
-                tooltip: 'record_donation_title'.tr,
-                icon: const Icon(Icons.volunteer_activism_outlined,
-                    color: AppColors.success),
-                onPressed: () async {
-                  await Get.to(() => RecordDonationScreen(donor: donor));
-                  if (mounted) controller.loadDonors();
-                },
-              ),
             // Edit donor profile
             if (controller.canEdit)
               IconButton(
@@ -556,6 +546,21 @@ class _DonorListScreenState extends State<DonorListScreen> {
                 ),
               ),
             ),
+              ],
+            ),
+            if (controller.canEdit)
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  icon: const Icon(Icons.volunteer_activism_outlined,
+                    size: 18, color: AppColors.success),
+                  label: Text('record_donation_title'.tr),
+                  onPressed: () async {
+                    await Get.to(() => RecordDonationScreen(donor: donor));
+                    if (mounted) controller.loadDonors();
+                  },
+                ),
+              ),
           ],
         ),
       ),
