@@ -253,21 +253,12 @@ service cloud.firestore {
     function validId(id) { return id is string && id.size() > 0 && !id.matches('.*[/].*'); }
     function eventReadable(e) { return e.active == true || (e.active == false && editorial()); }
     function validDonor(d) {
-      return (
-          (d.keys().hasAll(['name','phone','blood_group','gender','photo_url','village','union','upazila',
-              'district','profession','linked_user_id','active','last_donated_at','total_donations',
-              'created_at','created_by','updated_at','updated_by'])
-            && d.keys().hasOnly(['name','phone','blood_group','gender','photo_url','village','union','upazila',
-              'district','profession','linked_user_id','active','last_donated_at','total_donations',
-              'created_at','created_by','updated_at','updated_by']))
-          ||
-          (d.keys().hasAll(['name','phone','blood_group','gender','photo_url','village','union','upazila',
-              'district','profession','linked_user_id','active','last_donated_at','total_donations',
-              'created_at','created_by','updated_at','updated_by'])
-            && d.keys().hasOnly(['name','phone','blood_group','gender','photo_url','village','union','upazila',
-              'district','profession','linked_user_id','active','last_donated_at','total_donations',
-              'created_at','created_by','updated_at','updated_by']))
-        )
+      return d.keys().hasAll(['name','phone','blood_group','gender','photo_url','village','union','upazila',
+          'district','profession','linked_user_id','active','last_donated_at','total_donations',
+          'created_at','created_by','updated_at','updated_by'])
+        && d.keys().hasOnly(['name','phone','blood_group','gender','photo_url','village','union','upazila',
+          'district','profession','linked_user_id','active','last_donated_at','total_donations',
+          'created_at','created_by','updated_at','updated_by','latest_donation_id'])
         && d.name is string && d.phone is string && d.blood_group is string
         && nullableString(d.gender) && nullableString(d.village) && nullableString(d.union)
         && d.upazila is string && d.district is string && nullableString(d.profession)
@@ -276,8 +267,63 @@ service cloud.firestore {
         && nullableString(d.linked_user_id) && d.active is bool
         && (d.last_donated_at == null || d.last_donated_at is timestamp)
         && d.total_donations is int && d.total_donations >= 0
+        && nullableString(d.get('latest_donation_id', null))
         && d.created_at is timestamp && d.created_by is string
         && d.updated_at is timestamp && d.updated_by is string;
+    }
+    function donationPath(id) {
+      return /databases/$(database)/documents/donations/$(id);
+    }
+    function donorPath(id) {
+      return /databases/$(database)/documents/donors/$(id);
+    }
+    function donorDonationIncrement(id) {
+      let before = resource.data;
+      let after = request.resource.data;
+      let recordId = after.get('latest_donation_id', null);
+      return admitted() && history() && before.active == true
+        && after.diff(before).affectedKeys().hasOnly([
+          'total_donations','last_donated_at','latest_donation_id','updated_at','updated_by'])
+        && after.total_donations == before.total_donations + 1
+        && after.last_donated_at is timestamp
+        && after.last_donated_at <= request.time
+        && (before.last_donated_at == null || after.last_donated_at > before.last_donated_at)
+        && recordId is string && recordId.size() > 0 && recordId.size() <= 120
+        && !recordId.matches('.*[/].*')
+        && recordId != before.get('latest_donation_id', null)
+        && !exists(donationPath(recordId))
+        && getAfter(donationPath(recordId)).data.donor_id == id
+        && getAfter(donationPath(recordId)).data.donation_date == after.last_donated_at
+        && getAfter(donationPath(recordId)).data.recorded_by == ownId()
+        && getAfter(donationPath(recordId)).data.created_at == request.time
+        && after.updated_at == request.time && after.updated_by == ownId();
+    }
+    function validDonation(id, d) {
+      return d.keys().hasAll(['donor_id','donor_name_snapshot','blood_group_snapshot',
+          'donation_date','location','hospital','recipient_name','recipient_contact',
+          'recorded_by','created_at','updated_at'])
+        && d.keys().hasOnly(['donor_id','donor_name_snapshot','blood_group_snapshot',
+          'donation_date','location','hospital','recipient_name','recipient_contact',
+          'recorded_by','created_at','updated_at'])
+        && d.donor_id is string && d.donor_id.size() > 0
+        && !d.donor_id.matches('.*[/].*')
+        && d.donor_name_snapshot is string && d.blood_group_snapshot is string
+        && nullableString(d.location) && nullableString(d.hospital)
+        && nullableString(d.recipient_name) && nullableString(d.recipient_contact)
+        && d.donation_date is timestamp && d.donation_date <= request.time
+        && d.created_at == request.time && d.updated_at == null
+        && d.recorded_by == ownId()
+        && get(donorPath(d.donor_id)).data.active == true
+        && d.donor_name_snapshot == get(donorPath(d.donor_id)).data.name
+        && d.blood_group_snapshot == get(donorPath(d.donor_id)).data.blood_group
+        && (get(donorPath(d.donor_id)).data.last_donated_at == null ||
+            d.donation_date > get(donorPath(d.donor_id)).data.last_donated_at)
+        && getAfter(donorPath(d.donor_id)).data.total_donations ==
+          get(donorPath(d.donor_id)).data.total_donations + 1
+        && getAfter(donorPath(d.donor_id)).data.latest_donation_id == id
+        && getAfter(donorPath(d.donor_id)).data.last_donated_at == d.donation_date
+        && getAfter(donorPath(d.donor_id)).data.updated_by == ownId()
+        && getAfter(donorPath(d.donor_id)).data.updated_at == request.time;
     }
     function validDonorPayload(d) {
       return (
@@ -397,7 +443,8 @@ service cloud.firestore {
           'gender','photo_url','village','union','upazila','district','profession','updated_at','updated_by'])
         && request.resource.data.diff(resource.data).affectedKeys().hasAny(['name','blood_group',
           'gender','photo_url','village','union','upazila','district','profession'])
-        && request.resource.data.updated_at == request.time && request.resource.data.updated_by == ownId();
+        && request.resource.data.updated_at == request.time && request.resource.data.updated_by == ownId()
+        || donorDonationIncrement(id);
     }
     match /donor_submissions/{id} {
       allow read: if admitted() && (resource.data.submitted_by == ownId() || editorial());
@@ -437,6 +484,10 @@ service cloud.firestore {
     }
     match /donations/{id} {
       allow read: if admitted() && history();
+      // Record and donor counter advance in the SAME atomic transaction.
+      // No direct counter edits, unverified donations or deletions.
+      allow create: if admitted() && history()
+        && validDonation(id, request.resource.data);
     }
     match /notices/{id} {
       allow read: if admitted() && (resource.data.status == 'published'
